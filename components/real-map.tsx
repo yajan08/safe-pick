@@ -26,25 +26,25 @@ export function RealMap() {
           shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
         });
 
-        // School location (shifted to far right edge - Indore, India)
-        const schoolPosition: [number, number] = [22.7350, 76.0500];
+        // School location (shifted far right - Indore, India)
+        const schoolPosition: [number, number] = [22.7350, 75.9400];
         
-        // Simulated route points - shifted to the far right edge of viewport
+        // Simulated route points - shifted to the far right side of the viewport
         const routePoints: [number, number][] = [
-          [22.7100, 76.0200],
-          [22.7200, 76.0350],
-          [22.7350, 76.0500],
-          [22.7500, 76.0650],
-          [22.7650, 76.0800],
+          [22.7200, 75.9250],
+          [22.7280, 75.9320],
+          [22.7350, 75.9400],
+          [22.7420, 75.9480],
+          [22.7500, 75.9550],
         ];
 
-        // Stop locations - far right edge
+        // Stop locations - shifted far right
         const stops: { position: [number, number]; name: string }[] = [
-          { position: [22.7100, 76.0200], name: "Green Valley School" },
-          { position: [22.7200, 76.0350], name: "Stop 1 - Vijay Nagar" },
-          { position: [22.7350, 76.0500], name: "Stop 2 - Scheme 78" },
-          { position: [22.7500, 76.0650], name: "Stop 3 - AB Road" },
-          { position: [22.7650, 76.0800], name: "Stop 4 - Palasia" },
+          { position: [22.7200, 75.9250], name: "Green Valley School" },
+          { position: [22.7280, 75.9320], name: "Stop 1 - Vijay Nagar" },
+          { position: [22.7350, 75.9400], name: "Stop 2 - Scheme 78" },
+          { position: [22.7420, 75.9480], name: "Stop 3 - AB Road" },
+          { position: [22.7500, 75.9550], name: "Stop 4 - Palasia" },
         ];
 
         // Create a functional component for the map
