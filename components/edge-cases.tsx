@@ -10,9 +10,22 @@ import {
   Clock,
   Bell,
   Shield,
+  type LucideIcon,
 } from "lucide-react";
 
-const edgeCases = [
+interface EdgeCase {
+  id: string;
+  title: string;
+  subtitle: string;
+  icon: LucideIcon;
+  description: string;
+  demo:
+    | { type: "verification"; stages: { label: string; status: string }[] }
+    | { type: "alert"; message: string; priority: string }
+    | { type: "sync"; stages: string[] };
+}
+
+const edgeCases: EdgeCase[] = [
   {
     id: "forgot-qr",
     title: "Forgot QR Card",
