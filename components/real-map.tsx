@@ -49,12 +49,33 @@ export function RealMap() {
 
         // Create a functional component for the map
         const MapWrapper = ({ isDark }: { isDark: boolean }) => {
-          const [vehiclePosition, setVehiclePosition] = useState(0);
+          const [vehiclePos, setVehiclePos] = useState<[number, number]>(routePoints[0]);
 
           useEffect(() => {
+            const duration = 20000; // 20 seconds for full route
+            const startTime = Date.now();
+            
             const interval = setInterval(() => {
-              setVehiclePosition((prev) => (prev + 1) % routePoints.length);
-            }, 3000);
+              const elapsed = (Date.now() - startTime) % duration;
+              const progress = elapsed / duration;
+              
+              // Find which segment we are in
+              const totalSegments = routePoints.length - 1;
+              const segmentProgress = progress * totalSegments;
+              const currentSegment = Math.floor(segmentProgress);
+              const t = segmentProgress - currentSegment; // 0 to 1
+              
+              if (currentSegment < totalSegments) {
+                const startPoint = routePoints[currentSegment];
+                const endPoint = routePoints[currentSegment + 1];
+                
+                const lat = startPoint[0] + (endPoint[0] - startPoint[0]) * t;
+                const lng = startPoint[1] + (endPoint[1] - startPoint[1]) * t;
+                
+                setVehiclePos([lat, lng]);
+              }
+            }, 50); // 20fps for smooth CSS transition
+            
             return () => clearInterval(interval);
           }, []);
 
@@ -109,13 +130,14 @@ export function RealMap() {
 
               {/* Moving vehicle marker */}
               <CircleMarker
-                center={routePoints[vehiclePosition]}
+                center={vehiclePos}
                 radius={10}
                 pathOptions={{
                   color: "#22c55e",
                   fillColor: "#22c55e",
                   fillOpacity: 1,
-                  weight: 2
+                  weight: 2,
+                  className: "vehicle-marker"
                 }}
               />
             </MapContainer>

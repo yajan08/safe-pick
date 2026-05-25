@@ -27,14 +27,14 @@ export function HeroSection() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight text-foreground"
+            className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-heading font-extrabold tracking-tight leading-tight text-foreground"
           >
-            Don&apos;t Worry About Safety,
+            <span className="block whitespace-nowrap">Don&apos;t Worry About Safety,</span>
             <motion.span
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-gold text-glow block mt-2"
+              className="text-gold text-glow block mt-2 font-heading font-extrabold tracking-tight whitespace-nowrap"
             >
               We&apos;ve Got You Covered.
             </motion.span>
