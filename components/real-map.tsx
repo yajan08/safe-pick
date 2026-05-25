@@ -1,166 +1,154 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { useTheme } from "./theme-provider";
 
 export function RealMap() {
   const { theme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const [MapComponent, setMapComponent] = useState<React.ComponentType<{ isDark: boolean }> | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
+    // Dynamically import Leaflet only on client side
+    import("leaflet").then((L) => {
+      import("react-leaflet").then(({ MapContainer, TileLayer, Polyline, CircleMarker }) => {
+        // Fix Leaflet default marker icon issue
+        delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
+          iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
+          shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
+        });
+
+        // School location (Indore, India)
+        const schoolPosition: [number, number] = [22.7196, 75.8577];
+        
+        // Simulated route points
+        const routePoints: [number, number][] = [
+          [22.7196, 75.8577],
+          [22.7250, 75.8620],
+          [22.7300, 75.8700],
+          [22.7350, 75.8750],
+          [22.7400, 75.8800],
+        ];
+
+        // Stop locations
+        const stops: { position: [number, number]; name: string }[] = [
+          { position: [22.7196, 75.8577], name: "Green Valley School" },
+          { position: [22.7250, 75.8620], name: "Stop 1 - Vijay Nagar" },
+          { position: [22.7300, 75.8700], name: "Stop 2 - Scheme 78" },
+          { position: [22.7350, 75.8750], name: "Stop 3 - AB Road" },
+          { position: [22.7400, 75.8800], name: "Stop 4 - Palasia" },
+        ];
+
+        // Create a functional component for the map
+        const MapWrapper = ({ isDark }: { isDark: boolean }) => {
+          const [vehiclePosition, setVehiclePosition] = useState(0);
+
+          useEffect(() => {
+            const interval = setInterval(() => {
+              setVehiclePosition((prev) => (prev + 1) % routePoints.length);
+            }, 3000);
+            return () => clearInterval(interval);
+          }, []);
+
+          // CartoDB free tiles - no authentication required
+          const tileUrl = isDark 
+            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
+          return (
+            <MapContainer
+              key={isDark ? "dark" : "light"}
+              center={schoolPosition}
+              zoom={13}
+              scrollWheelZoom={false}
+              zoomControl={false}
+              dragging={false}
+              doubleClickZoom={false}
+              className="w-full h-full"
+              style={{ background: "transparent" }}
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                url={tileUrl}
+                subdomains="abcd"
+              />
+              
+              {/* Route line */}
+              <Polyline
+                positions={routePoints}
+                pathOptions={{ 
+                  color: "#c99225", 
+                  weight: 4, 
+                  opacity: 0.8,
+                  dashArray: "10, 10"
+                }}
+              />
+              
+              {/* Stop markers */}
+              {stops.map((stop, index) => (
+                <CircleMarker
+                  key={index}
+                  center={stop.position}
+                  radius={index === 0 ? 12 : 8}
+                  pathOptions={{
+                    color: "#c99225",
+                    fillColor: index === 0 ? "#c99225" : isDark ? "#0a0a0a" : "#ffffff",
+                    fillOpacity: 1,
+                    weight: 3
+                  }}
+                />
+              ))}
+
+              {/* Moving vehicle marker */}
+              <CircleMarker
+                center={routePoints[vehiclePosition]}
+                radius={10}
+                pathOptions={{
+                  color: "#22c55e",
+                  fillColor: "#22c55e",
+                  fillOpacity: 1,
+                  weight: 2
+                }}
+              />
+            </MapContainer>
+          );
+        };
+
+        setMapComponent(() => MapWrapper);
+      });
+    });
+  }, [mounted]);
+
   const isDark = theme === "dark";
 
   return (
-    <div className="absolute inset-0 z-0 overflow-hidden">
+    <div className="fixed inset-0 z-0 overflow-hidden">
       {/* Gradient overlays */}
-      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-transparent z-10" />
+      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent z-10" />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/60 z-10" />
       <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background z-10" />
-
-      {/* Map background with grid pattern */}
-      <div className="w-full h-full map-grid opacity-60" />
-
-      {/* Tracking Animation - Positioned on the Right Half */}
-      <div className="absolute right-12 md:right-24 lg:right-32 top-1/2 -translate-y-1/2 z-20">
-        <svg
-          width="300"
-          height="400"
-          viewBox="0 0 300 400"
-          fill="none"
-          className="opacity-90"
-        >
-          {/* Route line - curved path from bottom to destination */}
-          <motion.path
-            d="M 150 380 C 150 320, 100 280, 120 220 C 140 160, 180 140, 150 80"
-            stroke="#c99225"
-            strokeWidth="3"
-            strokeLinecap="round"
-            fill="none"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 2, ease: "easeInOut" }}
-          />
-
-          {/* Animated dashed overlay for visual effect */}
-          <motion.path
-            d="M 150 380 C 150 320, 100 280, 120 220 C 140 160, 180 140, 150 80"
-            stroke={isDark ? "rgba(201, 146, 37, 0.3)" : "rgba(201, 146, 37, 0.4)"}
-            strokeWidth="6"
-            strokeLinecap="round"
-            strokeDasharray="8 12"
-            fill="none"
-            initial={{ strokeDashoffset: 100 }}
-            animate={{ strokeDashoffset: 0 }}
-            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-          />
-
-          {/* Starting point node */}
-          <circle
-            cx="150"
-            cy="380"
-            r="8"
-            fill={isDark ? "#1a1a1a" : "#ffffff"}
-            stroke="#c99225"
-            strokeWidth="3"
-          />
-          <circle cx="150" cy="380" r="3" fill="#c99225" />
-
-          {/* Destination marker - School/Drop-off Location */}
-          <g transform="translate(150, 60)">
-            {/* Pin body */}
-            <motion.path
-              d="M 0 -30 C -15 -30, -20 -15, -20 -5 C -20 10, 0 25, 0 25 C 0 25, 20 10, 20 -5 C 20 -15, 15 -30, 0 -30 Z"
-              fill="#c99225"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 1.5, duration: 0.5, type: "spring" }}
-            />
-            {/* Inner circle */}
-            <motion.circle
-              cx="0"
-              cy="-8"
-              r="8"
-              fill={isDark ? "#0a0a0a" : "#ffffff"}
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 1.8, duration: 0.3 }}
-            />
-            {/* Pulsing glow effect */}
-            <motion.circle
-              cx="0"
-              cy="-8"
-              r="25"
-              fill="none"
-              stroke="#c99225"
-              strokeWidth="2"
-              initial={{ scale: 0.5, opacity: 0.8 }}
-              animate={{ scale: 1.5, opacity: 0 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-            />
-          </g>
-
-          {/* Moving vehicle dot */}
-          <motion.g
-            initial={{ offsetDistance: "0%" }}
-            animate={{ offsetDistance: "100%" }}
-            transition={{
-              duration: 6,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            style={{
-              offsetPath: `path("M 150 380 C 150 320, 100 280, 120 220 C 140 160, 180 140, 150 80")`,
-            }}
-          >
-            {/* Vehicle glow */}
-            <motion.circle
-              cx="0"
-              cy="0"
-              r="16"
-              fill="#c99225"
-              opacity="0.3"
-              animate={{ scale: [1, 1.3, 1] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
-            />
-            {/* Vehicle dot */}
-            <circle cx="0" cy="0" r="8" fill="#c99225" />
-            <circle
-              cx="0"
-              cy="0"
-              r="4"
-              fill={isDark ? "#0a0a0a" : "#ffffff"}
-            />
-          </motion.g>
-
-          {/* Waypoint markers along the route */}
-          <g>
-            <circle
-              cx="120"
-              cy="220"
-              r="5"
-              fill={isDark ? "#1a1a1a" : "#ffffff"}
-              stroke="#c99225"
-              strokeWidth="2"
-            />
-            <circle
-              cx="140"
-              cy="160"
-              r="5"
-              fill={isDark ? "#1a1a1a" : "#ffffff"}
-              stroke="#c99225"
-              strokeWidth="2"
-            />
-          </g>
-        </svg>
-
-        {/* Label for destination */}
-        <motion.div
-          className="absolute -top-2 left-1/2 -translate-x-1/2 glass px-3 py-1.5 rounded-lg"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 2, duration: 0.5 }}
-        >
-          <span className="text-xs font-medium text-gold whitespace-nowrap">
-            School Drop-off
-          </span>
-        </motion.div>
+      
+      {/* Leaflet CSS */}
+      <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+        crossOrigin=""
+      />
+      
+      {/* Map */}
+      <div className="w-full h-full opacity-70">
+        {MapComponent ? <MapComponent isDark={isDark} /> : (
+          <div className="w-full h-full bg-map-bg animate-pulse" />
+        )}
       </div>
     </div>
   );

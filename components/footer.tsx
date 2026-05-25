@@ -39,7 +39,7 @@ const itemVariants = {
 
 export function Footer() {
   return (
-    <footer className="relative z-50 py-16 px-6 bg-zinc-50 dark:bg-zinc-950 border-t border-border transition-colors duration-300">
+    <footer className="py-16 px-6 bg-ebony border-t border-border transition-colors duration-300">
       <div className="max-w-7xl mx-auto">
         <motion.div
           variants={containerVariants}

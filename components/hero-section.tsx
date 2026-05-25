@@ -5,7 +5,7 @@ import { RealMap } from "./real-map";
 
 export function HeroSection() {
   return (
-    <section className="relative h-[90vh] min-h-[600px] flex items-center overflow-hidden">
+    <section className="relative min-h-screen flex items-center overflow-hidden">
       {/* Real map background */}
       <RealMap />
 

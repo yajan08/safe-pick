@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { 
   Shield, 
   MapPin, 
@@ -14,6 +15,7 @@ import {
   Smartphone,
   Route,
   CheckCircle,
+  Play
 } from "lucide-react";
 
 const features = [
@@ -104,7 +106,7 @@ const itemVariants = {
 
 export function Features() {
   return (
-    <section className="relative z-40 py-24 px-6 overflow-hidden bg-white dark:bg-black transition-colors duration-300">
+    <section className="py-24 px-6 relative overflow-hidden bg-ebony transition-colors duration-300">
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-30 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
@@ -178,7 +180,28 @@ export function Features() {
           ))}
         </motion.div>
 
-
+        {/* CTA Button */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ delay: 0.3 }}
+          className="text-center mt-16"
+        >
+          <p className="text-muted mb-6">
+            See how SafePick transforms school transportation safety.
+          </p>
+          <Link href="/demo">
+            <motion.button
+              className="inline-flex items-center gap-3 px-8 py-4 bg-gold text-background font-semibold rounded-full hover:bg-gold-light transition-colors shadow-lg shadow-gold/20"
+              whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(201, 146, 37, 0.3)" }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Play className="w-5 h-5" />
+              See Live in Action
+            </motion.button>
+          </Link>
+        </motion.div>
       </div>
     </section>
   );
