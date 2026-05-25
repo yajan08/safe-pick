@@ -1,26 +1,92 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --gold: #c99225;
+  --gold-light: #d9a84a;
+  --gold-dark: #a67a1d;
+  --ebony: #121212;
+  --ebony-light: #1a1a1a;
+  --muted: #888888;
+  --muted-foreground: #666666;
+  --card: #141414;
+  --card-foreground: #ffffff;
+  --border: #2a2a2a;
+  --radius: 0.75rem;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --color-gold-dark: var(--gold-dark);
+  --color-ebony: var(--ebony);
+  --color-ebony-light: var(--ebony-light);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-border: var(--border);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--ebony);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gold);
+  border-radius: 4px;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(20, 20, 20, 0.7);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(201, 146, 37, 0.15);
+}
+
+/* Glow effects */
+.glow-gold {
+  box-shadow: 0 0 30px rgba(201, 146, 37, 0.3);
+}
+
+.text-glow {
+  text-shadow: 0 0 40px rgba(201, 146, 37, 0.5);
+}
+
+/* Animated gradient border */
+@keyframes borderGlow {
+  0%, 100% {
+    border-color: rgba(201, 146, 37, 0.3);
+  }
+  50% {
+    border-color: rgba(201, 146, 37, 0.8);
+  }
+}
+
+.animate-border-glow {
+  animation: borderGlow 3s ease-in-out infinite;
+}
+
+/* Grid pattern for map */
+.map-grid {
+  background-image: 
+    linear-gradient(rgba(201, 146, 37, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201, 146, 37, 0.05) 1px, transparent 1px);
+  background-size: 50px 50px;
 }
