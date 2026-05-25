@@ -39,17 +39,17 @@ const itemVariants = {
 
 export function Footer() {
   return (
-    <footer className="py-16 px-6 bg-ebony border-t border-border transition-colors duration-300">
+    <footer className="relative z-40 py-12 sm:py-16 px-4 sm:px-6 bg-background border-t border-border transition-colors duration-300">
       <div className="max-w-7xl mx-auto">
         <motion.div
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true }}
-          className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-12 mb-12"
         >
           {/* Brand column */}
-          <motion.div variants={itemVariants} className="lg:col-span-2">
+          <motion.div variants={itemVariants} className="sm:col-span-2 lg:col-span-2">
             <Link href="/" className="flex items-center gap-3 mb-6 group">
               <motion.div
                 className="w-12 h-12 rounded-xl bg-gold flex items-center justify-center"
@@ -62,13 +62,13 @@ export function Footer() {
                 SafePick
               </span>
             </Link>
-            <p className="text-muted max-w-sm mb-8 leading-relaxed">
+            <p className="text-muted max-w-sm mb-6 sm:mb-8 leading-relaxed text-sm sm:text-base">
               Ensuring the safety of every child&apos;s journey with real-time tracking, 
               verified confirmations, and complete peace of mind for parents and schools.
             </p>
 
             {/* Contact cards */}
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               <motion.a
                 href="mailto:hello@safepick.in"
                 className="flex items-center gap-4 p-4 rounded-xl bg-card border border-border hover:border-gold/50 transition-all group"

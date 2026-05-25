@@ -130,11 +130,11 @@ export function RealMap() {
   const isDark = theme === "dark";
 
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden">
-      {/* Gradient overlays */}
-      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent z-10" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/60 z-10" />
-      <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background z-10" />
+    <div className="absolute inset-0 z-0 overflow-hidden">
+      {/* Gradient overlays - reduced opacity for better visibility */}
+      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/60 to-transparent z-10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/40 z-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-transparent to-background z-10" />
       
       {/* Leaflet CSS */}
       <link
@@ -145,7 +145,7 @@ export function RealMap() {
       />
       
       {/* Map */}
-      <div className="w-full h-full opacity-70">
+      <div className="w-full h-full opacity-90">
         {MapComponent ? <MapComponent isDark={isDark} /> : (
           <div className="w-full h-full bg-map-bg animate-pulse" />
         )}

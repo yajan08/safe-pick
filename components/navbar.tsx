@@ -21,20 +21,20 @@ export function Navbar() {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5 }}
-      className="fixed top-0 left-0 right-0 z-50 px-6 py-4"
+      className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-6 py-3 sm:py-4"
     >
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between px-6 py-3 rounded-2xl glass border border-gold/20 transition-colors duration-300">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-2 sm:py-3 rounded-2xl glass border border-gold/20 transition-colors duration-300">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <motion.div
-              className="w-10 h-10 rounded-xl bg-gold flex items-center justify-center transition-colors duration-300"
+              className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gold flex items-center justify-center transition-colors duration-300"
               whileHover={{ rotate: 360 }}
               transition={{ duration: 0.5 }}
             >
-              <Shield className="w-6 h-6 text-background" />
+              <Shield className="w-5 h-5 sm:w-6 sm:h-6 text-background" />
             </motion.div>
-            <span className="text-xl font-bold text-foreground">SafePick</span>
+            <span className="text-lg sm:text-xl font-bold text-foreground">SafePick</span>
           </Link>
 
           {/* Desktop nav */}

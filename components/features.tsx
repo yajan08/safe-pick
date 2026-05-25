@@ -106,7 +106,7 @@ const itemVariants = {
 
 export function Features() {
   return (
-    <section className="py-24 px-6 relative overflow-hidden bg-ebony transition-colors duration-300">
+    <section className="relative z-30 py-16 sm:py-24 px-4 sm:px-6 overflow-hidden bg-background border-t border-border transition-colors duration-300">
       {/* Background decoration */}
       <div className="absolute inset-0 opacity-30 pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
@@ -120,7 +120,7 @@ export function Features() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
-          className="text-center mb-16"
+          className="text-center mb-10 sm:mb-16"
         >
           <motion.span 
             className="inline-block text-gold text-sm font-semibold tracking-wider uppercase mb-4 px-4 py-2 rounded-full bg-gold/10 border border-gold/20"
@@ -130,11 +130,11 @@ export function Features() {
           >
             Core Features
           </motion.span>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mt-4 text-foreground text-balance">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mt-4 text-foreground text-balance">
             Everything You Need for
             <span className="text-gold block mt-2">Complete Peace of Mind</span>
           </h2>
-          <p className="text-muted mt-6 max-w-2xl mx-auto text-lg leading-relaxed text-pretty">
+          <p className="text-muted mt-4 sm:mt-6 max-w-2xl mx-auto text-base sm:text-lg leading-relaxed text-pretty">
             A comprehensive suite of safety tools designed to keep every journey secure, 
             transparent, and worry-free.
           </p>
@@ -146,7 +146,7 @@ export function Features() {
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-50px" }}
-          className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5"
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5"
         >
           {features.map((feature, index) => (
             <motion.div
@@ -155,21 +155,21 @@ export function Features() {
               whileHover={{ y: -5, transition: { duration: 0.2 } }}
               className="group relative"
             >
-              <div className="h-full p-5 rounded-2xl bg-card border border-border hover:border-gold/50 transition-all duration-300 hover:shadow-lg hover:shadow-gold/5">
+              <div className="h-full p-4 sm:p-5 rounded-2xl bg-card border border-border hover:border-gold/50 transition-all duration-300 hover:shadow-lg hover:shadow-gold/5">
                 {/* Icon container */}
                 <motion.div
-                  className="w-12 h-12 rounded-xl bg-gold/10 flex items-center justify-center mb-4 group-hover:bg-gold/20 transition-colors duration-300"
+                  className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gold/10 flex items-center justify-center mb-3 sm:mb-4 group-hover:bg-gold/20 transition-colors duration-300"
                   whileHover={{ scale: 1.1, rotate: 5 }}
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
-                  <feature.icon className="w-6 h-6 text-gold" />
+                  <feature.icon className="w-5 h-5 sm:w-6 sm:h-6 text-gold" />
                 </motion.div>
 
                 {/* Content */}
-                <h3 className="text-lg font-semibold text-foreground mb-2 group-hover:text-gold transition-colors duration-300">
+                <h3 className="text-base sm:text-lg font-semibold text-foreground mb-1 sm:mb-2 group-hover:text-gold transition-colors duration-300">
                   {feature.title}
                 </h3>
-                <p className="text-muted leading-relaxed text-sm">
+                <p className="text-muted leading-relaxed text-xs sm:text-sm">
                   {feature.description}
                 </p>
 
@@ -186,7 +186,7 @@ export function Features() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ delay: 0.3 }}
-          className="text-center mt-16"
+          className="text-center mt-10 sm:mt-16"
         >
           <p className="text-muted mb-6">
             See how SafePick transforms school transportation safety.
