@@ -4,14 +4,20 @@ import { useEffect, useState } from "react";
 import { useTheme } from "./theme-provider";
 
 export function RealMap() {
-  const [MapComponent, setMapComponent] = useState<React.ComponentType | null>(null);
   const { theme } = useTheme();
-  const isDark = theme === "dark";
+  const [mounted, setMounted] = useState(false);
+  const [MapComponent, setMapComponent] = useState<React.ComponentType<{ isDark: boolean }> | null>(null);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+
     // Dynamically import Leaflet only on client side
     import("leaflet").then((L) => {
-      import("react-leaflet").then(({ MapContainer, TileLayer, Marker, Polyline, CircleMarker }) => {
+      import("react-leaflet").then(({ MapContainer, TileLayer, Polyline, CircleMarker }) => {
         // Fix Leaflet default marker icon issue
         delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
         L.Icon.Default.mergeOptions({
@@ -25,11 +31,11 @@ export function RealMap() {
         
         // Simulated route points
         const routePoints: [number, number][] = [
-          [22.7196, 75.8577], // School
+          [22.7196, 75.8577],
           [22.7250, 75.8620],
           [22.7300, 75.8700],
           [22.7350, 75.8750],
-          [22.7400, 75.8800], // Home area
+          [22.7400, 75.8800],
         ];
 
         // Stop locations
@@ -42,7 +48,7 @@ export function RealMap() {
         ];
 
         // Create a functional component for the map
-        const MapWrapper = () => {
+        const MapWrapper = ({ isDark }: { isDark: boolean }) => {
           const [vehiclePosition, setVehiclePosition] = useState(0);
 
           useEffect(() => {
@@ -52,8 +58,14 @@ export function RealMap() {
             return () => clearInterval(interval);
           }, []);
 
+          // CartoDB free tiles - no authentication required
+          const tileUrl = isDark 
+            ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+            : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+
           return (
             <MapContainer
+              key={isDark ? "dark" : "light"}
               center={schoolPosition}
               zoom={13}
               scrollWheelZoom={false}
@@ -64,11 +76,9 @@ export function RealMap() {
               style={{ background: "transparent" }}
             >
               <TileLayer
-                attribution='&copy; <a href="https://stadiamaps.com/">Stadia Maps</a>'
-                url={isDark 
-                  ? "https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-                  : "https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}{r}.png"
-                }
+                attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                url={tileUrl}
+                subdomains="abcd"
               />
               
               {/* Route line */}
@@ -115,10 +125,12 @@ export function RealMap() {
         setMapComponent(() => MapWrapper);
       });
     });
-  }, [isDark]);
+  }, [mounted]);
+
+  const isDark = theme === "dark";
 
   return (
-    <div className="absolute inset-0 overflow-hidden">
+    <div className="fixed inset-0 z-0 overflow-hidden">
       {/* Gradient overlays */}
       <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent z-10" />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/60 z-10" />
@@ -133,8 +145,8 @@ export function RealMap() {
       />
       
       {/* Map */}
-      <div className="w-full h-full opacity-60">
-        {MapComponent ? <MapComponent /> : (
+      <div className="w-full h-full opacity-70">
+        {MapComponent ? <MapComponent isDark={isDark} /> : (
           <div className="w-full h-full bg-map-bg animate-pulse" />
         )}
       </div>

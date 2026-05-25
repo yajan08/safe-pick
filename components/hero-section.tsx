@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Link from "next/link";
 import { RealMap } from "./real-map";
 
 export function HeroSection() {
@@ -47,22 +46,25 @@ export function HeroSection() {
             where your child is, every moment of their journey.
           </motion.p>
 
-          {/* Watch Demo Button Only */}
+          {/* Trust badges */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.9 }}
-            className="mt-10"
+            className="mt-10 flex flex-wrap gap-4"
           >
-            <Link href="/demo">
-              <motion.button
-                className="px-10 py-4 rounded-full bg-gold text-background font-semibold text-lg"
-                whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(201, 146, 37, 0.4)" }}
-                whileTap={{ scale: 0.98 }}
+            {["End-to-End Encrypted", "Real-Time Updates", "Verified Identity"].map((badge, index) => (
+              <motion.div
+                key={badge}
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 1 + index * 0.1 }}
+                className="glass px-4 py-2 rounded-full flex items-center gap-2"
               >
-                Watch Demo
-              </motion.button>
-            </Link>
+                <div className="w-2 h-2 rounded-full bg-gold animate-pulse" />
+                <span className="text-sm text-foreground">{badge}</span>
+              </motion.div>
+            ))}
           </motion.div>
         </div>
       </div>
