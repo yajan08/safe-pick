@@ -26,25 +26,25 @@ export function RealMap() {
           shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
         });
 
-        // School location (Indore, India)
-        const schoolPosition: [number, number] = [22.7196, 75.8577];
+        // School location (shifted far right - Indore, India)
+        const schoolPosition: [number, number] = [22.7350, 75.9400];
         
-        // Simulated route points
+        // Simulated route points - shifted to the far right side of the viewport
         const routePoints: [number, number][] = [
-          [22.7196, 75.8577],
-          [22.7250, 75.8620],
-          [22.7300, 75.8700],
-          [22.7350, 75.8750],
-          [22.7400, 75.8800],
+          [22.7200, 75.9250],
+          [22.7280, 75.9320],
+          [22.7350, 75.9400],
+          [22.7420, 75.9480],
+          [22.7500, 75.9550],
         ];
 
-        // Stop locations
+        // Stop locations - shifted far right
         const stops: { position: [number, number]; name: string }[] = [
-          { position: [22.7196, 75.8577], name: "Green Valley School" },
-          { position: [22.7250, 75.8620], name: "Stop 1 - Vijay Nagar" },
-          { position: [22.7300, 75.8700], name: "Stop 2 - Scheme 78" },
-          { position: [22.7350, 75.8750], name: "Stop 3 - AB Road" },
-          { position: [22.7400, 75.8800], name: "Stop 4 - Palasia" },
+          { position: [22.7200, 75.9250], name: "Green Valley School" },
+          { position: [22.7280, 75.9320], name: "Stop 1 - Vijay Nagar" },
+          { position: [22.7350, 75.9400], name: "Stop 2 - Scheme 78" },
+          { position: [22.7420, 75.9480], name: "Stop 3 - AB Road" },
+          { position: [22.7500, 75.9550], name: "Stop 4 - Palasia" },
         ];
 
         // Create a functional component for the map
@@ -130,11 +130,11 @@ export function RealMap() {
   const isDark = theme === "dark";
 
   return (
-    <div className="fixed inset-0 z-0 overflow-hidden">
-      {/* Gradient overlays */}
-      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/80 to-transparent z-10" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/60 z-10" />
-      <div className="absolute inset-0 bg-gradient-to-b from-background/40 via-transparent to-background z-10" />
+    <div className="absolute inset-0 z-0 overflow-hidden">
+      {/* Gradient overlays - lighter for better map visibility, stronger on left for text readability */}
+      <div className="absolute inset-0 bg-gradient-to-r from-background via-background/40 to-transparent z-10" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-background/20 z-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-background/20 via-transparent to-background/60 z-10" />
       
       {/* Leaflet CSS */}
       <link
@@ -144,8 +144,8 @@ export function RealMap() {
         crossOrigin=""
       />
       
-      {/* Map */}
-      <div className="w-full h-full opacity-70">
+      {/* Map - shifted to the right */}
+      <div className="absolute -right-[10%] top-0 w-[80%] h-full opacity-95">
         {MapComponent ? <MapComponent isDark={isDark} /> : (
           <div className="w-full h-full bg-map-bg animate-pulse" />
         )}
