@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Shield, Twitter, Linkedin, Instagram, Mail, MapPin, Phone } from "lucide-react";
+import { Shield, Twitter, Instagram, Mail, MapPin, Phone } from "lucide-react";
 
 const footerLinks = {
   product: [
@@ -27,7 +27,6 @@ const footerLinks = {
 
 const socialLinks = [
   { icon: Twitter, href: "#", label: "Twitter" },
-  { icon: Linkedin, href: "#", label: "LinkedIn" },
   { icon: Instagram, href: "#", label: "Instagram" },
 ];
 
