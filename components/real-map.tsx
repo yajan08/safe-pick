@@ -144,8 +144,8 @@ export function RealMap() {
         crossOrigin=""
       />
       
-      {/* Map */}
-      <div className="w-full h-full opacity-95">
+      {/* Map - shifted to the right */}
+      <div className="absolute -right-[10%] top-0 w-[80%] h-full opacity-95">
         {MapComponent ? <MapComponent isDark={isDark} /> : (
           <div className="w-full h-full bg-map-bg animate-pulse" />
         )}
