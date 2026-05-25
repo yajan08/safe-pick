@@ -1,9 +1,6 @@
 import { Navbar } from "@/components/navbar";
 import { HeroSection } from "@/components/hero-section";
-import { Features } from "@/components/features";
-import { DualPerspective } from "@/components/dual-perspective";
-import { EdgeCases } from "@/components/edge-cases";
-import { Pricing } from "@/components/pricing";
+import { TripSimulator } from "@/components/trip-simulator";
 import { Footer } from "@/components/footer";
 
 export default function Home() {
@@ -11,10 +8,7 @@ export default function Home() {
     <main className="min-h-screen bg-background">
       <Navbar />
       <HeroSection />
-      <Features />
-      <DualPerspective />
-      <EdgeCases />
-      <Pricing />
+      <TripSimulator />
       <Footer />
     </main>
   );

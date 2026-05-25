@@ -6,20 +6,13 @@ import { Shield, Globe, Mail, MapPin, Phone } from "lucide-react";
 
 const footerLinks = {
   product: [
-    { label: "Features", href: "#features" },
-    { label: "Pricing", href: "#pricing" },
-    { label: "Schools", href: "#schools" },
-    { label: "Parents", href: "#parents" },
-  ],
-  company: [
-    { label: "About Us", href: "#about" },
-    { label: "Careers", href: "#careers" },
-    { label: "Blog", href: "#blog" },
-    { label: "Press Kit", href: "#press" },
+    { label: "Home", href: "/" },
+    { label: "About Us", href: "/about" },
+    { label: "Contact Us", href: "/contact" },
+    { label: "Demo", href: "/demo" },
   ],
   support: [
     { label: "Help Center", href: "#help" },
-    { label: "Contact", href: "#contact" },
     { label: "Privacy Policy", href: "#privacy" },
     { label: "Terms of Service", href: "#terms" },
   ],
@@ -34,7 +27,7 @@ export function Footer() {
   return (
     <footer className="py-16 px-6 bg-ebony border-t border-border">
       <div className="max-w-7xl mx-auto">
-        <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* Brand column */}
           <div className="lg:col-span-2">
             <Link href="/" className="flex items-center gap-2 mb-4">
@@ -66,28 +59,10 @@ export function Footer() {
           {/* Links columns */}
           <div>
             <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
-              Product
+              Navigation
             </h4>
             <ul className="space-y-3">
               {footerLinks.product.map((link, index) => (
-                <li key={index}>
-                  <Link
-                    href={link.href}
-                    className="text-muted hover:text-gold transition-colors"
-                  >
-                    {link.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-4">
-              Company
-            </h4>
-            <ul className="space-y-3">
-              {footerLinks.company.map((link, index) => (
                 <li key={index}>
                   <Link
                     href={link.href}

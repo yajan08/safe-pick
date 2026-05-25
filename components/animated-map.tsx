@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useTheme } from "./theme-provider";
 
 interface MapNode {
   id: number;
@@ -19,9 +20,16 @@ interface MapLine {
   delay: number;
 }
 
-export function AnimatedMap() {
+interface AnimatedMapProps {
+  focusPoint?: { x: number; y: number };
+}
+
+export function AnimatedMap({ focusPoint }: AnimatedMapProps) {
   const [nodes, setNodes] = useState<MapNode[]>([]);
   const [lines, setLines] = useState<MapLine[]>([]);
+  const { theme } = useTheme();
+
+  const isDark = theme === "dark";
 
   useEffect(() => {
     // Generate random nodes
@@ -50,13 +58,26 @@ export function AnimatedMap() {
     setLines(generatedLines);
   }, []);
 
+  // Colors based on theme
+  const nodeColor = isDark ? "#c99225" : "#c99225";
+  const lineColor = isDark ? "rgba(201, 146, 37, 0.2)" : "rgba(0, 0, 0, 0.15)";
+  const pulseColor = isDark ? "rgba(201, 146, 37, 0.3)" : "rgba(201, 146, 37, 0.4)";
+
   return (
     <div className="absolute inset-0 overflow-hidden map-grid">
       {/* Gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-l from-transparent via-transparent to-background z-10" />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/50 z-10" />
 
-      <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="xMidYMid slice">
+      <motion.svg 
+        className="w-full h-full" 
+        viewBox="0 0 100 100" 
+        preserveAspectRatio="xMidYMid slice"
+        animate={focusPoint ? { 
+          viewBox: `${focusPoint.x - 25} ${focusPoint.y - 25} 50 50` 
+        } : {}}
+        transition={{ duration: 1.5, ease: "easeInOut" }}
+      >
         {/* Animated lines */}
         {lines.map((line) => (
           <motion.line
@@ -65,7 +86,7 @@ export function AnimatedMap() {
             y1={line.y1}
             x2={line.x2}
             y2={line.y2}
-            stroke="rgba(201, 146, 37, 0.2)"
+            stroke={lineColor}
             strokeWidth="0.2"
             initial={{ pathLength: 0, opacity: 0 }}
             animate={{ pathLength: 1, opacity: [0, 0.5, 0.2] }}
@@ -81,7 +102,7 @@ export function AnimatedMap() {
         {/* Moving vehicle indicator */}
         <motion.circle
           r="0.8"
-          fill="#c99225"
+          fill={nodeColor}
           initial={{ cx: 20, cy: 80 }}
           animate={{
             cx: [20, 40, 60, 80, 60, 40, 20],
@@ -105,7 +126,7 @@ export function AnimatedMap() {
         <motion.circle
           r="2"
           fill="none"
-          stroke="#c99225"
+          stroke={nodeColor}
           strokeWidth="0.1"
           initial={{ cx: 20, cy: 80 }}
           animate={{
@@ -128,7 +149,7 @@ export function AnimatedMap() {
               cx={node.x}
               cy={node.y}
               r="0.5"
-              fill="#c99225"
+              fill={nodeColor}
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: [0.3, 0.8, 0.3] }}
               transition={{
@@ -143,7 +164,7 @@ export function AnimatedMap() {
               cy={node.y}
               r="1.5"
               fill="none"
-              stroke="rgba(201, 146, 37, 0.3)"
+              stroke={pulseColor}
               strokeWidth="0.1"
               initial={{ scale: 0 }}
               animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
@@ -155,7 +176,7 @@ export function AnimatedMap() {
             />
           </motion.g>
         ))}
-      </svg>
+      </motion.svg>
     </div>
   );
 }

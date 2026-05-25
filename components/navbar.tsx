@@ -3,17 +3,18 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useState } from "react";
-import { Shield, Menu, X } from "lucide-react";
+import { Shield, Menu, X, Sun, Moon } from "lucide-react";
+import { useTheme } from "./theme-provider";
 
 const navLinks = [
-  { label: "Features", href: "#features" },
-  { label: "For Schools", href: "#schools" },
-  { label: "For Parents", href: "#parents" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Home", href: "/" },
+  { label: "About Us", href: "/about" },
+  { label: "Contact Us", href: "/contact" },
 ];
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <motion.nav
@@ -49,31 +50,44 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Desktop CTA */}
-          <div className="hidden md:flex items-center gap-4">
-            <Link
-              href="#contact"
-              className="text-sm text-muted hover:text-foreground transition-colors"
-            >
-              Contact
-            </Link>
+          {/* Theme Toggle */}
+          <div className="hidden md:flex items-center">
             <motion.button
-              className="px-6 py-2 rounded-full bg-gold text-background text-sm font-semibold"
+              onClick={toggleTheme}
+              className="p-3 rounded-full glass border border-gold/20 hover:border-gold/50 transition-colors"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              aria-label="Toggle theme"
             >
-              Get Started
+              {theme === "dark" ? (
+                <Sun className="w-5 h-5 text-gold" />
+              ) : (
+                <Moon className="w-5 h-5 text-gold" />
+              )}
             </motion.button>
           </div>
 
           {/* Mobile menu button */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="md:hidden p-2 text-foreground"
-            aria-label="Toggle menu"
-          >
-            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+          <div className="flex md:hidden items-center gap-3">
+            <button
+              onClick={toggleTheme}
+              className="p-2 rounded-full glass border border-gold/20"
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? (
+                <Sun className="w-5 h-5 text-gold" />
+              ) : (
+                <Moon className="w-5 h-5 text-gold" />
+              )}
+            </button>
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              className="p-2 text-foreground"
+              aria-label="Toggle menu"
+            >
+              {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu */}
@@ -94,17 +108,6 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <hr className="border-border" />
-              <Link
-                href="#contact"
-                onClick={() => setIsOpen(false)}
-                className="text-muted hover:text-foreground transition-colors py-2"
-              >
-                Contact
-              </Link>
-              <button className="w-full py-3 rounded-xl bg-gold text-background font-semibold">
-                Get Started
-              </button>
             </div>
           </motion.div>
         )}

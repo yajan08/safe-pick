@@ -1,9 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { AnimatedMap } from "./animated-map";
-import { PhoneMockup } from "./phone-mockup";
-import { Shield, QrCode, MapPin } from "lucide-react";
 
 export function HeroSection() {
   const headlineWords = ["Real-Time", "Trust.", "Absolute", "Peace", "of", "Mind."];
@@ -15,108 +14,56 @@ export function HeroSection() {
 
       {/* Content */}
       <div className="relative z-20 w-full max-w-7xl mx-auto px-6 py-20 lg:py-0">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left content */}
-          <div className="space-y-8">
-            {/* Badge */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-gold/30"
-            >
-              <Shield className="w-4 h-4 text-gold" />
-              <span className="text-sm text-muted">Trusted by 500+ Schools</span>
-            </motion.div>
-
-            {/* Headline */}
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
-              {headlineWords.map((word, index) => (
-                <motion.span
-                  key={index}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.5,
-                    delay: index * 0.1,
-                  }}
-                  className={`inline-block mr-3 ${
-                    index < 2 ? "text-gold text-glow" : "text-foreground"
-                  }`}
-                >
-                  {word}
-                </motion.span>
-              ))}
-            </h1>
-
-            {/* Subheadline */}
-            <motion.p
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.7 }}
-              className="text-lg md:text-xl text-muted max-w-lg leading-relaxed"
-            >
-              Verified child pickup and drop confirmations using{" "}
-              <span className="text-gold font-medium">QR technology</span>. Know exactly
-              where your child is, every moment of their journey.
-            </motion.p>
-
-            {/* Feature pills */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.9 }}
-              className="flex flex-wrap gap-3"
-            >
-              {[
-                { icon: MapPin, text: "Live GPS Tracking" },
-                { icon: QrCode, text: "QR Verification" },
-                { icon: Shield, text: "Anti-Cheat System" },
-              ].map((feature, index) => (
-                <div
-                  key={index}
-                  className="flex items-center gap-2 px-4 py-2 rounded-full bg-ebony-light border border-border"
-                >
-                  <feature.icon className="w-4 h-4 text-gold" />
-                  <span className="text-sm text-foreground">{feature.text}</span>
-                </div>
-              ))}
-            </motion.div>
-
-            {/* CTA Buttons */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 1.1 }}
-              className="flex flex-wrap gap-4 pt-4"
-            >
-              <motion.button
-                className="group relative px-8 py-4 rounded-full bg-gold text-background font-semibold overflow-hidden"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+        <div className="max-w-2xl">
+          {/* Headline - Left aligned */}
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+            {headlineWords.map((word, index) => (
+              <motion.span
+                key={index}
+                initial={{ opacity: 0, y: 30 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{
+                  duration: 0.5,
+                  delay: index * 0.1,
+                }}
+                className={`inline-block mr-3 ${
+                  index < 2 ? "text-gold text-glow" : "text-foreground"
+                }`}
               >
-                <span className="relative z-10">Get Started Free</span>
-                <motion.div
-                  className="absolute inset-0 bg-gold-light"
-                  initial={{ x: "-100%" }}
-                  whileHover={{ x: 0 }}
-                  transition={{ duration: 0.3 }}
-                />
-              </motion.button>
+                {word}
+              </motion.span>
+            ))}
+          </h1>
+
+          {/* Subheadline */}
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.7 }}
+            className="mt-6 text-lg md:text-xl text-muted max-w-lg leading-relaxed"
+          >
+            Verified child pickup and drop confirmations using{" "}
+            <span className="text-gold font-medium">QR technology</span>. Know exactly
+            where your child is, every moment of their journey.
+          </motion.p>
+
+          {/* Watch Demo Button Only */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.9 }}
+            className="mt-10"
+          >
+            <Link href="/demo">
               <motion.button
-                className="px-8 py-4 rounded-full border border-gold/50 text-gold font-semibold hover:bg-gold/10 transition-colors"
-                whileHover={{ scale: 1.02 }}
+                className="px-10 py-4 rounded-full bg-gold text-background font-semibold text-lg"
+                whileHover={{ scale: 1.02, boxShadow: "0 0 30px rgba(201, 146, 37, 0.4)" }}
                 whileTap={{ scale: 0.98 }}
               >
                 Watch Demo
               </motion.button>
-            </motion.div>
-          </div>
-
-          {/* Right content - Phone mockup */}
-          <div className="flex justify-center lg:justify-end">
-            <PhoneMockup />
-          </div>
+            </Link>
+          </motion.div>
         </div>
       </div>
 
