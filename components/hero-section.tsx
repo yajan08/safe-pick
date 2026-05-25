@@ -2,15 +2,15 @@
 
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { AnimatedMap } from "./animated-map";
+import { RealMap } from "./real-map";
 
 export function HeroSection() {
   const headlineWords = ["Real-Time", "Trust.", "Absolute", "Peace", "of", "Mind."];
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
-      {/* Animated background map */}
-      <AnimatedMap />
+      {/* Real map background */}
+      <RealMap />
 
       {/* Content */}
       <div className="relative z-20 w-full max-w-7xl mx-auto px-6 py-20 lg:py-0">

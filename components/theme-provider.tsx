@@ -16,11 +16,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
     const savedTheme = localStorage.getItem("safepick-theme") as Theme | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
+    const initialTheme = savedTheme || "dark";
+    setTheme(initialTheme);
+    
+    // Apply theme immediately on mount
+    const root = document.documentElement;
+    if (initialTheme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
     }
+    
+    setMounted(true);
   }, []);
 
   useEffect(() => {
