@@ -107,10 +107,24 @@ const itemVariants = {
 export function Features() {
   return (
     <section className="relative z-30 py-16 sm:py-24 px-4 sm:px-6 overflow-hidden bg-background border-t border-border transition-colors duration-300">
-      {/* Background decoration */}
+      {/* Background decoration with subtle animation */}
       <div className="absolute inset-0 opacity-30 pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
+        <motion.div 
+          className="absolute top-0 left-1/4 w-96 h-96 bg-gold/10 rounded-full blur-3xl"
+          animate={{ 
+            y: [0, -20, 0],
+            scale: [1, 1.05, 1]
+          }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+        />
+        <motion.div 
+          className="absolute bottom-0 right-1/4 w-96 h-96 bg-gold/5 rounded-full blur-3xl"
+          animate={{ 
+            y: [0, 20, 0],
+            scale: [1, 1.1, 1]
+          }}
+          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+        />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">

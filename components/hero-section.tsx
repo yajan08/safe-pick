@@ -9,10 +9,34 @@ export function HeroSection() {
       {/* Real map background */}
       <RealMap />
 
+      {/* Subtle animated glow effect */}
+      <motion.div
+        className="absolute top-1/4 right-1/4 w-96 h-96 bg-gold/5 rounded-full blur-3xl pointer-events-none"
+        animate={{ 
+          scale: [1, 1.2, 1],
+          opacity: [0.3, 0.5, 0.3]
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+      />
+
       {/* Content */}
       <div className="relative z-20 w-full max-w-7xl mx-auto px-4 sm:px-6 py-12 lg:py-0">
         <div className="max-w-xl lg:max-w-2xl">
           {/* Main tagline */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-gold/10 border border-gold/20 mb-6"
+          >
+            <motion.div 
+              className="w-2 h-2 rounded-full bg-gold"
+              animate={{ scale: [1, 1.2, 1] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            />
+            <span className="text-xs sm:text-sm text-gold font-medium">Trusted by 500+ Schools</span>
+          </motion.div>
+          
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}

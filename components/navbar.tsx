@@ -40,13 +40,19 @@ export function Navbar() {
           {/* Desktop nav */}
           <div className="hidden md:flex items-center gap-8">
             {navLinks.map((link, index) => (
-              <Link
+              <motion.div
                 key={index}
-                href={link.href}
-                className="text-sm text-muted hover:text-gold transition-colors"
+                whileHover={{ y: -2 }}
+                transition={{ duration: 0.2 }}
               >
-                {link.label}
-              </Link>
+                <Link
+                  href={link.href}
+                  className="text-sm text-muted hover:text-gold transition-colors relative group"
+                >
+                  {link.label}
+                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gold group-hover:w-full transition-all duration-300" />
+                </Link>
+              </motion.div>
             ))}
           </div>
 

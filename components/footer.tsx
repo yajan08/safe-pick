@@ -160,14 +160,30 @@ export function Footer() {
 
             {/* Trust badges */}
             <div className="mt-8 space-y-3">
-              <div className="flex items-center gap-2 text-xs text-muted">
-                <Shield className="w-4 h-4 text-gold" />
+              <motion.div 
+                className="flex items-center gap-2 text-xs text-muted"
+                whileHover={{ x: 3 }}
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <Shield className="w-4 h-4 text-gold" />
+                </motion.div>
                 <span>GDPR Compliant</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs text-muted">
-                <Shield className="w-4 h-4 text-gold" />
+              </motion.div>
+              <motion.div 
+                className="flex items-center gap-2 text-xs text-muted"
+                whileHover={{ x: 3 }}
+              >
+                <motion.div
+                  animate={{ scale: [1, 1.1, 1] }}
+                  transition={{ duration: 2, repeat: Infinity, delay: 0.5 }}
+                >
+                  <Shield className="w-4 h-4 text-gold" />
+                </motion.div>
                 <span>256-bit Encryption</span>
-              </div>
+              </motion.div>
             </div>
           </motion.div>
         </motion.div>
