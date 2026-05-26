@@ -97,7 +97,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 9 Complete - Registration Overhaul & Driver UI Polish**
+## 📈 Current Status: **Phase 10 Complete - Trip State Machine & QR Fan-Out Logging**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -157,12 +157,19 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
     - Redesigned `DriverDashboard` with high-contrast summary cards ("Total Trips", "Pending Today") and accessible trip list items.
     - Restructured `TripDetailScreen` into a clear hierarchy: Status Banner, Details & Edit, Map Placeholder, Target Schools Summary (dynamically derived from manifest), and a staggered animated Student Roster List with colored status chips.
     - Added massive high-contrast FAB for QR scanning when trips are in progress.
-15. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
+15. **Trip Execution State Machine & QR Logging (Phase 10):**
+    - Created `DailySessionModel` to support pause/resume/end states.
+    - Created `AttendanceModel` nested within sessions for detailed boarding/alighting timestamps.
+    - Created `StudentRideLogModel` for a Fan-out write to `students/{student_id}/ride_history`.
+    - Updated `TripService` to manage session state (`pauseDailySession`, `resumeDailySession`, `endDailySession`).
+    - Implemented `processQrScan` with Firestore Batch Writes to synchronously update attendance, manifest status, and student ride history.
+    - Overhauled `TripDetailScreen` action buttons to dynamically reflect and control the active session state.
+    - Integrated `mobile_scanner` and built `QRScannerScreen` accessible via the massive FAB on active trips.
+    - Added `TripHistoryScreen` accessible from `DriverDashboard` to view completed trips.
+16. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
 
 ---
 
 ## 🎯 Next Tasks
-- **QR Code Scanner Integration:** Connect the placeholder button on each student card in the manifest list to open a barcode camera scanner, updating attendance subcollections upon scanning.
 - **MQTT Real-Time Location Stream:** Wire the driver location publishing streams and MQTT map listeners.
 - **Admin Dashboard:** Build school admin role with dashboard filtered by `managed_school_id`.
-

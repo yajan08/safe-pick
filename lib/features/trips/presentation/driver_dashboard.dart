@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../data/trip_model.dart';
 import 'trip_detail_screen.dart';
 import 'create_trip_screen.dart';
+import 'trip_history_screen.dart';
 
 /// Real-time stream provider that fetches all trips assigned to the logged-in driver.
 final driverTripsProvider = StreamProvider<List<TripModel>>((ref) {
@@ -101,6 +102,16 @@ class DriverDashboard extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Driver Dashboard'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.history_rounded),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const TripHistoryScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout_rounded),
             onPressed: () => _handleSignOut(context, ref),

@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/auth_service.dart';
 import 'trip_manifest_model.dart';
+import '../../students/data/student_ride_log_model.dart';
+import 'daily_session_model.dart';
 
 /// Riverpod provider for the [TripService] instance.
 final tripServiceProvider = Provider<TripService>((ref) {
@@ -15,6 +17,30 @@ final tripServiceProvider = Provider<TripService>((ref) {
 final tripManifestProvider = StreamProvider.family<List<TripManifestModel>, String>((ref, tripId) {
   final tripService = ref.watch(tripServiceProvider);
   return tripService.streamTripManifest(tripId);
+});
+
+/// Riverpod StreamProvider family that streams a daily session by trip ID.
+final activeSessionProvider = StreamProvider.family<DailySessionModel?, String>((ref, tripId) {
+  final firestore = ref.watch(firestoreProvider);
+  final auth = ref.watch(firebaseAuthProvider);
+  
+  if (auth.currentUser == null) return Stream.value(null);
+
+  final now = DateTime.now();
+  final dateString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+  return firestore
+      .collection('daily_sessions')
+      .where('trip_id', isEqualTo: tripId)
+      .where('driver_uid', isEqualTo: auth.currentUser!.uid)
+      .where('date', isEqualTo: dateString)
+      .snapshots()
+      .map((snapshot) {
+        if (snapshot.docs.isEmpty) return null;
+        // Assume the most recent one for today if multiple exist
+        final doc = snapshot.docs.first;
+        return DailySessionModel.fromJson(doc.data(), doc.id);
+      });
 });
 
 /// Service class responsible for Firestore Trip and Manifest operations.
@@ -63,14 +89,123 @@ class TripService {
         'start_time': Timestamp.fromDate(now),
       };
 
-      await docRef.set(sessionData);
-      
-      // Update the active trip's status to active in Firestore (optional helper)
-      await _firestore.collection('trips').doc(tripId).update({'status': 'active'});
+      final batch = _firestore.batch();
+      batch.set(docRef, sessionData);
+      batch.update(_firestore.collection('trips').doc(tripId), {'status': 'active'});
 
+      // Initialize attendance records from manifest
+      final manifestDocs = await _firestore.collection('trips').doc(tripId).collection('trip_manifest').get();
+      for (var manifestDoc in manifestDocs.docs) {
+        final studentId = manifestDoc.id;
+        final attendanceRef = docRef.collection('attendance').doc(studentId);
+        batch.set(attendanceRef, {
+          'status': 'pending',
+        });
+      }
+
+      await batch.commit();
       return sessionId;
     } catch (e) {
       throw 'Failed to start trip: $e';
     }
+  }
+
+  Future<void> pauseDailySession(String sessionId) async {
+    await _firestore.collection('daily_sessions').doc(sessionId).update({'status': 'paused'});
+  }
+
+  Future<void> resumeDailySession(String sessionId) async {
+    await _firestore.collection('daily_sessions').doc(sessionId).update({'status': 'in_progress'});
+  }
+
+  Future<void> endDailySession(String sessionId, String tripId) async {
+    final batch = _firestore.batch();
+    batch.update(_firestore.collection('daily_sessions').doc(sessionId), {
+      'status': 'completed',
+      'end_time': Timestamp.fromDate(DateTime.now()),
+    });
+    batch.update(_firestore.collection('trips').doc(tripId), {'status': 'completed'});
+    await batch.commit();
+  }
+
+  /// Process a QR Scan event using Firestore Batch Writes (Fan-out)
+  Future<void> processQrScan(String studentId, String sessionId) async {
+    final sessionRef = _firestore.collection('daily_sessions').doc(sessionId);
+    final attendanceRef = sessionRef.collection('attendance').doc(studentId);
+    
+    // We need some trip info to populate the ride log
+    final sessionSnap = await sessionRef.get();
+    if (!sessionSnap.exists) throw 'Active trip session not found.';
+    final tripId = sessionSnap.data()?['trip_id'] as String? ?? '';
+    final dateString = sessionSnap.data()?['date'] as String? ?? '';
+    final driverUid = sessionSnap.data()?['driver_uid'] as String? ?? '';
+
+    // Fetch trip details
+    final tripSnap = await _firestore.collection('trips').doc(tripId).get();
+    final tripName = tripSnap.data()?['trip_name'] as String? ?? 'Unknown Trip';
+
+    // Fetch driver details
+    final driverSnap = await _firestore.collection('users').doc(driverUid).get();
+    final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
+    final vehicleNumber = driverSnap.data()?['vehicle_number'] as String? ?? '';
+
+    // Fetch current attendance
+    final attendanceSnap = await attendanceRef.get();
+    if (!attendanceSnap.exists) {
+      throw 'Student $studentId is not on this trip\'s manifest.';
+    }
+
+    final currentStatus = attendanceSnap.data()?['status'] as String? ?? 'pending';
+    final rideHistoryRef = _firestore.collection('students').doc(studentId).collection('ride_history').doc(sessionId);
+
+    final batch = _firestore.batch();
+    final now = Timestamp.fromDate(DateTime.now());
+
+    if (currentStatus == 'pending') {
+      // Boarding
+      batch.update(attendanceRef, {
+        'status': 'onboarded',
+        'boarded_at': now,
+      });
+
+      // Update manifest for UI sync
+      batch.update(_firestore.collection('trips').doc(tripId).collection('trip_manifest').doc(studentId), {
+        'status': 'onboarded',
+      });
+
+      // Create ride history entry
+      final rideLog = StudentRideLogModel(
+        logId: sessionId,
+        sessionId: sessionId,
+        tripName: tripName,
+        driverName: driverName,
+        vehicleNumber: vehicleNumber,
+        date: dateString,
+        boardedAt: now.toDate(),
+        status: 'onboarded',
+      );
+      batch.set(rideHistoryRef, rideLog.toJson());
+    } else if (currentStatus == 'onboarded') {
+      // Alighting
+      batch.update(attendanceRef, {
+        'status': 'dropped',
+        'alighted_at': now,
+      });
+
+      // Update manifest for UI sync
+      batch.update(_firestore.collection('trips').doc(tripId).collection('trip_manifest').doc(studentId), {
+        'status': 'dropped',
+      });
+
+      // Update ride history entry
+      batch.update(rideHistoryRef, {
+        'status': 'dropped',
+        'alighted_at': now,
+      });
+    } else {
+      throw 'Student has already been dropped off or is marked absent.';
+    }
+
+    await batch.commit();
   }
 }
