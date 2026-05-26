@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../students/presentation/parent_dashboard.dart';
+import '../../trips/presentation/driver_dashboard.dart';
 import 'login_screen.dart';
 
 /// Future provider that fetches the user's role from Firestore using their UID.
@@ -13,7 +15,7 @@ final userRoleProvider = FutureProvider.family<String, String>((ref, uid) async 
 
 /// A gatekeeper widget that routes the user based on their authentication state.
 /// - If not logged in -> routes to [LoginScreen].
-/// - If logged in -> fetches user role from Firestore and routes to corresponding dashboard shell.
+/// - If logged in -> fetches user role from Firestore and routes to corresponding dashboard.
 class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
 
@@ -33,7 +35,16 @@ class AuthGate extends ConsumerWidget {
 
         return roleAsync.when(
           data: (role) {
-            // Once the role is fetched, return the temporary welcome screen
+            final normalizedRole = role.toLowerCase().trim();
+            
+            // Route user depending on Firestore role
+            if (normalizedRole == 'driver') {
+              return const DriverDashboard();
+            } else if (normalizedRole == 'parent') {
+              return const ParentDashboard();
+            }
+            
+            // Fallback for Admin or unknown roles
             return Scaffold(
               body: SafeArea(
                 child: Padding(
@@ -43,7 +54,6 @@ class AuthGate extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const Spacer(),
-                      // Center branding and role welcome
                       Center(
                         child: Column(
                           children: [
@@ -54,7 +64,7 @@ class AuthGate extends ConsumerWidget {
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                _getRoleIcon(role),
+                                Icons.admin_panel_settings_rounded,
                                 color: theme.colorScheme.primary,
                                 size: 56,
                               ),
@@ -76,11 +86,9 @@ class AuthGate extends ConsumerWidget {
                         ),
                       ),
                       const Spacer(),
-                      // Sign Out button for testing convenience
                       OutlinedButton.icon(
                         onPressed: () async {
                           try {
-                            // Invalidate the role provider cache to ensure fresh fetch next time
                             ref.invalidate(userRoleProvider(user.uid));
                             await ref.read(authServiceProvider).signOut();
                           } catch (e) {
@@ -109,13 +117,13 @@ class AuthGate extends ConsumerWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const CircularProgressIndicator(
+                  CircularProgressIndicator(
                     valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
                   ),
                   const SizedBox(height: 24),
                   Text(
                     'Loading account profile...',
-                    style: theme.textTheme.bodyMedium?.copyWith(
+                    style: TextStyle(
                       color: AppTheme.textGrey,
                       fontWeight: FontWeight.w500,
                     ),
@@ -163,7 +171,6 @@ class AuthGate extends ConsumerWidget {
                       const SizedBox(height: 32),
                       ElevatedButton(
                         onPressed: () {
-                          // Retry fetching role
                           ref.invalidate(userRoleProvider(user.uid));
                         },
                         child: const Text('Retry Fetch'),
@@ -240,17 +247,5 @@ class AuthGate extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  IconData _getRoleIcon(String role) {
-    switch (role.toLowerCase()) {
-      case 'driver':
-        return Icons.directions_bus_rounded;
-      case 'admin':
-        return Icons.admin_panel_settings_rounded;
-      case 'parent':
-      default:
-        return Icons.family_restroom_rounded;
-    }
   }
 }

@@ -61,6 +61,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
   - `trip_type`: String (`pickup` | `dropoff`)
   - `school_ids`: Array of Strings (IDs of schools visited on this route)
   - `status`: String (`active` | `inactive` | `completed`)
+  - `estimated_duration`: String (estimated travel duration)
 
 #### `trips/{trip_id}/trip_manifest`
 - **Path:** `/trips/{trip_id}/trip_manifest/{student_id}`
@@ -90,28 +91,31 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 2.1 Complete - Registration & User Profile Synced**
+## 📈 Current Status: **Phase 3 Complete - Role Dashboards Configured**
 
 ### Completed Milestones:
-1. **Workspace Cleanup (Phase 1):** Successfully purged all Next.js/Web template files and directories.
-2. **Flutter Initialization (Phase 1):** Run `flutter create` using org `com.safepick` and project name `safe_pick`.
-3. **Strict Color Theme Applied (Phase 1/Pre-Flight):** Configured `app_theme.dart` to strictly enforce the brand guidelines (Gold `#C1942B`, black backgrounds, white text).
-4. **User Model (Phase 2):** Designed immutable `UserModel` in [user_model.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/data/user_model.dart) with native Firestore `Timestamp` serialization.
-5. **Authentication Services (Phase 2 & 2.1):** 
-   - Exposes Riverpod streams monitoring authorization state changes.
-   - Implemented `signIn(email, password)` and `signOut()`.
-   - Coded `getUserRole(uid)` querying Firestore collections.
-   - Added `signUp({required email, required password, required name, required phone, required role})` which creates a Firebase Auth user credential, translates it to a `UserModel` with `'active'` status and native timestamp date, and writes it directly to the `/users/{uid}` collection.
-6. **Branded Login & Sign-Up UI Screens (Phase 2 & 2.1):** 
-   - Validiated inputs, loading buttons, and snackbars.
-   - Integrated [sign_up_screen.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/sign_up_screen.dart) for registering Parents and Drivers.
-   - Appended routing buttons at the bottom of the screens to allow swapping between Sign In and Sign Up structures.
-7. **Auth Gate Router (Phase 2):** Programmed [auth_gate.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/auth_gate.dart) which routes signed-out users to `LoginScreen`, and queries and welcomes authenticated users depending on their retrieved Firestore user role.
-8. **Testing Checks:** Clean analysis (`flutter analyze` - No issues found) and automated unit test coverage passing 100%.
+1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
+2. **Flutter Setup (Phase 1):** Initialized standard Flutter package structure.
+3. **Core Premium Dark Theme (Phase 1):** Standardized color scheme (Gold `#C1942B`, black backgrounds, white text).
+4. **Auth Layer (Phase 2 & 2.1):** 
+   - Created `UserModel`.
+   - Coded `AuthService` handling sign-in, sign-up, sign-out, and firestore profile document creation.
+   - Built custom validated `LoginScreen` and `SignUpScreen` UIs.
+5. **Data Models (Phase 3):**
+   - Created `StudentModel` in [student_model.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/students/data/student_model.dart) matching students collection.
+   - Created `TripModel` in [trip_model.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/trips/data/trip_model.dart) matching trips collection.
+6. **Parent Dashboard (Phase 3):**
+   - Coded [parent_dashboard.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/students/presentation/parent_dashboard.dart) using Riverpod `parentStudentsProvider` to listen to real-time updates where `parent_uid == currentUser.uid`.
+   - Renders child cards detailing grade, status, and expandable stats (attendance rate, trip totals).
+7. **Driver Dashboard (Phase 3):**
+   - Coded [driver_dashboard.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/trips/presentation/driver_dashboard.dart) using Riverpod `driverTripsProvider` to track assigned routes where `driver_uid == currentUser.uid`.
+   - Renders trip card detailing route name, type (pickup/dropoff), status, duration, and route initiation controls.
+8. **AuthGate Router Upgrade (Phase 3):**
+   - Modified [auth_gate.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/auth_gate.dart) to route users directly to their corresponding dashboards depending on their Firestore user profile role.
+9. **Testing & Checks:** Zero issues/warnings on `flutter analyze` and widget tests passing 100%.
 
 ---
 
-## 🎯 Next Tasks (Phase 3)
-- **Dashboard Interfaces:** Build the layout for Driver Dashboard (van control panel, passenger manifest list) and Parent Dashboard (live tracking details, student status cards).
-- **MQTT/EMQX Tracking Hooks:** Connect MQTT listeners inside UI structures for active locations updates.
-- **Attendance Logging:** Implement check-in/check-out buttons writing directly to the `attendance` Firestore sub-collections.
+## 🎯 Next Tasks (Phase 4)
+- **MQTT Real-Time Location stream:** Wire the driver location publishing streams and MQTT map listeners.
+- **Attendance Check-In Events:** Build check-in/check-out scanners/buttons inside the Driver's Passenger Manifest view.
