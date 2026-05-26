@@ -8,6 +8,7 @@ import '../../profile/presentation/parent_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 import '../../../core/services/telemetry_consumer.dart';
 import '../../../core/services/mqtt_service.dart';
+import 'live_tracking_map_screen.dart';
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
 final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
@@ -374,15 +375,25 @@ class ParentDashboard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isInVan ? 'Opening Live Tracking Map... (Coming Soon)' : 'Trip not started yet.',
+        if (isInVan && sessionId.isNotEmpty) {
+          // Navigate to full-screen live tracking map
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => LiveTrackingMapScreen(
+                student: student,
+                sessionId: sessionId,
+              ),
             ),
-            backgroundColor: isInVan ? AppTheme.primaryGold : AppTheme.textSecondary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Live tracking is available once the trip starts.'),
+              backgroundColor: AppTheme.textSecondary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       },
       child: Container(
         height: 200,
@@ -461,6 +472,30 @@ class ParentDashboard extends ConsumerWidget {
                     ],
                   ),
                   error: (e, _) => Text('Signal error: $e', style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.errorRed)),
+                ),
+                const SizedBox(height: 10),
+                // Tap CTA
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryGold,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.open_in_new_rounded, color: Colors.white, size: 14),
+                      SizedBox(width: 6),
+                      Text(
+                        'Open Full Map',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ] else ...[                
                 Text(

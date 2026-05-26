@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 
 @immutable
@@ -9,6 +10,7 @@ class TripManifestModel {
   final int stopOrder;
   final String status; // 'pending' | 'onboarded' | 'dropped' | 'absent'
   final String expectedTime; // e.g. "07:30 AM"
+  final GeoPoint? homeLocation; // Student's home GPS coordinates
 
   const TripManifestModel({
     required this.studentId,
@@ -18,6 +20,7 @@ class TripManifestModel {
     required this.stopOrder,
     required this.status,
     required this.expectedTime,
+    this.homeLocation,
   });
 
   /// Factory constructor to create a TripManifestModel from a Map
@@ -30,6 +33,7 @@ class TripManifestModel {
       stopOrder: json['stop_order'] as int? ?? 0,
       status: json['status'] as String? ?? 'pending',
       expectedTime: json['expected_time'] as String? ?? '07:30 AM',
+      homeLocation: json['home_location'] as GeoPoint?,
     );
   }
 
@@ -54,6 +58,7 @@ class TripManifestModel {
     int? stopOrder,
     String? status,
     String? expectedTime,
+    GeoPoint? homeLocation,
   }) {
     return TripManifestModel(
       studentId: studentId ?? this.studentId,
@@ -63,6 +68,7 @@ class TripManifestModel {
       stopOrder: stopOrder ?? this.stopOrder,
       status: status ?? this.status,
       expectedTime: expectedTime ?? this.expectedTime,
+      homeLocation: homeLocation ?? this.homeLocation,
     );
   }
 

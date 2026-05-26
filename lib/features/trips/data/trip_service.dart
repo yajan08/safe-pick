@@ -60,6 +60,46 @@ final sessionAttendanceProvider = StreamProvider.family<Map<String, String>, Str
       });
 });
 
+/// Enriches the trip manifest with each student's home_location GeoPoint.
+/// Fetches each student document once and merges the coordinate data.
+/// Used by the driver map to render home-pin markers.
+final manifestWithLocationsProvider =
+    FutureProvider.family<List<TripManifestModel>, String>((ref, tripId) async {
+  final firestore = ref.watch(firestoreProvider);
+
+  // 1. Get manifest list
+  final manifestSnap = await firestore
+      .collection('trips')
+      .doc(tripId)
+      .collection('trip_manifest')
+      .orderBy('stop_order')
+      .get();
+
+  final List<TripManifestModel> enriched = [];
+
+  for (final doc in manifestSnap.docs) {
+    var model = TripManifestModel.fromJson(doc.data(), doc.id);
+
+    // 2. Fetch the matching student document for their home_location
+    try {
+      final studentSnap =
+          await firestore.collection('students').doc(doc.id).get();
+      if (studentSnap.exists) {
+        final loc = studentSnap.data()?['home_location'];
+        if (loc != null) {
+          model = model.copyWith(homeLocation: loc as GeoPoint);
+        }
+      }
+    } catch (_) {
+      // If a student doc is missing, skip silently — map still renders
+    }
+
+    enriched.add(model);
+  }
+
+  return enriched;
+});
+
 /// Service class responsible for Firestore Trip and Manifest operations.
 class TripService {
   final FirebaseFirestore _firestore;

@@ -7,6 +7,7 @@ import '../data/trip_service.dart';
 import '../data/trip_manifest_model.dart';
 import '../data/daily_session_model.dart';
 import 'qr_scanner_screen.dart';
+import 'trip_map_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/location_broadcaster.dart';
@@ -246,8 +247,8 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                 _buildTripDetailsCard(theme, trip, session),
                                 const SizedBox(height: 16),
 
-                                // 3. Map Placeholder
-                                _buildMapPlaceholder(theme),
+                                // 3. Map Card — tappable, opens real map
+                                _buildMapCard(theme, trip, session),
                                 const SizedBox(height: 16),
 
                                 // 4. Target Schools Summary
@@ -581,49 +582,72 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   // ─── 3. Map Placeholder ────────────────────────────────
-  Widget _buildMapPlaceholder(ThemeData theme) {
+  // ─── 3. Map Card ────────────────────────────────────────
+  Widget _buildMapCard(ThemeData theme, TripModel trip, DailySessionModel? session) {
+    final isActive = session?.status == 'in_progress' || session?.status == 'paused';
     return GestureDetector(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Map View loading... (Coming Soon)'),
-            backgroundColor: AppTheme.primaryGold,
-            behavior: SnackBarBehavior.floating,
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => TripMapScreen(
+              tripId: widget.tripId,
+              tripName: trip.tripName,
+            ),
           ),
         );
       },
       child: Container(
         height: 160,
         decoration: BoxDecoration(
-          color: const Color(0xFFF0F0F0),
+          color: isActive ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border),
+          border: Border.all(
+            color: isActive ? AppTheme.primaryGold.withValues(alpha: 0.6) : AppTheme.border,
+            width: isActive ? 1.5 : 1,
+          ),
         ),
         child: Stack(
           children: [
-            CustomPaint(
-              size: const Size(double.infinity, 160),
-              painter: _MapGridPainter(),
+            // Grid background hint
+            ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: CustomPaint(
+                size: const Size(double.infinity, 160),
+                painter: _MapGridPainter(),
+              ),
             ),
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(12),
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                    ),
+                  ],
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.map_rounded, color: AppTheme.primaryGold, size: 24),
-                    const SizedBox(width: 8),
+                    Icon(
+                      isActive ? Icons.gps_fixed_rounded : Icons.map_rounded,
+                      color: AppTheme.primaryGold,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 10),
                     Text(
-                      'View Live Map',
+                      isActive ? 'Open Live Map' : 'View Student Stops',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppTheme.textPrimary,
                       ),
                     ),
+                    const SizedBox(width: 6),
+                    const Icon(Icons.arrow_forward_ios_rounded,
+                        color: AppTheme.primaryGold, size: 14),
                   ],
                 ),
               ),

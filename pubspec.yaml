@@ -53,6 +53,8 @@ dependencies:
   path: ^1.9.1
   path_provider: ^2.1.5
   shimmer: ^3.0.0
+  flutter_map: ^7.0.2          # OpenStreetMap tile rendering — no API key needed
+  latlong2: ^0.9.1             # LatLng type for flutter_map markers
 
 dev_dependencies:
   flutter_test:
