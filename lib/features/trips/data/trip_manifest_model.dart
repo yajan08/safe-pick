@@ -5,14 +5,16 @@ class TripManifestModel {
   final String studentId;
   final String schoolId;
   final String name;
+  final String schoolName;
   final int stopOrder;
-  final String status; // 'active' | 'absent' | 'skipped'
+  final String status; // 'pending' | 'onboarded' | 'dropped' | 'absent'
   final String expectedTime; // e.g. "07:30 AM"
 
   const TripManifestModel({
     required this.studentId,
     required this.schoolId,
     required this.name,
+    this.schoolName = '',
     required this.stopOrder,
     required this.status,
     required this.expectedTime,
@@ -24,8 +26,9 @@ class TripManifestModel {
       studentId: id,
       schoolId: json['school_id'] as String? ?? '',
       name: json['name'] as String? ?? '',
+      schoolName: json['school_name'] as String? ?? '',
       stopOrder: json['stop_order'] as int? ?? 0,
-      status: json['status'] as String? ?? 'active',
+      status: json['status'] as String? ?? 'pending',
       expectedTime: json['expected_time'] as String? ?? '07:30 AM',
     );
   }
@@ -35,6 +38,7 @@ class TripManifestModel {
     return {
       'school_id': schoolId,
       'name': name,
+      'school_name': schoolName,
       'stop_order': stopOrder,
       'status': status,
       'expected_time': expectedTime,
@@ -46,6 +50,7 @@ class TripManifestModel {
     String? studentId,
     String? schoolId,
     String? name,
+    String? schoolName,
     int? stopOrder,
     String? status,
     String? expectedTime,
@@ -54,6 +59,7 @@ class TripManifestModel {
       studentId: studentId ?? this.studentId,
       schoolId: schoolId ?? this.schoolId,
       name: name ?? this.name,
+      schoolName: schoolName ?? this.schoolName,
       stopOrder: stopOrder ?? this.stopOrder,
       status: status ?? this.status,
       expectedTime: expectedTime ?? this.expectedTime,
@@ -62,6 +68,6 @@ class TripManifestModel {
 
   @override
   String toString() {
-    return 'TripManifestModel(studentId: $studentId, schoolId: $schoolId, name: $name, stopOrder: $stopOrder, status: $status)';
+    return 'TripManifestModel(studentId: $studentId, schoolId: $schoolId, name: $name, schoolName: $schoolName, stopOrder: $stopOrder, status: $status)';
   }
 }

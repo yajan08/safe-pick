@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 
@@ -16,8 +17,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _phoneController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _vehicleNumberController = TextEditingController();
 
   String _selectedRole = 'Parent';
+  String _selectedGender = 'Male';
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -27,6 +30,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     _phoneController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
+    _vehicleNumberController.dispose();
     super.dispose();
   }
 
@@ -45,6 +49,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         name: _nameController.text,
         phone: _phoneController.text,
         role: _selectedRole,
+        gender: _selectedGender,
+        vehicleNumber: _selectedRole == 'Driver' ? _vehicleNumberController.text : null,
       );
 
       // On success, AuthGate handles routing automatically.
@@ -79,6 +85,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDriver = _selectedRole == 'Driver';
 
     return Scaffold(
       appBar: AppBar(
@@ -104,13 +111,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     letterSpacing: -0.5,
                   ),
                   textAlign: TextAlign.center,
-                ),
+                ).animate().fade().slideY(begin: -0.1),
                 const SizedBox(height: 8),
                 Text(
                   'Register to track rides and manage check-ins',
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
-                ),
+                ).animate().fade(delay: 100.ms).slideY(begin: -0.1),
                 const SizedBox(height: 36),
 
                 // Registration Form Card
@@ -122,6 +129,35 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          // Role Dropdown Selection
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedRole,
+                            decoration: const InputDecoration(
+                              labelText: 'Select Role',
+                              prefixIcon: Icon(Icons.badge_outlined),
+                            ),
+                            dropdownColor: AppTheme.surface,
+                            style: theme.textTheme.bodyLarge?.copyWith(color: AppTheme.textPrimary),
+                            items: const [
+                              DropdownMenuItem(
+                                value: 'Parent',
+                                child: Text('Parent'),
+                              ),
+                              DropdownMenuItem(
+                                value: 'Driver',
+                                child: Text('Driver'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _selectedRole = value;
+                                });
+                              }
+                            },
+                          ).animate().fade(delay: 150.ms),
+                          const SizedBox(height: 18),
+
                           // Full Name Input
                           TextFormField(
                             controller: _nameController,
@@ -141,8 +177,59 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               }
                               return null;
                             },
-                          ),
+                          ).animate().fade(delay: 200.ms),
                           const SizedBox(height: 18),
+                          
+                          // Gender Dropdown
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedGender,
+                            decoration: const InputDecoration(
+                              labelText: 'Gender',
+                              prefixIcon: Icon(Icons.wc_rounded),
+                            ),
+                            dropdownColor: AppTheme.surface,
+                            style: theme.textTheme.bodyLarge?.copyWith(color: AppTheme.textPrimary),
+                            items: const [
+                              DropdownMenuItem(value: 'Male', child: Text('Male')),
+                              DropdownMenuItem(value: 'Female', child: Text('Female')),
+                              DropdownMenuItem(value: 'Other', child: Text('Other')),
+                            ],
+                            onChanged: (value) {
+                              if (value != null) {
+                                setState(() {
+                                  _selectedGender = value;
+                                });
+                              }
+                            },
+                          ).animate().fade(delay: 250.ms),
+                          const SizedBox(height: 18),
+
+                          // Dynamic Vehicle Number for Driver
+                          AnimatedSize(
+                            duration: 300.ms,
+                            curve: Curves.easeInOut,
+                            child: isDriver
+                                ? Padding(
+                                    padding: const EdgeInsets.only(bottom: 18.0),
+                                    child: TextFormField(
+                                      controller: _vehicleNumberController,
+                                      textCapitalization: TextCapitalization.characters,
+                                      textInputAction: TextInputAction.next,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Vehicle Number',
+                                        hintText: 'e.g. MH12AB1234',
+                                        prefixIcon: Icon(Icons.directions_car_rounded),
+                                      ),
+                                      validator: (value) {
+                                        if (isDriver && (value == null || value.trim().isEmpty)) {
+                                          return 'Please enter your vehicle number';
+                                        }
+                                        return null;
+                                      },
+                                    ).animate().fade(),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
 
                           // Phone Number Input
                           TextFormField(
@@ -165,7 +252,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               }
                               return null;
                             },
-                          ),
+                          ).animate().fade(delay: 300.ms),
                           const SizedBox(height: 18),
 
                           // Email Input
@@ -190,14 +277,14 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               }
                               return null;
                             },
-                          ),
+                          ).animate().fade(delay: 350.ms),
                           const SizedBox(height: 18),
 
                           // Password Input
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            textInputAction: TextInputAction.next,
+                            textInputAction: TextInputAction.done,
                             decoration: InputDecoration(
                               labelText: 'Password',
                               hintText: 'Create a password',
@@ -225,36 +312,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               }
                               return null;
                             },
-                          ),
-                          const SizedBox(height: 18),
-
-                          // Role Dropdown Selection
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedRole,
-                            decoration: const InputDecoration(
-                              labelText: 'Select Role',
-                              prefixIcon: Icon(Icons.badge_outlined),
-                            ),
-                            dropdownColor: AppTheme.surface,
-                            style: theme.textTheme.bodyLarge,
-                            items: const [
-                              DropdownMenuItem(
-                                value: 'Parent',
-                                child: Text('Parent'),
-                              ),
-                              DropdownMenuItem(
-                                value: 'Driver',
-                                child: Text('Driver'),
-                              ),
-                            ],
-                            onChanged: (value) {
-                              if (value != null) {
-                                setState(() {
-                                  _selectedRole = value;
-                                });
-                              }
-                            },
-                          ),
+                          ).animate().fade(delay: 400.ms),
                           const SizedBox(height: 28),
 
                           // Submit Sign Up Button
@@ -272,12 +330,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                     ),
                                   )
                                 : const Text('Sign Up'),
-                          ),
+                          ).animate().fade(delay: 450.ms).scale(begin: const Offset(0.95, 0.95)),
                         ],
                       ),
                     ),
                   ),
-                ),
+                ).animate().fade(delay: 150.ms).slideY(begin: 0.1),
                 const SizedBox(height: 24),
 
                 // Log In Navigation Link
@@ -299,7 +357,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       ),
                     ),
                   ],
-                ),
+                ).animate().fade(delay: 500.ms),
               ],
             ),
           ),

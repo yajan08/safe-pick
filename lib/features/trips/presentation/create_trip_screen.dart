@@ -166,6 +166,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
           expectedTime: formattedTime, // Simplified for now
           status: 'pending',
           schoolId: student.schoolId,
+          schoolName: student.schoolName,
           name: student.name,
         );
         batch.set(manifestRef, manifestModel.toJson());

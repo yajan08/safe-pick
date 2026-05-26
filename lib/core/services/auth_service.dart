@@ -57,6 +57,8 @@ class AuthService {
     required String name,
     required String phone,
     required String role,
+    String gender = '',
+    String? vehicleNumber,
   }) async {
     try {
       final credential = await _auth.createUserWithEmailAndPassword(
@@ -71,6 +73,8 @@ class AuthService {
         phone: phone.trim(),
         status: 'active',
         createdAt: DateTime.now(),
+        gender: gender,
+        vehicleNumber: vehicleNumber,
       );
 
       await _firestore.collection('users').doc(credential.user!.uid).set(user.toJson());

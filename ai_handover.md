@@ -97,7 +97,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 8 Complete - Parent Profile, QR Codes, & Dashboard Cleanup**
+## 📈 Current Status: **Phase 9 Complete - Registration Overhaul & Driver UI Polish**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -151,7 +151,13 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
     - Created [student_detail_screen.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/profile/presentation/student_detail_screen.dart) — shows full student details with a visual QR code (`QrImageView`) encoding the `student_id` (e.g., `SP1005`). Includes Edit and Remove actions.
     - Cleaned up `ParentDashboard`: removed FAB, removed sign out and remove button. Added a Profile avatar icon in AppBar that navigates to `ParentProfileScreen`.
     - Dashboard now strictly focuses on child status monitoring (selector, status card, ETA card, map placeholder).
-14. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
+14. **Registration Overhaul & Driver UI Polish (Phase 9):**
+    - Updated `UserModel` and `AuthService` to include `gender` and `vehicleNumber` (nullable, for drivers).
+    - Overhauled `SignUpScreen` with dynamic form fields (Vehicle Number appears when Driver role is selected).
+    - Redesigned `DriverDashboard` with high-contrast summary cards ("Total Trips", "Pending Today") and accessible trip list items.
+    - Restructured `TripDetailScreen` into a clear hierarchy: Status Banner, Details & Edit, Map Placeholder, Target Schools Summary (dynamically derived from manifest), and a staggered animated Student Roster List with colored status chips.
+    - Added massive high-contrast FAB for QR scanning when trips are in progress.
+15. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
 
 ---
 

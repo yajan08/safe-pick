@@ -141,7 +141,7 @@ class DriverDashboard extends ConsumerWidget {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        _buildSummaryTile(theme, totalTrips, pendingTrips),
+                        _buildSummaryCards(theme, totalTrips, pendingTrips),
                         const SizedBox(height: 24),
                         Expanded(
                           child: ListView.builder(
@@ -189,49 +189,54 @@ class DriverDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildSummaryTile(ThemeData theme, int total, int pending) {
+  Widget _buildSummaryCards(ThemeData theme, int total, int pending) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildSingleSummaryCard(theme, 'Total Trips', total.toString()),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: _buildSingleSummaryCard(theme, 'Pending Today', pending.toString()),
+        ),
+      ],
+    ).animate().fade(delay: 200.ms).scale(begin: const Offset(0.9, 0.9));
+  }
+
+  Widget _buildSingleSummaryCard(ThemeData theme, String label, String value) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
       decoration: BoxDecoration(
-        color: AppTheme.primaryGold,
+        color: const Color(0xFF2C2C2C), // Dark grey background
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.primaryGold.withValues(alpha: 0.3),
-            blurRadius: 10,
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
         children: [
-          _buildSummaryItem(theme, 'Total Trips', total.toString()),
-          Container(width: 1, height: 40, color: AppTheme.background.withValues(alpha: 0.3)),
-          _buildSummaryItem(theme, 'Pending', pending.toString()),
+          Text(
+            value,
+            style: theme.textTheme.displaySmall?.copyWith(
+              color: AppTheme.primaryGold, // Bright amber accents
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: theme.textTheme.titleMedium?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
         ],
       ),
-    ).animate().fade(delay: 200.ms).scale(begin: const Offset(0.9, 0.9));
-  }
-
-  Widget _buildSummaryItem(ThemeData theme, String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: theme.textTheme.headlineMedium?.copyWith(
-            color: AppTheme.background,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: theme.textTheme.labelLarge?.copyWith(
-            color: AppTheme.background.withValues(alpha: 0.8),
-          ),
-        ),
-      ],
     );
   }
 
@@ -250,110 +255,79 @@ class DriverDashboard extends ConsumerWidget {
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
         decoration: BoxDecoration(
           color: AppTheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border, width: 1),
+          border: Border.all(color: AppTheme.border, width: 2), // Thicker border for contrast
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Route Title
                 Expanded(
-                  child: Text(
-                    trip.tripName,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        trip.tripName,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(
+                            isPickup ? Icons.login_rounded : Icons.logout_rounded,
+                            color: AppTheme.primaryGold,
+                            size: 24,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            isPickup ? 'Morning Pick-Up' : 'Afternoon Drop-Off',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
-                // Status Badge
+                // Large Status Badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: isCompleted
-                        ? AppTheme.successGreen.withValues(alpha: 0.15)
+                        ? AppTheme.successGreen
                         : isActive
-                            ? AppTheme.primaryGold.withValues(alpha: 0.15)
-                            : AppTheme.textSecondary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
+                            ? AppTheme.primaryGold
+                            : const Color(0xFFE0E0E0),
+                    borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
                     trip.status.toUpperCase(),
-                    style: theme.textTheme.labelLarge?.copyWith(
-                      color: isCompleted
-                          ? AppTheme.successGreen
-                          : isActive
-                              ? AppTheme.primaryGold
-                              : AppTheme.textSecondary,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: (isCompleted || isActive) ? Colors.white : AppTheme.textPrimary,
                       fontWeight: FontWeight.bold,
-                      fontSize: 10,
+                      letterSpacing: 1.2,
                     ),
                   ),
                 ),
               ],
-            ),
-            const SizedBox(height: 16),
-            const Divider(color: AppTheme.border, height: 1),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                // Trip Type info
-                Icon(
-                  isPickup ? Icons.login_rounded : Icons.logout_rounded,
-                  color: AppTheme.primaryGold,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  isPickup ? 'Morning Pick-Up' : 'Afternoon Drop-Off',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                // Estimated Duration info
-                const Icon(
-                  Icons.schedule_rounded,
-                  color: AppTheme.textSecondary,
-                  size: 18,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  trip.approxStartTime.isNotEmpty 
-                    ? '${trip.approxStartTime} (${trip.estimatedDuration})' 
-                    : trip.estimatedDuration,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 18),
-            // Action button to start/view route details
-            ElevatedButton.icon(
-              onPressed: isCompleted
-                  ? null
-                  : () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => TripDetailScreen(tripId: trip.tripId),
-                        ),
-                      );
-                    },
-              icon: Icon(
-                isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded,
-                color: isCompleted ? AppTheme.textSecondary : AppTheme.background,
-              ),
-              label: Text(isCompleted ? 'Route Completed' : 'Start Route'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: isCompleted ? AppTheme.border : AppTheme.primaryGold,
-                foregroundColor: isCompleted ? AppTheme.textMuted : AppTheme.background,
-              ),
             ),
           ],
         ),

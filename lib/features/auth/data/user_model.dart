@@ -10,6 +10,8 @@ class UserModel {
   final String status; // 'active' | 'suspended' | 'pending'
   final DateTime createdAt;
   final String? managedSchoolId;
+  final String gender;
+  final String? vehicleNumber; // Only for drivers
 
   const UserModel({
     required this.uid,
@@ -19,6 +21,8 @@ class UserModel {
     required this.status,
     required this.createdAt,
     this.managedSchoolId,
+    this.gender = '',
+    this.vehicleNumber,
   });
 
   /// Factory constructor to create a UserModel from a Map (e.g. Firestore document snapshot)
@@ -49,6 +53,8 @@ class UserModel {
       status: json['status'] as String? ?? 'pending',
       createdAt: parsedDate,
       managedSchoolId: json['managed_school_id'] as String?,
+      gender: json['gender'] as String? ?? '',
+      vehicleNumber: json['vehicle_number'] as String?,
     );
   }
 
@@ -61,7 +67,9 @@ class UserModel {
       'phone': phone,
       'status': status,
       'created_at': Timestamp.fromDate(createdAt),
+      'gender': gender,
       if (managedSchoolId != null) 'managed_school_id': managedSchoolId,
+      if (vehicleNumber != null) 'vehicle_number': vehicleNumber,
     };
   }
 
@@ -74,6 +82,8 @@ class UserModel {
     String? status,
     DateTime? createdAt,
     String? managedSchoolId,
+    String? gender,
+    String? vehicleNumber,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -83,6 +93,8 @@ class UserModel {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       managedSchoolId: managedSchoolId ?? this.managedSchoolId,
+      gender: gender ?? this.gender,
+      vehicleNumber: vehicleNumber ?? this.vehicleNumber,
     );
   }
 
@@ -96,16 +108,18 @@ class UserModel {
         other.phone == phone &&
         other.status == status &&
         other.createdAt == createdAt &&
-        other.managedSchoolId == managedSchoolId;
+        other.managedSchoolId == managedSchoolId &&
+        other.gender == gender &&
+        other.vehicleNumber == vehicleNumber;
   }
 
   @override
   int get hashCode {
-    return Object.hash(uid, role, name, phone, status, createdAt, managedSchoolId);
+    return Object.hash(uid, role, name, phone, status, createdAt, managedSchoolId, gender, vehicleNumber);
   }
 
   @override
   String toString() {
-    return 'UserModel(uid: $uid, role: $role, name: $name, phone: $phone, status: $status, createdAt: $createdAt, managedSchoolId: $managedSchoolId)';
+    return 'UserModel(uid: $uid, role: $role, name: $name, phone: $phone, status: $status, createdAt: $createdAt, managedSchoolId: $managedSchoolId, gender: $gender, vehicleNumber: $vehicleNumber)';
   }
 }
