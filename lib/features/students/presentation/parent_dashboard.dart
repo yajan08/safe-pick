@@ -366,17 +366,17 @@ class ParentDashboard extends ConsumerWidget {
   /// stored on the student document. When the status changes away from 'In Van'
   /// Riverpod disposes the provider and TelemetryConsumer disconnects cleanly.
   Widget _buildMapCard(BuildContext context, WidgetRef ref, ThemeData theme, StudentModel student) {
-    final isInVan = student.lastAttendanceStatus == 'In Van';
     // The active session id is stored on the student doc (set by TripService fan-out).
     final sessionId = student.stats['active_session_id'] as String? ?? '';
-    // Only subscribe to MQTT when there is an active session and child is in van.
-    final telemetryAsync = (isInVan && sessionId.isNotEmpty)
+    final isTripActive = sessionId.isNotEmpty;
+    // Subscribe to MQTT when there is an active session
+    final telemetryAsync = isTripActive
         ? ref.watch(parentTelemetryProvider(sessionId))
         : const AsyncValue<TelemetryPayload?>.data(null);
 
     return GestureDetector(
       onTap: () {
-        if (isInVan && sessionId.isNotEmpty) {
+        if (isTripActive) {
           // Navigate to full-screen live tracking map
           Navigator.of(context).push(
             MaterialPageRoute(
@@ -393,29 +393,29 @@ class ParentDashboard extends ConsumerWidget {
       child: Container(
         height: 200,
         decoration: BoxDecoration(
-          color: isInVan ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
+          color: isTripActive ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isInVan ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border),
+          border: Border.all(color: isTripActive ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border),
         ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                isInVan ? Icons.gps_fixed_rounded : Icons.map_rounded,
+                isTripActive ? Icons.gps_fixed_rounded : Icons.map_rounded,
                 size: 40,
-                color: isInVan ? AppTheme.primaryGold : AppTheme.textMuted,
+                color: isTripActive ? AppTheme.primaryGold : AppTheme.textMuted,
               ),
               const SizedBox(height: 10),
               Text(
-                isInVan ? 'Live Tracking Active' : 'Live Tracking Map',
+                isTripActive ? 'Live Tracking Active' : 'Live Tracking Map',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isInVan ? AppTheme.textPrimary : AppTheme.textMuted,
+                  color: isTripActive ? AppTheme.textPrimary : AppTheme.textMuted,
                 ),
               ),
               const SizedBox(height: 8),
-              if (isInVan) ...[      
+              if (isTripActive) ...[      
                 telemetryAsync.when(
                   data: (payload) => payload != null
                       ? Column(

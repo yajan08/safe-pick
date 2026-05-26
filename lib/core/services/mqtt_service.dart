@@ -85,6 +85,7 @@ class MqttService {
       }
 
       _client = MqttServerClient.withPort(_kBrokerHost, clientId, _kBrokerPort);
+      _client!.onBadCertificate = (dynamic cert) => true;
       _client!
         ..secure          = true
         ..securityContext = securityContext

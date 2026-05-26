@@ -1,7 +1,16 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'mqtt_service.dart';
+
+final locationBroadcasterProvider = Provider<LocationBroadcaster>((ref) {
+  final broadcaster = LocationBroadcaster();
+  ref.onDispose(() {
+    broadcaster.dispose();
+  });
+  return broadcaster;
+});
 
 /// Handles the driver-side GPS → MQTT publish loop.
 ///

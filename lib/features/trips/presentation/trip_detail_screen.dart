@@ -38,13 +38,6 @@ class TripDetailScreen extends ConsumerStatefulWidget {
 
 class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   bool _isLoading = false;
-  final LocationBroadcaster _broadcaster = LocationBroadcaster();
-
-  @override
-  void dispose() {
-    _broadcaster.dispose();
-    super.dispose();
-  }
 
   Future<void> _handleStartTrip() async {
     setState(() => _isLoading = true);
@@ -61,7 +54,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
             sessionValue.when(
               data: (session) {
                 if (session != null && mounted) {
-                  _broadcaster.start(sessionId: session.sessionId, driverUid: uid);
+                  ref.read(locationBroadcasterProvider).start(sessionId: session.sessionId, driverUid: uid);
                 }
               },
               loading: () {},
@@ -82,7 +75,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     try {
       final tripService = ref.read(tripServiceProvider);
       await tripService.pauseDailySession(sessionId);
-      await _broadcaster.stop(); // Stop GPS broadcasting on pause
+      await ref.read(locationBroadcasterProvider).stop(); // Stop GPS broadcasting on pause
     } catch (e) {
       if (mounted) _showError(e.toString());
     } finally {
@@ -97,7 +90,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       await tripService.resumeDailySession(sessionId);
       // Resume GPS broadcasting
       final uid = ref.read(firebaseAuthProvider).currentUser?.uid ?? 'unknown';
-      _broadcaster.start(sessionId: sessionId, driverUid: uid);
+      ref.read(locationBroadcasterProvider).start(sessionId: sessionId, driverUid: uid);
     } catch (e) {
       if (mounted) _showError(e.toString());
     } finally {
@@ -129,7 +122,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     try {
       final tripService = ref.read(tripServiceProvider);
       await tripService.endDailySession(sessionId, widget.tripId);
-      await _broadcaster.stop(); // Disconnect GPS broadcast on end
+      await ref.read(locationBroadcasterProvider).stop(); // Disconnect GPS broadcast on end
       if (mounted) {
         SnackBarUtils.showSuccess(context, 'Trip ended successfully.');
       }
