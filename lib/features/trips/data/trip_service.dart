@@ -144,7 +144,8 @@ class TripService {
   }
 
   /// Process a QR Scan event using Firestore Batch Writes (Fan-out)
-  Future<void> processQrScan(String studentId, String sessionId) async {
+  /// Optionally accepts an overrideTimestamp for offline sync processing.
+  Future<void> processQrScan(String studentId, String sessionId, {DateTime? overrideTimestamp}) async {
     final sessionRef = _firestore.collection('daily_sessions').doc(sessionId);
     final attendanceRef = sessionRef.collection('attendance').doc(studentId);
     
@@ -174,7 +175,7 @@ class TripService {
     final rideHistoryRef = _firestore.collection('students').doc(studentId).collection('ride_history').doc(sessionId);
 
     final batch = _firestore.batch();
-    final now = Timestamp.fromDate(DateTime.now());
+    final now = Timestamp.fromDate(overrideTimestamp ?? DateTime.now());
 
     if (currentStatus == 'pending') {
       // Boarding

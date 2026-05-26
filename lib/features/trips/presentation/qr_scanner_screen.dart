@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:flutter/services.dart';
+import 'package:geolocator/geolocator.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/services/sync_queue_service.dart';
 import '../data/trip_service.dart';
 
 class QRScannerScreen extends ConsumerStatefulWidget {
@@ -53,53 +56,65 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
       _isProcessing = true;
     });
 
-    _controller.stop(); // Stop scanning while processing
+    // 1. Success Beep / Haptic
+    HapticFeedback.heavyImpact();
 
-    // Show loading overlay conceptually
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(
-          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
-        ),
-      ),
-    );
-
+    // 2. Grab GPS (fallback to 0.0 if failing offline, timeout 2s)
+    double lat = 0.0;
+    double lng = 0.0;
     try {
-      final tripService = ref.read(tripServiceProvider);
-      await tripService.processQrScan(rawValue, widget.sessionId);
+      final position = await Geolocator.getCurrentPosition(
+        timeLimit: const Duration(seconds: 2),
+      );
+      lat = position.latitude;
+      lng = position.longitude;
+    } catch (_) {
+      // Ignore and use fallback
+    }
+
+    // 3. Write locally to Queue
+    try {
+      final syncQueue = ref.read(syncQueueServiceProvider);
+      final log = SyncLog(
+        studentId: rawValue,
+        sessionId: widget.sessionId,
+        scannedAt: DateTime.now(),
+        latitude: lat,
+        longitude: lng,
+      );
+      
+      await syncQueue.addToQueue(log);
       
       if (mounted) {
-        Navigator.of(context).pop(); // dismiss loading dialog
-        Navigator.of(context).pop(); // dismiss scanner screen
-        
+        // Quick visual alert
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Success: $rawValue processed!'),
-            backgroundColor: AppTheme.successGreen,
+            content: Text('Scanned $rawValue - Queued', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+            backgroundColor: AppTheme.primaryGold,
             behavior: SnackBarBehavior.floating,
+            duration: const Duration(milliseconds: 1500),
           ),
         );
       }
     } catch (e) {
       if (mounted) {
-        Navigator.of(context).pop(); // dismiss loading dialog
-        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: Text('Error queuing scan: $e'),
             backgroundColor: AppTheme.errorRed,
             behavior: SnackBarBehavior.floating,
           ),
         );
-        
-        // Resume scanning if there was an error
-        setState(() {
-          _isProcessing = false;
-        });
-        _controller.start();
       }
+    } finally {
+      // 4. Immediately reset for next scan (e.g. within 1 second)
+      Future.delayed(const Duration(seconds: 1), () {
+        if (mounted) {
+          setState(() {
+            _isProcessing = false;
+          });
+        }
+      });
     }
   }
 

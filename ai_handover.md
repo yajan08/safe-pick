@@ -97,7 +97,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 11 Complete - Reusable Trip Templates & Brand Integration**
+## 📈 Current Status: **Phase 12 Complete - Offline-First QR Scanner & Network Sync Queue**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -172,7 +172,12 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
     - Implemented a "More Options" manual override in `TripDetailScreen` roster to explicitly mark students Absent or Manually Onboard without QR scans.
     - Integrated static brand logo (`light_logo.jpg`) across `LoginScreen`, `SignUpScreen`, and main AppBars, stripping out text titles for a minimalist look.
     - Hardened `AuthGate` to catch missing profile errors and automatically log out the user with a graceful SnackBar message to prevent infinite loops.
-18. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
+18. **Offline-First QR Scanner & Network Sync Queue (Phase 12):**
+    - Added `connectivity_plus` and `sqflite` for offline-resilient operations.
+    - Implemented `SyncQueueService` using a local SQLite database (`sync_queue.db`) to queue offline scans. Sqflite was chosen for its simple setup, zero code-gen overhead, and robust auto-incrementing ID capabilities.
+    - Added a background sync engine that listens to `connectivity_plus` changes and flushes pending scans to Firestore (`processQrScan`) when online.
+    - Upgraded `QRScannerScreen` to instantly queue scans locally, providing haptic feedback and capturing GPS coordinates, without waiting for slow or unavailable network responses. The UI resets within 1 second for rapid scanning.
+19. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
 
 ---
 
