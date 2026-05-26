@@ -5,6 +5,7 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
 import '../../profile/presentation/parent_profile_screen.dart';
+import '../../../core/widgets/shimmer_loading.dart';
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
 final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
@@ -104,20 +105,24 @@ class ParentDashboard extends ConsumerWidget {
                   
                   // Dashboard Content for Selected Student
                   Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildProfileCard(context, theme, selectedStudent),
-                          const SizedBox(height: 16),
-                          _buildStatusCard(theme, selectedStudent),
-                          const SizedBox(height: 16),
-                          _buildEtaCard(theme, selectedStudent),
-                          const SizedBox(height: 16),
-                          _buildMapCard(context, theme, selectedStudent),
-                          const SizedBox(height: 32),
-                        ],
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      child: SingleChildScrollView(
+                        key: ValueKey<String>(selectedStudent.studentId),
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildProfileCard(context, theme, selectedStudent),
+                            const SizedBox(height: 16),
+                            _buildStatusCard(theme, selectedStudent),
+                            const SizedBox(height: 16),
+                            _buildEtaCard(theme, selectedStudent),
+                            const SizedBox(height: 16),
+                            _buildMapCard(context, theme, selectedStudent),
+                            const SizedBox(height: 32),
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -125,9 +130,19 @@ class ParentDashboard extends ConsumerWidget {
               ),
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
+          loading: () => Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const ShimmerLoading(width: 100, height: 16),
+                const SizedBox(height: 8),
+                const ShimmerLoading(width: double.infinity, height: 48),
+                const SizedBox(height: 24),
+                const ShimmerCard(height: 140),
+                const ShimmerCard(height: 100),
+                const ShimmerCard(height: 100),
+              ],
             ),
           ),
           error: (error, stackTrace) => _buildErrorState(theme, error.toString()),

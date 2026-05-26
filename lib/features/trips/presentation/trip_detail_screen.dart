@@ -7,6 +7,7 @@ import '../data/trip_service.dart';
 import '../data/trip_manifest_model.dart';
 import '../data/daily_session_model.dart';
 import 'qr_scanner_screen.dart';
+import '../../../core/widgets/shimmer_loading.dart';
 import '../../../core/services/auth_service.dart';
 
 /// Future provider to fetch details of a specific trip.
@@ -236,14 +237,16 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                 ],
               );
             },
-            loading: () => const Center(
-              child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold)),
+            loading: () => const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: ShimmerList(itemCount: 5, itemHeight: 80),
             ),
             error: (error, _) => _buildErrorState(theme, error.toString()),
           );
         },
-        loading: () => const Center(
-          child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold)),
+        loading: () => const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: ShimmerList(itemCount: 5, itemHeight: 80),
         ),
         error: (error, _) => _buildErrorState(theme, error.toString()),
       ),

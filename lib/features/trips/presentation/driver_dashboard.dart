@@ -7,6 +7,7 @@ import '../data/trip_model.dart';
 import 'trip_detail_screen.dart';
 import 'create_trip_screen.dart';
 import 'trip_history_screen.dart';
+import '../../../core/widgets/shimmer_loading.dart';
 
 /// Real-time stream provider that fetches all trips assigned to the logged-in driver.
 final driverTripsProvider = StreamProvider<List<TripModel>>((ref) {
@@ -175,10 +176,19 @@ class DriverDashboard extends ConsumerWidget {
                       ],
                     );
                   },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
-                    ),
+                  loading: () => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(child: ShimmerLoading(width: double.infinity, height: 100, borderRadius: 20)),
+                          SizedBox(width: 16),
+                          Expanded(child: ShimmerLoading(width: double.infinity, height: 100, borderRadius: 20)),
+                        ],
+                      ),
+                      SizedBox(height: 24),
+                      Expanded(child: ShimmerList(itemCount: 4, itemHeight: 140)),
+                    ],
                   ),
                   error: (error, stackTrace) => _buildErrorState(theme, error.toString()),
                 ),

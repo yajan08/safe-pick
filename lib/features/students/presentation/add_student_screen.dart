@@ -244,7 +244,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter the student\'s name';
+                      return 'Please enter student name';
                     }
                     return null;
                   },
@@ -261,7 +261,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
-                      return 'Please enter the grade/class';
+                      return 'Please enter grade';
                     }
                     return null;
                   },

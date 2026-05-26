@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../features/auth/data/user_model.dart';
 
 /// Riverpod provider for the raw [FirebaseAuth] instance.
@@ -101,14 +102,29 @@ class AuthService {
   /// Standard roles: 'parent', 'driver', or 'admin'.
   Future<String> getUserRole(String uid) async {
     try {
-      final doc = await _firestore.collection('users').doc(uid).get();
+      // Attempt to get from server first, fallback to cache natively in Firestore
+      final doc = await _firestore.collection('users').doc(uid).get(const GetOptions(source: Source.serverAndCache));
       if (doc.exists) {
         final data = doc.data();
-        return data?['role'] as String? ?? 'parent';
+        final role = data?['role'] as String? ?? 'parent';
+        
+        // Save to SharedPreferences as a robust secondary cache
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('cached_role_$uid', role);
+        
+        return role;
       }
       return 'parent'; // Default role if user profile document is not found
     } catch (e) {
       debugPrint('Error getting user role from Firestore: $e');
+      
+      // Fallback to SharedPreferences if Firestore cache fails entirely (e.g., cleared cache)
+      final prefs = await SharedPreferences.getInstance();
+      final cachedRole = prefs.getString('cached_role_$uid');
+      if (cachedRole != null) {
+        return cachedRole;
+      }
+      
       throw 'Failed to fetch user role. Please verify your connection.';
     }
   }

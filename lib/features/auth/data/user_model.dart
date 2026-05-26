@@ -48,7 +48,7 @@ class UserModel {
     return UserModel(
       uid: json['uid'] as String? ?? '',
       role: json['role'] as String? ?? 'parent',
-      name: json['name'] as String? ?? '',
+      name: json['name'] as String? ?? 'Unknown User',
       phone: json['phone'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
       createdAt: parsedDate,

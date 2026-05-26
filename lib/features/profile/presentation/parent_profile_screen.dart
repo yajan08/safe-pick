@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../students/data/student_model.dart';
 import '../../students/presentation/add_student_screen.dart';
 import 'student_detail_screen.dart';
+import '../../../core/widgets/shimmer_loading.dart';
 
 /// Provider that streams all active students for the current parent.
 final profileStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
@@ -144,12 +145,8 @@ class ParentProfileScreen extends ConsumerWidget {
                   );
                 },
                 loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 40),
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
-                    ),
-                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: ShimmerList(itemCount: 3, itemHeight: 80),
                 ),
                 error: (error, _) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 24),

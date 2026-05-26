@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../students/presentation/parent_dashboard.dart';
 import '../../trips/presentation/driver_dashboard.dart';
 import 'login_screen.dart';
@@ -134,27 +135,51 @@ class AuthGate extends ConsumerWidget {
           ),
           error: (error, stackTrace) {
             WidgetsBinding.instance.addPostFrameCallback((_) async {
-              try {
-                ref.invalidate(userRoleProvider(user.uid));
-                await ref.read(authServiceProvider).signOut();
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Account profile missing. Please try signing up again.'),
-                      backgroundColor: AppTheme.errorRed,
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+              final connectivity = await Connectivity().checkConnectivity();
+              final isOffline = connectivity.contains(ConnectivityResult.none);
+              
+              if (!isOffline) {
+                try {
+                  ref.invalidate(userRoleProvider(user.uid));
+                  await ref.read(authServiceProvider).signOut();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Account profile missing. Please try signing up again.'),
+                        backgroundColor: AppTheme.errorRed,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Ignore sign-out errors in the fallback
                 }
-              } catch (e) {
-                // Ignore sign-out errors in the fallback
               }
             });
+
             return Scaffold(
               backgroundColor: AppTheme.background,
-              body: const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
+              body: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.wifi_off_rounded, color: AppTheme.textSecondary, size: 48),
+                    const SizedBox(height: 16),
+                    Text(
+                      'You are offline.',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Please check your connection to sync your profile.', style: TextStyle(color: AppTheme.textMuted)),
+                    const SizedBox(height: 24),
+                    OutlinedButton(
+                      onPressed: () => ref.invalidate(userRoleProvider(user.uid)),
+                      child: const Text('Retry'),
+                    ),
+                  ],
                 ),
               ),
             );
