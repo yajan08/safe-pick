@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/auth_gate.dart';
 import 'onboarding_screen.dart';
 

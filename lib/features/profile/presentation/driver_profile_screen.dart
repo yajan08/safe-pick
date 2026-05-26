@@ -139,7 +139,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                       const SizedBox(height: 20),
 
                       DropdownButtonFormField<String>(
-                        value: _selectedGender,
+                        initialValue: _selectedGender,
                         decoration: const InputDecoration(
                           labelText: 'Gender',
                           prefixIcon: Icon(Icons.wc_rounded),

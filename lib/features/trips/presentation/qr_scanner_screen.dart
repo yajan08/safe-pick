@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/sync_queue_service.dart';
-import '../data/trip_service.dart';
 
 class QRScannerScreen extends ConsumerStatefulWidget {
   final String sessionId;
