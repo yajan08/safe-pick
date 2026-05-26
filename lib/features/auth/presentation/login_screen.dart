@@ -73,9 +73,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   Hero(
                     tag: 'app_logo',
                     child: SvgPicture.asset(
-                      'assets/images/logo.svg',
+                      'assets/images/logo_dark.svg',
                       height: 100,
-                      colorFilter: const ColorFilter.mode(AppTheme.primaryGold, BlendMode.srcIn),
                     ),
                   ),  const SizedBox(height: 24),
                     Text(

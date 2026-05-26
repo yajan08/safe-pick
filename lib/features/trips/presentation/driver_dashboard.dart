@@ -106,9 +106,8 @@ class DriverDashboard extends ConsumerWidget {
         elevation: 0,
         centerTitle: true,
         title: SvgPicture.asset(
-          'assets/images/logo.svg',
+          'assets/images/logo_dark.svg',
           height: 28,
-          colorFilter: const ColorFilter.mode(AppTheme.primaryGold, BlendMode.srcIn),
         ),
         actions: [
           IconButton(

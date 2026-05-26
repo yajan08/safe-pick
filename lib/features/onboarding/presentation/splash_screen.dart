@@ -49,9 +49,8 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Hero(
           tag: 'app_logo',
           child: SvgPicture.asset(
-            'assets/images/logo.svg',
+            'assets/images/logo_dark.svg',
             width: 180,
-            colorFilter: const ColorFilter.mode(AppTheme.primaryGold, BlendMode.srcIn),
           ),
         ).animate()
          .fadeIn(duration: 800.ms)
