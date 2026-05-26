@@ -36,9 +36,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     try {
       final authService = ref.read(authServiceProvider);
-      await authService.signInWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
+      await authService.signIn(
+        _emailController.text,
+        _passwordController.text,
       );
       
       // If successful, the AuthGate will automatically detect the user change

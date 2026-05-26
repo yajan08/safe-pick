@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../core/services/auth_service.dart';
-import '../../../../core/theme/app_theme.dart';
+import '../../../core/services/auth_service.dart';
+import '../../../core/theme/app_theme.dart';
 import 'login_screen.dart';
 
-/// A gatekeeper widget that routes the user based on their Firebase Authentication state.
-/// - If not authenticated -> routes to [LoginScreen].
-/// - If authenticated -> routes to a temporary role checker screen (Phase 3).
+/// Future provider that fetches the user's role from Firestore using their UID.
+/// Caches the role for the user session.
+final userRoleProvider = FutureProvider.family<String, String>((ref, uid) async {
+  final authService = ref.watch(authServiceProvider);
+  return authService.getUserRole(uid);
+});
+
+/// A gatekeeper widget that routes the user based on their authentication state.
+/// - If not logged in -> routes to [LoginScreen].
+/// - If logged in -> fetches user role from Firestore and routes to corresponding dashboard shell.
 class AuthGate extends ConsumerWidget {
   const AuthGate({super.key});
 
@@ -20,24 +27,167 @@ class AuthGate extends ConsumerWidget {
         if (user == null) {
           return const LoginScreen();
         }
-        return const CheckingRoleScreen();
-      },
-      loading: () => Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Loading SafePick...',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w500,
+        
+        // User is logged in, now fetch their role from Firestore
+        final roleAsync = ref.watch(userRoleProvider(user.uid));
+
+        return roleAsync.when(
+          data: (role) {
+            // Once the role is fetched, return the temporary welcome screen
+            return Scaffold(
+              body: SafeArea(
+                child: Padding(
+                  padding: const EdgeInsets.all(28.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Spacer(),
+                      // Center branding and role welcome
+                      Center(
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                _getRoleIcon(role),
+                                color: theme.colorScheme.primary,
+                                size: 56,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'Welcome ${role.toUpperCase()}',
+                              style: theme.textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'SafePick dashboard is coming soon.',
+                              style: theme.textTheme.bodyMedium,
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      // Sign Out button for testing convenience
+                      OutlinedButton.icon(
+                        onPressed: () async {
+                          try {
+                            // Invalidate the role provider cache to ensure fresh fetch next time
+                            ref.invalidate(userRoleProvider(user.uid));
+                            await ref.read(authServiceProvider).signOut();
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(e.toString()),
+                                  backgroundColor: AppTheme.errorRed,
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.logout_rounded),
+                        label: const Text('Sign Out'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ],
+            );
+          },
+          loading: () => Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
+                  ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Loading account profile...',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textGrey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          error: (error, stackTrace) => Scaffold(
+            body: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(28.0),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.errorRed.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.error_outline_rounded,
+                          color: AppTheme.errorRed,
+                          size: 48,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Profile Fetch Failed',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Could not retrieve user role details from Firestore. This account may not have a profile set up yet.',
+                        style: theme.textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 32),
+                      ElevatedButton(
+                        onPressed: () {
+                          // Retry fetching role
+                          ref.invalidate(userRoleProvider(user.uid));
+                        },
+                        child: const Text('Retry Fetch'),
+                      ),
+                      const SizedBox(height: 12),
+                      OutlinedButton(
+                        onPressed: () async {
+                          ref.invalidate(userRoleProvider(user.uid));
+                          await ref.read(authServiceProvider).signOut();
+                        },
+                        child: const Text('Sign Out'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
           ),
         ),
       ),
@@ -63,7 +213,7 @@ class AuthGate extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Auth Initialization Error',
+                    'Auth Connection Error',
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
@@ -72,14 +222,13 @@ class AuthGate extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Could not configure connection to Firebase. Please verify you have run "flutterfire configure" or checked your configuration settings.',
+                    'Could not verify authentication stream. Please check your config parameters.',
                     style: theme.textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 32),
                   OutlinedButton(
                     onPressed: () {
-                      // Trigger a manual refresh of the provider
                       ref.invalidate(authStateChangesProvider);
                     },
                     child: const Text('Try Again'),
@@ -92,90 +241,16 @@ class AuthGate extends ConsumerWidget {
       ),
     );
   }
-}
 
-/// A premium temporary screen showing checking role. 
-/// It includes a sign-out button so users aren't locked in during manual testing.
-class CheckingRoleScreen extends ConsumerWidget {
-  const CheckingRoleScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(28.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Spacer(),
-              // Loading Animation & Icon
-              Center(
-                child: Column(
-                  children: [
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        const SizedBox(
-                          width: 80,
-                          height: 80,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 4,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
-                          ),
-                        ),
-                        Icon(
-                          Icons.vpn_key_outlined,
-                          color: theme.colorScheme.primary,
-                          size: 32,
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 32),
-                    Text(
-                      'Logged In Successfully',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Checking user role and profile status...',
-                      style: theme.textTheme.bodyMedium,
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-              const Spacer(),
-              // Log out Option
-              OutlinedButton.icon(
-                onPressed: () async {
-                  try {
-                    await ref.read(authServiceProvider).signOut();
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(e.toString()),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.logout_rounded),
-                label: const Text('Sign Out / Reset'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  IconData _getRoleIcon(String role) {
+    switch (role.toLowerCase()) {
+      case 'driver':
+        return Icons.directions_bus_rounded;
+      case 'admin':
+        return Icons.admin_panel_settings_rounded;
+      case 'parent':
+      default:
+        return Icons.family_restroom_rounded;
+    }
   }
 }

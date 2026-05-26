@@ -1,4 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Riverpod provider for the raw [FirebaseAuth] instance.
@@ -6,10 +8,16 @@ final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
   return FirebaseAuth.instance;
 });
 
+/// Riverpod provider for the raw [FirebaseFirestore] instance.
+final firestoreProvider = Provider<FirebaseFirestore>((ref) {
+  return FirebaseFirestore.instance;
+});
+
 /// Riverpod provider for the [AuthService] instance.
 final authServiceProvider = Provider<AuthService>((ref) {
   final firebaseAuth = ref.watch(firebaseAuthProvider);
-  return AuthService(firebaseAuth);
+  final firestore = ref.watch(firestoreProvider);
+  return AuthService(firebaseAuth, firestore);
 });
 
 /// Riverpod provider listening to authentication state changes.
@@ -21,16 +29,14 @@ final authStateChangesProvider = StreamProvider<User?>((ref) {
 /// Service class containing all Firebase Authentication operations.
 class AuthService {
   final FirebaseAuth _auth;
+  final FirebaseFirestore _firestore;
 
-  AuthService(this._auth);
+  AuthService(this._auth, this._firestore);
 
   /// Signs in a user using their email and password.
   /// Returns the authenticated [UserCredential].
   /// Throws user-friendly errors on Firebase Exceptions.
-  Future<UserCredential> signInWithEmailAndPassword({
-    required String email,
-    required String password,
-  }) async {
+  Future<UserCredential> signIn(String email, String password) async {
     try {
       return await _auth.signInWithEmailAndPassword(
         email: email.trim(),
@@ -49,6 +55,22 @@ class AuthService {
       await _auth.signOut();
     } catch (e) {
       throw 'Failed to sign out. Please check your internet connection.';
+    }
+  }
+
+  /// Queries the users collection in Firestore and returns the role.
+  /// Standard roles: 'parent', 'driver', or 'admin'.
+  Future<String> getUserRole(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get();
+      if (doc.exists) {
+        final data = doc.data();
+        return data?['role'] as String? ?? 'parent';
+      }
+      return 'parent'; // Default role if user profile document is not found
+    } catch (e) {
+      debugPrint('Error getting user role from Firestore: $e');
+      throw 'Failed to fetch user role. Please verify your connection.';
     }
   }
 

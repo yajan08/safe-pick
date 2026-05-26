@@ -1,17 +1,26 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:safe_pick/main.dart';
+import 'package:safe_pick/core/services/auth_service.dart';
 
 void main() {
-  testWidgets('SafePick App Architecture Smoke Test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('SafePick App Logged Out routes to LoginScreen', (WidgetTester tester) async {
     await tester.pumpWidget(
-      const ProviderScope(
-        child: SafePickApp(),
+      ProviderScope(
+        overrides: [
+          // Override the auth state changes provider to return null (logged out)
+          authStateChangesProvider.overrideWith((ref) => Stream.value(null)),
+        ],
+        child: const SafePickApp(),
       ),
     );
 
-    // Verify that the error gate is rendered since Firebase is not initialized in tests.
-    expect(find.text('Auth Initialization Error'), findsOneWidget);
+    // Pump the stream values and wait for animations
+    await tester.pumpAndSettle();
+
+    // Verify that the login screen elements are rendered.
+    expect(find.text('Welcome to SafePick'), findsOneWidget);
+    expect(find.text('Sign In'), findsWidgets);
   });
 }
