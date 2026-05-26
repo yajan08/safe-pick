@@ -71,18 +71,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Top Branding Section
                 Column(
                   children: [
-                    // Bus / Safety Icon in Circle
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.directions_bus_rounded,
-                        color: theme.colorScheme.primary,
-                        size: 64,
-                      ),
+                    Image.asset(
+                      'assets/images/light_logo.jpg',
+                      height: 120,
                     ),
                     const SizedBox(height: 24),
                     Text(

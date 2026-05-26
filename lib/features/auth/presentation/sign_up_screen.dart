@@ -103,6 +103,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Welcome Logo
+                Image.asset(
+                  'assets/images/light_logo.jpg',
+                  height: 100,
+                ).animate().fade().slideY(begin: -0.1),
+                const SizedBox(height: 16),
+
                 // Welcome Text
                 Text(
                   'Join SafePick',

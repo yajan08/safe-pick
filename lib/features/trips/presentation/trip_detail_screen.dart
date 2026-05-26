@@ -140,7 +140,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('Trip Details'),
+        elevation: 0,
+        centerTitle: true,
+        title: Image.asset(
+          'assets/images/light_logo.jpg',
+          height: 32,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -197,11 +202,15 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                               if (manifest.isEmpty) {
                                 return _buildEmptyManifestState(theme);
                               }
+                              final attendanceMap = session != null
+                                  ? ref.watch(sessionAttendanceProvider(session.sessionId)).value ?? {}
+                                  : <String, String>{};
+
                               return Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 20),
                                 child: Column(
                                   children: manifest.asMap().entries.map((entry) {
-                                    return _buildStudentRow(theme, entry.value, entry.key)
+                                    return _buildStudentRow(theme, entry.value, entry.key, session, attendanceMap)
                                         .animate()
                                         .fade(delay: Duration(milliseconds: 150 + (entry.key * 60)))
                                         .slideY(begin: 0.03);
@@ -634,8 +643,36 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     );
   }
 
+  Future<void> _handleManualOverride(String sessionId, String studentId, String status) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        title: Text(status == 'onboarded' ? 'Manual Onboard' : 'Mark Absent', style: const TextStyle(color: AppTheme.textPrimary)),
+        content: Text('Are you sure you want to mark this student as ${status == 'onboarded' ? 'onboarded' : 'absent'}?', style: const TextStyle(color: AppTheme.textSecondary)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: status == 'onboarded' ? AppTheme.primaryGold : AppTheme.errorRed, foregroundColor: Colors.white),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    try {
+      await ref.read(tripServiceProvider).manualAttendanceOverride(sessionId, studentId, status);
+    } catch (e) {
+      if (mounted) _showError(e.toString());
+    }
+  }
+
   // ─── 6. Student Roster Row ────────────────────────────
-  Widget _buildStudentRow(ThemeData theme, TripManifestModel student, int index) {
+  Widget _buildStudentRow(ThemeData theme, TripManifestModel student, int index, DailySessionModel? session, Map<String, String> attendanceMap) {
+    final status = attendanceMap[student.studentId] ?? student.status;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -680,7 +717,23 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
               ],
             ),
           ),
-          _buildStatusChip(theme, student.status),
+          _buildStatusChip(theme, status),
+          if (session != null && session.status == 'in_progress')
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, color: AppTheme.textMuted),
+              color: AppTheme.surface,
+              onSelected: (val) => _handleManualOverride(session.sessionId, student.studentId, val),
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'onboarded',
+                  child: Text('Manual Onboard', style: TextStyle(color: AppTheme.primaryGold, fontWeight: FontWeight.bold)),
+                ),
+                const PopupMenuItem(
+                  value: 'absent',
+                  child: Text('Mark Absent', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ),
         ],
       ),
     );

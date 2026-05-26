@@ -48,7 +48,12 @@ class ParentDashboard extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('Parent Dashboard'),
+        elevation: 0,
+        centerTitle: true,
+        title: Image.asset(
+          'assets/images/light_logo.jpg',
+          height: 32,
+        ),
         actions: [
           GestureDetector(
             onTap: () {

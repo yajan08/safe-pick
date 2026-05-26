@@ -67,17 +67,17 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 },
                 children: const [
                   OnboardingPage(
-                    iconData: Icons.directions_bus_rounded,
+                    imagePath: 'assets/images/onboarding3.png',
                     title: 'Welcome to SafePick',
                     description: 'The premium school van tracking system for parents and drivers.',
                   ),
                   OnboardingPage(
-                    iconData: Icons.security_rounded,
+                    imagePath: 'assets/images/onboarding2.png',
                     title: 'Secure Accounts',
                     description: 'Log in with verified credentials to manage your trips and view student manifests.',
                   ),
                   OnboardingPage(
-                    iconData: Icons.verified_user_rounded,
+                    imagePath: 'assets/images/onboarding1.png',
                     title: 'Verified Check-Ins',
                     description: 'Link students securely and guarantee their safety with every ride.',
                   ),
@@ -132,13 +132,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 class OnboardingPage extends StatelessWidget {
-  final IconData iconData; // Using Icons as placeholder for illustrations
+  final String imagePath;
   final String title;
   final String description;
 
   const OnboardingPage({
     super.key,
-    required this.iconData,
+    required this.imagePath,
     required this.title,
     required this.description,
   });
@@ -152,20 +152,14 @@ class OnboardingPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(48),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryGold.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            // Placeholder: When the user provides SVG illustrations, 
-            // they can replace this Icon widget with SvgPicture.asset(...)
-            child: Icon(
-              iconData,
-              size: 120,
-              color: AppTheme.primaryGold,
+            height: 240,
+            padding: const EdgeInsets.all(16),
+            child: Image.asset(
+              imagePath,
+              fit: BoxFit.contain,
             ),
           ),
-          const SizedBox(height: 64),
+          const SizedBox(height: 48),
           Text(
             title,
             style: theme.textTheme.headlineMedium?.copyWith(

@@ -97,7 +97,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 10 Complete - Trip State Machine & QR Fan-Out Logging**
+## 📈 Current Status: **Phase 11 Complete - Reusable Trip Templates & Brand Integration**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -166,7 +166,13 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
     - Overhauled `TripDetailScreen` action buttons to dynamically reflect and control the active session state.
     - Integrated `mobile_scanner` and built `QRScannerScreen` accessible via the massive FAB on active trips.
     - Added `TripHistoryScreen` accessible from `DriverDashboard` to view completed trips.
-16. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
+17. **Reusable Trip Templates & UI Polish (Phase 11):**
+    - Transitioned Trip model to act as reusable templates. `TripService` no longer mutates the master trip or manifest during daily runs.
+    - Added `sessionAttendanceProvider` to stream active session attendance seamlessly while preserving master manifest state.
+    - Implemented a "More Options" manual override in `TripDetailScreen` roster to explicitly mark students Absent or Manually Onboard without QR scans.
+    - Integrated static brand logo (`light_logo.jpg`) across `LoginScreen`, `SignUpScreen`, and main AppBars, stripping out text titles for a minimalist look.
+    - Hardened `AuthGate` to catch missing profile errors and automatically log out the user with a graceful SnackBar message to prevent infinite loops.
+18. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
 
 ---
 

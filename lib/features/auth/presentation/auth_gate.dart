@@ -132,63 +132,33 @@ class AuthGate extends ConsumerWidget {
               ),
             ),
           ),
-          error: (error, stackTrace) => Scaffold(
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.all(28.0),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppTheme.errorRed.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.error_outline_rounded,
-                          color: AppTheme.errorRed,
-                          size: 48,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        'Profile Fetch Failed',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Could not retrieve user role details from Firestore. This account may not have a profile set up yet.',
-                        style: theme.textTheme.bodyMedium,
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 32),
-                      ElevatedButton(
-                        onPressed: () {
-                          ref.invalidate(userRoleProvider(user.uid));
-                        },
-                        child: const Text('Retry Fetch'),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton(
-                        onPressed: () async {
-                          ref.invalidate(userRoleProvider(user.uid));
-                          await ref.read(authServiceProvider).signOut();
-                        },
-                        child: const Text('Sign Out'),
-                      ),
-                    ],
-                  ),
+          error: (error, stackTrace) {
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              try {
+                ref.invalidate(userRoleProvider(user.uid));
+                await ref.read(authServiceProvider).signOut();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Account profile missing. Please try signing up again.'),
+                      backgroundColor: AppTheme.errorRed,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              } catch (e) {
+                // Ignore sign-out errors in the fallback
+              }
+            });
+            return Scaffold(
+              backgroundColor: AppTheme.background,
+              body: const Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
                 ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
       loading: () => const Scaffold(

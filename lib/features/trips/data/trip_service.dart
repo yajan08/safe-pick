@@ -43,6 +43,23 @@ final activeSessionProvider = StreamProvider.family<DailySessionModel?, String>(
       });
 });
 
+/// Riverpod StreamProvider family that streams a daily session's attendance.
+final sessionAttendanceProvider = StreamProvider.family<Map<String, String>, String>((ref, sessionId) {
+  final firestore = ref.watch(firestoreProvider);
+  return firestore
+      .collection('daily_sessions')
+      .doc(sessionId)
+      .collection('attendance')
+      .snapshots()
+      .map((snapshot) {
+        final Map<String, String> attendance = {};
+        for (var doc in snapshot.docs) {
+          attendance[doc.id] = doc.data()['status'] as String? ?? 'pending';
+        }
+        return attendance;
+      });
+});
+
 /// Service class responsible for Firestore Trip and Manifest operations.
 class TripService {
   final FirebaseFirestore _firestore;
@@ -91,7 +108,6 @@ class TripService {
 
       final batch = _firestore.batch();
       batch.set(docRef, sessionData);
-      batch.update(_firestore.collection('trips').doc(tripId), {'status': 'active'});
 
       // Initialize attendance records from manifest
       final manifestDocs = await _firestore.collection('trips').doc(tripId).collection('trip_manifest').get();
@@ -124,7 +140,6 @@ class TripService {
       'status': 'completed',
       'end_time': Timestamp.fromDate(DateTime.now()),
     });
-    batch.update(_firestore.collection('trips').doc(tripId), {'status': 'completed'});
     await batch.commit();
   }
 
@@ -168,11 +183,6 @@ class TripService {
         'boarded_at': now,
       });
 
-      // Update manifest for UI sync
-      batch.update(_firestore.collection('trips').doc(tripId).collection('trip_manifest').doc(studentId), {
-        'status': 'onboarded',
-      });
-
       // Create ride history entry
       final rideLog = StudentRideLogModel(
         logId: sessionId,
@@ -192,11 +202,6 @@ class TripService {
         'alighted_at': now,
       });
 
-      // Update manifest for UI sync
-      batch.update(_firestore.collection('trips').doc(tripId).collection('trip_manifest').doc(studentId), {
-        'status': 'dropped',
-      });
-
       // Update ride history entry
       batch.update(rideHistoryRef, {
         'status': 'dropped',
@@ -204,6 +209,65 @@ class TripService {
       });
     } else {
       throw 'Student has already been dropped off or is marked absent.';
+    }
+
+    await batch.commit();
+  }
+
+  /// Manually override attendance status (e.g. Absent, Manual Onboard)
+  Future<void> manualAttendanceOverride(String sessionId, String studentId, String status) async {
+    final sessionRef = _firestore.collection('daily_sessions').doc(sessionId);
+    final attendanceRef = sessionRef.collection('attendance').doc(studentId);
+    
+    final sessionSnap = await sessionRef.get();
+    if (!sessionSnap.exists) throw 'Active trip session not found.';
+
+    final tripId = sessionSnap.data()?['trip_id'] as String? ?? '';
+    final dateString = sessionSnap.data()?['date'] as String? ?? '';
+    final driverUid = sessionSnap.data()?['driver_uid'] as String? ?? '';
+
+    // Fetch details for ride log
+    final tripSnap = await _firestore.collection('trips').doc(tripId).get();
+    final tripName = tripSnap.data()?['trip_name'] as String? ?? 'Unknown Trip';
+
+    final driverSnap = await _firestore.collection('users').doc(driverUid).get();
+    final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
+    final vehicleNumber = driverSnap.data()?['vehicle_number'] as String? ?? '';
+
+    final batch = _firestore.batch();
+    final now = Timestamp.fromDate(DateTime.now());
+    
+    final updateData = <String, dynamic>{
+      'status': status,
+    };
+    if (status == 'onboarded') {
+      updateData['boarded_at'] = now;
+    } else if (status == 'dropped') {
+      updateData['alighted_at'] = now;
+    }
+
+    batch.update(attendanceRef, updateData);
+
+    // Ride History
+    final rideHistoryRef = _firestore.collection('students').doc(studentId).collection('ride_history').doc(sessionId);
+    
+    final rideLog = StudentRideLogModel(
+      logId: sessionId,
+      sessionId: sessionId,
+      tripName: tripName,
+      driverName: driverName,
+      vehicleNumber: vehicleNumber,
+      date: dateString,
+      boardedAt: status == 'onboarded' ? now.toDate() : null,
+      status: status,
+    );
+    
+    if (status == 'onboarded' || status == 'absent') {
+      // First time log creation
+      batch.set(rideHistoryRef, rideLog.toJson());
+    } else {
+      // Just update existing
+      batch.update(rideHistoryRef, updateData);
     }
 
     await batch.commit();
