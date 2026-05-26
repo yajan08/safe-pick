@@ -28,7 +28,9 @@ class _SplashScreenState extends State<SplashScreen> {
     final prefs = await SharedPreferences.getInstance();
     final showOnboarding = !(prefs.getBool('onboarding_complete') ?? false);
 
-    Navigator.of(context).pushReplacement(
+    if (!mounted) return;
+    final navigator = Navigator.of(context);
+    navigator.pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             showOnboarding ? const OnboardingScreen() : const AuthGate(),

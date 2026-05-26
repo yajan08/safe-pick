@@ -13,7 +13,6 @@ class StudentModel {
   final String schoolName;
   final String note;
   final String lastAttendanceStatus; // 'At Home' | 'In Van' | 'At School'
-  final String? currentSessionId;
   final Map<String, dynamic> stats; // e.g. {'total_trips': 0, 'attendance_rate': 1.0}
 
   const StudentModel({
@@ -27,7 +26,6 @@ class StudentModel {
     this.schoolName = '',
     this.note = '',
     this.lastAttendanceStatus = 'At Home',
-    this.currentSessionId,
     required this.stats,
   });
 
@@ -44,7 +42,6 @@ class StudentModel {
       schoolName: json['school_name'] as String? ?? '',
       note: json['note'] as String? ?? '',
       lastAttendanceStatus: json['last_attendance_status'] as String? ?? 'At Home',
-      currentSessionId: json['current_session_id'] as String?,
       stats: json['stats'] as Map<String, dynamic>? ?? const {},
     );
   }
@@ -61,7 +58,6 @@ class StudentModel {
       'school_name': schoolName,
       'note': note,
       'last_attendance_status': lastAttendanceStatus,
-      'current_session_id': currentSessionId,
       'stats': stats,
     };
   }
@@ -78,7 +74,6 @@ class StudentModel {
     String? schoolName,
     String? note,
     String? lastAttendanceStatus,
-    String? currentSessionId,
     Map<String, dynamic>? stats,
   }) {
     return StudentModel(
@@ -92,7 +87,6 @@ class StudentModel {
       schoolName: schoolName ?? this.schoolName,
       note: note ?? this.note,
       lastAttendanceStatus: lastAttendanceStatus ?? this.lastAttendanceStatus,
-      currentSessionId: currentSessionId ?? this.currentSessionId,
       stats: stats ?? this.stats,
     );
   }

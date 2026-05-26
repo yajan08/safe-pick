@@ -8,10 +8,8 @@ import '../data/trip_manifest_model.dart';
 import '../data/daily_session_model.dart';
 import 'qr_scanner_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
-import 'dart:async';
-import 'package:geolocator/geolocator.dart';
-import '../../../core/services/mqtt_service.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/location_broadcaster.dart';
 
 /// Future provider to fetch details of a specific trip.
 final tripDetailsProvider = FutureProvider.family<TripModel, String>((ref, tripId) async {
@@ -37,71 +35,44 @@ class TripDetailScreen extends ConsumerStatefulWidget {
 
 class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   bool _isLoading = false;
-  StreamSubscription<Position>? _positionStream;
+  final LocationBroadcaster _broadcaster = LocationBroadcaster();
 
   @override
   void dispose() {
-    _stopTelemetry();
+    _broadcaster.dispose();
     super.dispose();
-  }
-
-  Future<void> _startTelemetry(String sessionId) async {
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      if (mounted) _showError('Location services are disabled.');
-      return;
-    }
-
-    permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        if (mounted) _showError('Location permissions are denied');
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      if (mounted) _showError('Location permissions are permanently denied.');
-      return;
-    }
-
-    final user = ref.read(firebaseAuthProvider).currentUser;
-    if (user != null) {
-      await ref.read(mqttServiceProvider).connect('driver_${user.uid}');
-      _positionStream = Geolocator.getPositionStream(
-        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, distanceFilter: 5),
-      ).listen((Position position) {
-        ref.read(mqttServiceProvider).publishLocation(sessionId, position.latitude, position.longitude, position.speed);
-      });
-    }
-  }
-
-  void _stopTelemetry() {
-    _positionStream?.cancel();
-    _positionStream = null;
-    ref.read(mqttServiceProvider).disconnect();
   }
 
   Future<void> _handleStartTrip() async {
     setState(() => _isLoading = true);
     try {
       final tripService = ref.read(tripServiceProvider);
-      final sessionId = await tripService.startDailySession(widget.tripId);
-      await _startTelemetry(sessionId);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Trip session started! Location tracking active.'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
+      await tripService.startDailySession(widget.tripId);
+            if (mounted) {
+          final uid = ref.read(firebaseAuthProvider).currentUser?.uid ?? 'unknown';
+          // Get the newly created session id from the stream to start broadcasting
+          // We read it after a brief tick to let Firestore stream update
+          Future.delayed(const Duration(milliseconds: 800), () {
+            if (!mounted) return;
+            final sessionValue = ref.read(activeSessionProvider(widget.tripId));
+            sessionValue.when(
+              data: (session) {
+                if (session != null && mounted) {
+                  _broadcaster.start(sessionId: session.sessionId, driverUid: uid);
+                }
+              },
+              loading: () {},
+              error: (_, __) {},
+            );
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Trip session started! Location tracking active.'),
+              backgroundColor: AppTheme.successGreen,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
     } catch (e) {
       if (mounted) _showError(e.toString());
     } finally {
@@ -114,7 +85,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     try {
       final tripService = ref.read(tripServiceProvider);
       await tripService.pauseDailySession(sessionId);
-      _stopTelemetry();
+      await _broadcaster.stop(); // Stop GPS broadcasting on pause
     } catch (e) {
       if (mounted) _showError(e.toString());
     } finally {
@@ -127,7 +98,9 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     try {
       final tripService = ref.read(tripServiceProvider);
       await tripService.resumeDailySession(sessionId);
-      await _startTelemetry(sessionId);
+      // Resume GPS broadcasting
+      final uid = ref.read(firebaseAuthProvider).currentUser?.uid ?? 'unknown';
+      _broadcaster.start(sessionId: sessionId, driverUid: uid);
     } catch (e) {
       if (mounted) _showError(e.toString());
     } finally {
@@ -159,7 +132,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     try {
       final tripService = ref.read(tripServiceProvider);
       await tripService.endDailySession(sessionId, widget.tripId);
-      _stopTelemetry();
+      await _broadcaster.stop(); // Disconnect GPS broadcast on end
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

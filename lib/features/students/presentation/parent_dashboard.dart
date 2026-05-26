@@ -5,17 +5,9 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
 import '../../profile/presentation/parent_profile_screen.dart';
-import '../../../core/services/mqtt_service.dart';
 import '../../../core/widgets/shimmer_loading.dart';
-
-final telemetryStreamProvider = StreamProvider.family<Map<String, dynamic>, String>((ref, sessionId) async* {
-  final mqttService = ref.read(mqttServiceProvider);
-  final user = ref.read(firebaseAuthProvider).currentUser;
-  if (user != null) {
-    await mqttService.connect('parent_${user.uid}');
-    yield* mqttService.streamLocation(sessionId);
-  }
-});
+import '../../../core/services/telemetry_consumer.dart';
+import '../../../core/services/mqtt_service.dart';
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
 final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
@@ -367,78 +359,120 @@ class ParentDashboard extends ConsumerWidget {
     ).animate().fade(delay: 300.ms).slideY(begin: 0.1);
   }
 
+  /// The map card shows a live telemetry readout when the student is In Van.
+  /// It subscribes via [parentTelemetryProvider] using the active session_id
+  /// stored on the student document. When the status changes away from 'In Van'
+  /// Riverpod disposes the provider and TelemetryConsumer disconnects cleanly.
   Widget _buildMapCard(BuildContext context, WidgetRef ref, ThemeData theme, StudentModel student) {
     final isInVan = student.lastAttendanceStatus == 'In Van';
-    final sessionId = student.currentSessionId;
+    // The active session id is stored on the student doc (set by TripService fan-out).
+    final sessionId = student.stats['active_session_id'] as String? ?? '';
+    // Only subscribe to MQTT when there is an active session and child is in van.
+    final telemetryAsync = (isInVan && sessionId.isNotEmpty)
+        ? ref.watch(parentTelemetryProvider(sessionId))
+        : const AsyncValue<TelemetryPayload?>.data(null);
 
-    return Container(
-      height: 180,
-      decoration: BoxDecoration(
-        color: isInVan ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isInVan ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.map_rounded,
-              size: 48,
-              color: isInVan ? AppTheme.primaryGold : AppTheme.textMuted,
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isInVan ? 'Opening Live Tracking Map... (Coming Soon)' : 'Trip not started yet.',
             ),
-            const SizedBox(height: 12),
-            Text(
-              'Live Tracking Map',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: isInVan ? AppTheme.textPrimary : AppTheme.textMuted,
-              ),
-            ),
-            if (!isInVan)
-              Text(
-                'Map available when trip starts',
-                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
-              ),
-            if (isInVan && sessionId != null)
-              Consumer(
-                builder: (context, ref, child) {
-                  final telemetryAsync = ref.watch(telemetryStreamProvider(sessionId));
-                  return telemetryAsync.when(
-                    data: (data) {
-                      final lat = data['latitude'] as double?;
-                      final lng = data['longitude'] as double?;
-                      final speed = data['speed'] as double?;
-                      if (lat != null && lng != null) {
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
-                          child: Text(
-                            'Lat: ${lat.toStringAsFixed(4)}, Lng: ${lng.toStringAsFixed(4)}\nSpeed: ${speed?.toStringAsFixed(1) ?? '0.0'} m/s',
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.primaryGold),
-                          ),
-                        );
-                      }
-                      return const SizedBox();
-                    },
-                    loading: () => const Padding(
-                      padding: EdgeInsets.only(top: 8.0),
-                      child: SizedBox(
-                        height: 16, width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryGold),
-                      ),
-                    ),
-                    error: (err, stack) => Text(
-                      'Error connecting to map',
-                      style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.errorRed),
-                    ),
-                  );
-                },
-              ),
-          ],
+            backgroundColor: isInVan ? AppTheme.primaryGold : AppTheme.textSecondary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+      child: Container(
+        height: 200,
+        decoration: BoxDecoration(
+          color: isInVan ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isInVan ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border),
         ),
-      ),
-    ).animate().fade(delay: 400.ms).slideY(begin: 0.1);
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                isInVan ? Icons.gps_fixed_rounded : Icons.map_rounded,
+                size: 40,
+                color: isInVan ? AppTheme.primaryGold : AppTheme.textMuted,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                isInVan ? 'Live Tracking Active' : 'Live Tracking Map',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isInVan ? AppTheme.textPrimary : AppTheme.textMuted,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (isInVan) ...[      
+                telemetryAsync.when(
+                  data: (payload) => payload != null
+                      ? Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryGold.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.location_on, color: AppTheme.primaryGold, size: 16),
+                                      const SizedBox(width: 4),
+                                      Text(
+                                        '${payload.latitude.toStringAsFixed(5)}, ${payload.longitude.toStringAsFixed(5)}',
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          fontFamily: 'monospace',
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.primaryGold,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Speed: ${(payload.speed * 3.6).toStringAsFixed(1)} km/h',
+                                    style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        )
+                      : Text(
+                          'Waiting for GPS signal…',
+                          style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
+                        ),
+                  loading: () => Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryGold)),
+                      const SizedBox(width: 8),
+                      Text('Connecting to van…', style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted)),
+                    ],
+                  ),
+                  error: (e, _) => Text('Signal error: $e', style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.errorRed)),
+                ),
+              ] else ...[                
+                Text(
+                  'Map available when trip starts',
+                  style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+    );
   }
 
 
