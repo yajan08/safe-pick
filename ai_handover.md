@@ -29,7 +29,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
   - `name`: String
   - `phone`: String
   - `status`: String (`active` | `suspended` | `pending`)
-  - `created_at`: Timestamp
+  - `created_at`: Timestamp (Firestore Native)
 
 ### `schools`
 - **Path:** `/schools/{school_id}`
@@ -90,22 +90,24 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 2 Complete - Authentication & Routing Set**
+## 📈 Current Status: **Phase 2.1 Complete - Registration & User Profile Synced**
 
 ### Completed Milestones:
-1. **Workspace Cleanup (Phase 1):** Successfully purged all legacy Next.js/Web template files and directories.
+1. **Workspace Cleanup (Phase 1):** Successfully purged all Next.js/Web template files and directories.
 2. **Flutter Initialization (Phase 1):** Run `flutter create` using org `com.safepick` and project name `safe_pick`.
 3. **Strict Color Theme Applied (Phase 1/Pre-Flight):** Configured `app_theme.dart` to strictly enforce the brand guidelines (Gold `#C1942B`, black backgrounds, white text).
-4. **User Model (Phase 2):** Designed immutable `UserModel` in [user_model.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/data/user_model.dart) with `fromJson` and `toJson` methods matching the database schema.
-5. **Authentication Services (Phase 2):** Configured [auth_service.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/core/services/auth_service.dart) exposing Riverpod providers (`firebaseAuthProvider`, `authServiceProvider`, and `authStateChangesProvider`) and implementing `signIn(String email, String password)`, `signOut()`, and `getUserRole(String uid)` querying the Firestore `users` collection.
-6. **Branded Login UI (Phase 2):** Created a beautiful, fully validated `LoginScreen` in [login_screen.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/login_screen.dart) integrating the black & gold styling, input validations, loading button states, and error SnackBar fallback behaviors.
-7. **Auth Gate Router (Phase 2):** Programmed [auth_gate.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/auth_gate.dart) which listens to `authStateChangesProvider`:
-   - Logged out -> Renders `LoginScreen`.
-   - Logged in -> Fetches role using `userRoleProvider(uid)` (Firestore queries).
-   - Fetching role -> Shows centered Amber `CircularProgressIndicator`.
-   - Role fetched -> Shows themed Scaffold containing `'Welcome [Role] - Dashboard coming soon'` with manual Log Out option.
-8. **App Integration:** Configured `main.dart` home to point directly to `AuthGate()`.
-9. **Verification Check:** Static code analysis verified with `flutter analyze` returning **"No issues found!"** and widget tests passing 100% with provider overrides.
+4. **User Model (Phase 2):** Designed immutable `UserModel` in [user_model.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/data/user_model.dart) with native Firestore `Timestamp` serialization.
+5. **Authentication Services (Phase 2 & 2.1):** 
+   - Exposes Riverpod streams monitoring authorization state changes.
+   - Implemented `signIn(email, password)` and `signOut()`.
+   - Coded `getUserRole(uid)` querying Firestore collections.
+   - Added `signUp({required email, required password, required name, required phone, required role})` which creates a Firebase Auth user credential, translates it to a `UserModel` with `'active'` status and native timestamp date, and writes it directly to the `/users/{uid}` collection.
+6. **Branded Login & Sign-Up UI Screens (Phase 2 & 2.1):** 
+   - Validiated inputs, loading buttons, and snackbars.
+   - Integrated [sign_up_screen.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/sign_up_screen.dart) for registering Parents and Drivers.
+   - Appended routing buttons at the bottom of the screens to allow swapping between Sign In and Sign Up structures.
+7. **Auth Gate Router (Phase 2):** Programmed [auth_gate.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/auth_gate.dart) which routes signed-out users to `LoginScreen`, and queries and welcomes authenticated users depending on their retrieved Firestore user role.
+8. **Testing Checks:** Clean analysis (`flutter analyze` - No issues found) and automated unit test coverage passing 100%.
 
 ---
 

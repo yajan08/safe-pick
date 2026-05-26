@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 @immutable
 class UserModel {
@@ -56,7 +57,7 @@ class UserModel {
       'name': name,
       'phone': phone,
       'status': status,
-      'created_at': createdAt.toIso8601String(), // In production Firestore, this is typically stored as a native Timestamp. We serialize to string or handle it in the repository.
+      'created_at': Timestamp.fromDate(createdAt),
     };
   }
 

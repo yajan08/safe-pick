@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../features/auth/data/user_model.dart';
 
 /// Riverpod provider for the raw [FirebaseAuth] instance.
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {
@@ -46,6 +47,40 @@ class AuthService {
       throw _handleAuthException(e);
     } catch (e) {
       throw 'An unexpected authentication error occurred. Please try again.';
+    }
+  }
+
+  /// Registers a new user with Firebase Auth and saves their profile details to Firestore.
+  Future<UserCredential> signUp({
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+    required String role,
+  }) async {
+    try {
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+
+      final user = UserModel(
+        uid: credential.user!.uid,
+        role: role.toLowerCase().trim(),
+        name: name.trim(),
+        phone: phone.trim(),
+        status: 'active',
+        createdAt: DateTime.now(),
+      );
+
+      await _firestore.collection('users').doc(credential.user!.uid).set(user.toJson());
+
+      return credential;
+    } on FirebaseAuthException catch (e) {
+      throw _handleAuthException(e);
+    } catch (e) {
+      debugPrint('Firestore write error during sign up: $e');
+      throw 'Registration succeeded, but profile creation failed. Please contact support.';
     }
   }
 
