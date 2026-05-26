@@ -18,6 +18,7 @@ final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
   return firestore
       .collection('students')
       .where('parent_uid', isEqualTo: currentUser.uid)
+      .where('status', isEqualTo: 'active')
       .snapshots()
       .map((snapshot) => snapshot.docs
           .map((doc) => StudentModel.fromJson(doc.data(), doc.id))
@@ -160,6 +161,8 @@ class ParentDashboard extends ConsumerWidget {
                           _buildEtaCard(theme, selectedStudent),
                           const SizedBox(height: 16),
                           _buildMapCard(context, theme, selectedStudent),
+                          const SizedBox(height: 16),
+                          _buildRemoveButton(context, ref, selectedStudent),
                           const SizedBox(height: 32),
                         ],
                       ),
@@ -274,6 +277,18 @@ class ParentDashboard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.border,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    'ID: ${student.studentId}',
+                    style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(height: 4),
                 Text(
                   student.schoolName.isNotEmpty ? student.schoolName : 'No School Set',
                   style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
@@ -448,6 +463,48 @@ class ParentDashboard extends ConsumerWidget {
         ),
       ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
     );
+  }
+
+  Widget _buildRemoveButton(BuildContext context, WidgetRef ref, StudentModel student) {
+    return TextButton.icon(
+      onPressed: () async {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.background,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: const BorderSide(color: AppTheme.border),
+            ),
+            title: const Text('Remove Student', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold)),
+            content: Text('Are you sure you want to remove ${student.name}? This will mark their profile as inactive.', style: const TextStyle(color: AppTheme.textSecondary)),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed, foregroundColor: AppTheme.background),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Remove'),
+              ),
+            ],
+          ),
+        );
+
+        if (confirm == true) {
+          try {
+            await ref.read(firestoreProvider).collection('students').doc(student.studentId).update({'status': 'inactive'});
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Student removed successfully'), backgroundColor: AppTheme.successGreen));
+            }
+          } catch (e) {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to remove: $e'), backgroundColor: AppTheme.errorRed));
+            }
+          }
+        }
+      },
+      icon: const Icon(Icons.person_remove_rounded, color: AppTheme.errorRed),
+      label: const Text('Remove Student', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold)),
+    ).animate().fade(delay: 500.ms).slideY(begin: 0.1);
   }
 
   Widget _buildEmptyState(ThemeData theme) {

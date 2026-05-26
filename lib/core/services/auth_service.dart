@@ -109,6 +109,34 @@ class AuthService {
     }
   }
 
+  /// Generates a sequential student ID (e.g., SP1001) using a Firestore transaction
+  Future<String> generateSequentialStudentId() async {
+    try {
+      final counterRef = _firestore.collection('metadata').doc('counters');
+      
+      final String formattedId = await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(counterRef);
+
+        if (!snapshot.exists) {
+          // Initialize counter if it doesn't exist
+          transaction.set(counterRef, {'student_count': 1000});
+          return 'SP1000';
+        }
+
+        final currentCount = snapshot.data()?['student_count'] as int? ?? 1000;
+        final nextCount = currentCount + 1;
+        
+        transaction.update(counterRef, {'student_count': nextCount});
+        return 'SP$nextCount';
+      });
+
+      return formattedId;
+    } catch (e) {
+      debugPrint('Error generating sequential ID: $e');
+      throw 'Failed to generate Student ID. Please try again.';
+    }
+  }
+
   /// Converts common [FirebaseAuthException] error codes into human-readable messages.
   String _handleAuthException(FirebaseAuthException e) {
     switch (e.code) {

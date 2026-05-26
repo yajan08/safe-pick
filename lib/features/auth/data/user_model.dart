@@ -9,6 +9,7 @@ class UserModel {
   final String phone;
   final String status; // 'active' | 'suspended' | 'pending'
   final DateTime createdAt;
+  final String? managedSchoolId;
 
   const UserModel({
     required this.uid,
@@ -17,6 +18,7 @@ class UserModel {
     required this.phone,
     required this.status,
     required this.createdAt,
+    this.managedSchoolId,
   });
 
   /// Factory constructor to create a UserModel from a Map (e.g. Firestore document snapshot)
@@ -46,6 +48,7 @@ class UserModel {
       phone: json['phone'] as String? ?? '',
       status: json['status'] as String? ?? 'pending',
       createdAt: parsedDate,
+      managedSchoolId: json['managed_school_id'] as String?,
     );
   }
 
@@ -58,6 +61,7 @@ class UserModel {
       'phone': phone,
       'status': status,
       'created_at': Timestamp.fromDate(createdAt),
+      if (managedSchoolId != null) 'managed_school_id': managedSchoolId,
     };
   }
 
@@ -69,6 +73,7 @@ class UserModel {
     String? phone,
     String? status,
     DateTime? createdAt,
+    String? managedSchoolId,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -77,6 +82,7 @@ class UserModel {
       phone: phone ?? this.phone,
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
+      managedSchoolId: managedSchoolId ?? this.managedSchoolId,
     );
   }
 
@@ -89,16 +95,17 @@ class UserModel {
         other.name == name &&
         other.phone == phone &&
         other.status == status &&
-        other.createdAt == createdAt;
+        other.createdAt == createdAt &&
+        other.managedSchoolId == managedSchoolId;
   }
 
   @override
   int get hashCode {
-    return Object.hash(uid, role, name, phone, status, createdAt);
+    return Object.hash(uid, role, name, phone, status, createdAt, managedSchoolId);
   }
 
   @override
   String toString() {
-    return 'UserModel(uid: $uid, role: $role, name: $name, phone: $phone, status: $status, createdAt: $createdAt)';
+    return 'UserModel(uid: $uid, role: $role, name: $name, phone: $phone, status: $status, createdAt: $createdAt, managedSchoolId: $managedSchoolId)';
   }
 }

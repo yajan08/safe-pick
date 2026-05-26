@@ -1,4 +1,4 @@
-import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,11 +47,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     super.dispose();
   }
 
-  String _generateRandomId() {
-    final random = Random();
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid easily confused chars
-    return List.generate(6, (index) => chars[random.nextInt(chars.length)]).join();
-  }
+
 
   Future<void> _captureLocation() async {
     setState(() {
@@ -144,7 +140,9 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       }
 
       final isEditing = widget.student != null;
-      final studentId = isEditing ? widget.student!.studentId : _generateRandomId();
+      final studentId = isEditing 
+          ? widget.student!.studentId 
+          : await ref.read(authServiceProvider).generateSequentialStudentId();
       
       final studentData = StudentModel(
         studentId: studentId,

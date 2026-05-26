@@ -30,6 +30,12 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
   - `phone`: String
   - `status`: String (`active` | `suspended` | `pending`)
   - `created_at`: Timestamp (Firestore Native)
+  - `managed_school_id`: String? (nullable, used when `role == 'admin'` to link to a school)
+
+### `metadata`
+- **Path:** `/metadata/counters`
+- **Fields:**
+  - `student_count`: Integer (auto-incrementing counter used by `generateSequentialStudentId` to produce IDs like SP1001, SP1002, etc.)
 
 ### `schools`
 - **Path:** `/schools/{school_id}`
@@ -91,7 +97,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 5 Complete - Data CRUD & Roster Building**
+## 📈 Current Status: **Phase 7 Complete - Parent CRUD Polish, Sequential IDs, & Admin Prep**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -122,12 +128,29 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
     - Implemented `AddStudentScreen` with form validation, FAB hooks, and Geolocator GPS capturing.
     - Implemented `CreateTripScreen` with route setup fields and FAB hooks.
     - Programmed student ID-lookup dialog inside `TripDetailScreen` enabling drivers to query and add students to the trip's manifest subcollection.
-11. **Testing & Checks:** Zero issues/warnings on `flutter analyze` and widget tests passing 100%.
+11. **Advanced Dashboards & Workflow Polish (Phase 6):**
+    - Converted app to Premium Light Mode (off-white backgrounds, dark typography).
+    - Added `flutter_animate` for elegant entry animations across all screens.
+    - Updated `StudentModel` with `school_name`, `note`, and `last_attendance_status` fields.
+    - Updated `TripModel` with `approx_start_time` field.
+    - Rebuilt `ParentDashboard` with child selector dropdown, profile card, status card, ETA card, and map placeholder.
+    - Rebuilt `DriverDashboard` with amber Top Summary Tile (Total/Pending trips).
+    - Updated `CreateTripScreen` with TimePicker, student search by ID, roster state management, and batch manifest writing.
+    - Updated `AddStudentScreen` with edit capability and new fields.
+12. **Parent CRUD Polish, Sequential IDs, & Admin Prep (Phase 7):**
+    - Added `managed_school_id` (nullable) to `UserModel` for future admin role support.
+    - Implemented Firestore Transaction-based sequential ID generator (`generateSequentialStudentId`) using `metadata/counters` document. IDs follow the format `SPXXXX` (e.g., SP1001, SP1002).
+    - Updated `AddStudentScreen` to use the sequential ID generator instead of random strings.
+    - Displayed `student_id` prominently in `ParentDashboard` profile card as a styled chip.
+    - Added "Remove Student" button with confirmation dialog implementing soft-delete (sets `status` to `inactive`).
+    - Updated Firestore query in `parentStudentsProvider` to filter only `status == 'active'` students.
+    - Updated `CreateTripScreen` search hint to reflect new SPXXXX format.
+13. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
 
 ---
 
 ## 🎯 Next Tasks
 - **QR Code Scanner Integration:** Connect the placeholder button on each student card in the manifest list to open a barcode camera scanner, updating attendance subcollections upon scanning.
 - **MQTT Real-Time Location Stream:** Wire the driver location publishing streams and MQTT map listeners.
-
+- **Admin Dashboard:** Build school admin role with dashboard filtered by `managed_school_id`.
 

@@ -347,8 +347,8 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                             controller: _searchController,
                             textCapitalization: TextCapitalization.characters,
                             decoration: const InputDecoration(
-                              labelText: 'Student ID',
-                              hintText: 'Enter 6-char ID',
+                              labelText: 'Search by Student ID',
+                              hintText: 'e.g. SP1005',
                               prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textSecondary),
                             ),
                           ),
