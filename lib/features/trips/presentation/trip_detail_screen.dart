@@ -12,6 +12,7 @@ import 'edit_trip_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/location_broadcaster.dart';
+import '../../../core/utils/snackbar_utils.dart';
 
 /// Future provider to fetch details of a specific trip.
 final tripDetailsProvider = FutureProvider.family<TripModel, String>((ref, tripId) async {
@@ -67,13 +68,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
               error: (_, __) {},
             );
           });
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Trip session started! Location tracking active.'),
-              backgroundColor: AppTheme.successGreen,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          SnackBarUtils.showSuccess(context, 'Trip session started! Location tracking active.');
         }
     } catch (e) {
       if (mounted) _showError(e.toString());
@@ -136,13 +131,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       await tripService.endDailySession(sessionId, widget.tripId);
       await _broadcaster.stop(); // Disconnect GPS broadcast on end
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Trip ended successfully.'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        SnackBarUtils.showSuccess(context, 'Trip ended successfully.');
       }
     } catch (e) {
       if (mounted) _showError(e.toString());
@@ -176,13 +165,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       final tripService = ref.read(tripServiceProvider);
       await tripService.reopenDailySession(sessionId);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Trip reopened successfully.'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        SnackBarUtils.showSuccess(context, 'Trip reopened successfully.');
       }
     } catch (e) {
       if (mounted) _showError(e.toString());
@@ -603,7 +586,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         );
       },
       child: Container(
-        height: 160,
+        height: 200,
         decoration: BoxDecoration(
           color: isActive ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(20),
@@ -618,7 +601,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
             ClipRRect(
               borderRadius: BorderRadius.circular(20),
               child: CustomPaint(
-                size: const Size(double.infinity, 160),
+                size: const Size(double.infinity, 200),
                 painter: _MapGridPainter(),
               ),
             ),
@@ -746,13 +729,18 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.background,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(status == 'onboarded' ? 'Manual Onboard' : 'Mark Absent', style: const TextStyle(color: AppTheme.textPrimary)),
         content: Text('Are you sure you want to mark this student as ${status == 'onboarded' ? 'onboarded' : 'absent'}?', style: const TextStyle(color: AppTheme.textSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: status == 'onboarded' ? AppTheme.primaryGold : AppTheme.errorRed, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: status == 'onboarded' ? AppTheme.primaryGold : AppTheme.errorRed,
+              foregroundColor: status == 'onboarded' ? Colors.black : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
             child: const Text('Confirm'),
           ),
         ],
@@ -761,7 +749,11 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
     if (confirm != true) return;
     try {
-      await ref.read(tripServiceProvider).manualAttendanceOverride(sessionId, studentId, status);
+      if (status == 'onboarded') {
+        await ref.read(tripServiceProvider).manualOnboard(sessionId, studentId);
+      } else {
+        await ref.read(tripServiceProvider).manualAttendanceOverride(sessionId, studentId, status);
+      }
     } catch (e) {
       if (mounted) _showError(e.toString());
     }
@@ -803,6 +795,8 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 if (student.schoolName.isNotEmpty)
                   Text(

@@ -281,6 +281,61 @@ class TripService {
     await batch.commit();
   }
 
+  /// Manually onboard a student during an active trip
+  Future<void> manualOnboard(String sessionId, String studentId) async {
+    final sessionRef = _firestore.collection('daily_sessions').doc(sessionId);
+    final attendanceRef = sessionRef.collection('attendance').doc(studentId);
+    
+    final sessionSnap = await sessionRef.get();
+    if (!sessionSnap.exists) throw 'Active trip session not found.';
+
+    final tripId = sessionSnap.data()?['trip_id'] as String? ?? '';
+    final dateString = sessionSnap.data()?['date'] as String? ?? '';
+    final driverUid = sessionSnap.data()?['driver_uid'] as String? ?? '';
+
+    // Fetch details for ride log
+    final tripSnap = await _firestore.collection('trips').doc(tripId).get();
+    final tripName = tripSnap.data()?['trip_name'] as String? ?? 'Unknown Trip';
+
+    final driverSnap = await _firestore.collection('users').doc(driverUid).get();
+    final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
+    final vehicleNumber = driverSnap.data()?['vehicle_number'] as String? ?? '';
+
+    final batch = _firestore.batch();
+    
+    // Set status: 'onboarded' and boarded_at: FieldValue.serverTimestamp()
+    batch.update(attendanceRef, {
+      'status': 'onboarded',
+      'boarded_at': FieldValue.serverTimestamp(),
+    });
+
+    // Ride History
+    final rideHistoryRef = _firestore.collection('students').doc(studentId).collection('ride_history').doc(sessionId);
+    
+    final rideLog = StudentRideLogModel(
+      logId: sessionId,
+      sessionId: sessionId,
+      tripName: tripName,
+      driverName: driverName,
+      vehicleNumber: vehicleNumber,
+      date: dateString,
+      boardedAt: DateTime.now(), // Local fallback
+      status: 'onboarded',
+    );
+    
+    batch.set(rideHistoryRef, rideLog.toJson());
+    batch.update(rideHistoryRef, {
+      'boarded_at': FieldValue.serverTimestamp(),
+    });
+
+    // Sync to global student record
+    batch.update(_firestore.collection('students').doc(studentId), {
+      'last_attendance_status': 'In Van',
+    });
+
+    await batch.commit();
+  }
+
   /// Manually override attendance status (e.g. Absent, Manual Onboard)
   Future<void> manualAttendanceOverride(String sessionId, String studentId, String status) async {
     final sessionRef = _firestore.collection('daily_sessions').doc(sessionId);

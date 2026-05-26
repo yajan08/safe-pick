@@ -9,6 +9,7 @@ import '../../../core/widgets/shimmer_loading.dart';
 import '../../../core/services/telemetry_consumer.dart';
 import '../../../core/services/mqtt_service.dart';
 import 'live_tracking_map_screen.dart';
+import '../../../core/utils/snackbar_utils.dart';
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
 final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
@@ -386,13 +387,7 @@ class ParentDashboard extends ConsumerWidget {
             ),
           );
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Live tracking is available once the trip starts.'),
-              backgroundColor: AppTheme.textSecondary,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+          SnackBarUtils.showInfo(context, 'Live tracking is available once the trip starts.');
         }
       },
       child: Container(

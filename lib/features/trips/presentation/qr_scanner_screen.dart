@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/sync_queue_service.dart';
+import '../../../core/utils/snackbar_utils.dart';
 
 class QRScannerScreen extends ConsumerStatefulWidget {
   final String sessionId;
@@ -40,13 +41,7 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
     // Check if it's a valid SafePick ID format (e.g. SP1001)
     if (!rawValue.startsWith('SP') || rawValue.length < 6) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid QR Code. Please scan a valid student ID.'),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        SnackBarUtils.showError(context, 'Invalid QR Code. Please scan a valid student ID.');
       }
       return;
     }
@@ -86,24 +81,11 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
       
       if (mounted) {
         // Quick visual alert
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Scanned $rawValue - Queued', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-            backgroundColor: AppTheme.primaryGold,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(milliseconds: 1500),
-          ),
-        );
+        SnackBarUtils.showInfo(context, 'Scanned $rawValue - Queued');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error queuing scan: $e'),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        SnackBarUtils.showError(context, 'Error queuing scan: $e');
       }
     } finally {
       // 4. Immediately reset for next scan (e.g. within 1 second)

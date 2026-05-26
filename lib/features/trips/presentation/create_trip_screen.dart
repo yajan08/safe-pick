@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../students/data/student_model.dart';
 import '../data/trip_model.dart';
 import '../data/trip_manifest_model.dart';
+import '../../../core/utils/snackbar_utils.dart';
 
 class CreateTripScreen extends ConsumerStatefulWidget {
   const CreateTripScreen({super.key});
@@ -192,9 +193,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
     }
 
     if (_selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please pick an approximate start time.')),
-      );
+      SnackBarUtils.showError(context, 'Please pick an approximate start time.');
       return;
     }
 
@@ -249,24 +248,15 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
       await batch.commit();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Trip "${newTrip.tripName}" created with ${_roster.length} students!'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
+        SnackBarUtils.showSuccess(
+          context,
+          'Trip "${newTrip.tripName}" created with ${_roster.length} students!',
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to create trip: $e'),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        SnackBarUtils.showError(context, 'Failed to create trip: $e');
       }
     } finally {
       if (mounted) {

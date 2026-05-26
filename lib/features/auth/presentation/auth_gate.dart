@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/utils/snackbar_utils.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../students/presentation/parent_dashboard.dart';
 import '../../trips/presentation/driver_dashboard.dart';
@@ -94,13 +95,7 @@ class AuthGate extends ConsumerWidget {
                             await ref.read(authServiceProvider).signOut();
                           } catch (e) {
                             if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(e.toString()),
-                                  backgroundColor: AppTheme.errorRed,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
+                              SnackBarUtils.showError(context, e.toString());
                             }
                           }
                         },
@@ -143,13 +138,7 @@ class AuthGate extends ConsumerWidget {
                   ref.invalidate(userRoleProvider(user.uid));
                   await ref.read(authServiceProvider).signOut();
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Account profile missing. Please try signing up again.'),
-                        backgroundColor: AppTheme.errorRed,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
+                    SnackBarUtils.showError(context, 'Account profile missing. Please try signing up again.');
                   }
                 } catch (e) {
                   // Ignore sign-out errors in the fallback

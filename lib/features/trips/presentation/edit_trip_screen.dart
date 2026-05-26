@@ -6,6 +6,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../students/data/student_model.dart';
 import '../data/trip_model.dart';
 import '../data/trip_manifest_model.dart';
+import '../../../core/utils/snackbar_utils.dart';
 
 class EditTripScreen extends ConsumerStatefulWidget {
   final TripModel trip;
@@ -233,9 +234,7 @@ class _EditTripScreenState extends ConsumerState<EditTripScreen> {
     }
 
     if (_selectedTime == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please pick an approximate start time.')),
-      );
+      SnackBarUtils.showError(context, 'Please pick an approximate start time.');
       return;
     }
 
@@ -284,24 +283,15 @@ class _EditTripScreenState extends ConsumerState<EditTripScreen> {
       await batch.commit();
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Trip "${_nameController.text.trim()}" updated!'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
+        SnackBarUtils.showSuccess(
+          context,
+          'Trip "${_nameController.text.trim()}" updated!',
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to update trip: $e'),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        SnackBarUtils.showError(context, 'Failed to update trip: $e');
       }
     } finally {
       if (mounted) {
