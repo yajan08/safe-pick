@@ -76,12 +76,13 @@ class MqttService {
     try {
       // Load the CA certificate from Flutter assets and build a SecurityContext.
       final certBytes = await rootBundle.load(_kCertAsset);
-      final securityContext = SecurityContext.defaultContext;
+      final securityContext = SecurityContext(withTrustedRoots: true);
       try {
-        securityContext.setTrustedCertificatesBytes(certBytes.buffer.asUint8List());
-      } catch (_) {
-        // Already trusted — safe to ignore "TrustAnchorAlreadyExists" errors
-        // that happen if connect() is called more than once in a session.
+        securityContext.setTrustedCertificatesBytes(
+          certBytes.buffer.asUint8List(certBytes.offsetInBytes, certBytes.lengthInBytes),
+        );
+      } catch (e) {
+        debugPrint('[MQTT] Error setting trusted certificates: $e');
       }
 
       _client = MqttServerClient.withPort(_kBrokerHost, clientId, _kBrokerPort);
@@ -98,8 +99,7 @@ class MqttService {
       final connMsg = MqttConnectMessage()
           .withClientIdentifier(clientId)
           .authenticateAs(_kUsername, _kPassword)
-          .startClean()
-          .withWillQos(MqttQos.atLeastOnce);
+          .startClean();
       _client!.connectionMessage = connMsg;
 
       debugPrint('[MQTT] Connecting as $clientId …');

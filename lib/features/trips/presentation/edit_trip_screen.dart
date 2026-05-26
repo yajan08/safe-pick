@@ -25,12 +25,12 @@ class EditTripScreen extends ConsumerStatefulWidget {
 class _EditTripScreenState extends ConsumerState<EditTripScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
-  late TextEditingController _durationController;
   late TextEditingController _vehicleController;
+  final _studentIdAddController = TextEditingController();
   
   late String _tripType;
-  TimeOfDay? _selectedTime;
   bool _isSubmitting = false;
+  bool _isAddingStudent = false;
 
   final List<StudentModel> _roster = [];
   bool _isLoadingProfile = true;
@@ -39,24 +39,9 @@ class _EditTripScreenState extends ConsumerState<EditTripScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.trip.tripName);
-    _durationController = TextEditingController(text: widget.trip.estimatedDuration.replaceAll(RegExp(r'[^0-9]'), ''));
     _vehicleController = TextEditingController();
     _tripType = widget.trip.tripType.toLowerCase() == 'pickup' ? 'pickup' : 'dropoff';
     
-    // Parse time
-    try {
-      if (widget.trip.approxStartTime.isNotEmpty) {
-        final timeParts = widget.trip.approxStartTime.split(' ');
-        final isPM = timeParts.length > 1 && timeParts[1].toUpperCase() == 'PM';
-        final hm = timeParts[0].split(':');
-        int h = int.parse(hm[0]);
-        final m = int.parse(hm[1]);
-        if (isPM && h < 12) h += 12;
-        if (!isPM && h == 12) h = 0;
-        _selectedTime = TimeOfDay(hour: h, minute: m);
-      }
-    } catch (_) {}
-
     _initRoster();
     _loadDriverProfile();
   }
@@ -96,145 +81,59 @@ class _EditTripScreenState extends ConsumerState<EditTripScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _durationController.dispose();
     _vehicleController.dispose();
+    _studentIdAddController.dispose();
     super.dispose();
   }
 
-  Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime ?? TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppTheme.primaryGold,
-              onPrimary: AppTheme.background,
-              onSurface: AppTheme.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (time != null) {
-      setState(() {
-        _selectedTime = time;
-      });
+  Future<void> _linkStudentById() async {
+    final studentId = _studentIdAddController.text.trim();
+    if (studentId.isEmpty) {
+      SnackBarUtils.showError(context, 'Please enter a Student ID.');
+      return;
     }
-  }
 
-  Future<void> _openStudentSelector() async {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppTheme.background,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setStateSheet) {
-            return DraggableScrollableSheet(
-              initialChildSize: 0.7,
-              minChildSize: 0.5,
-              maxChildSize: 0.9,
-              expand: false,
-              builder: (context, scrollController) {
-                return Column(
-                  children: [
-                    Container(
-                      margin: const EdgeInsets.only(top: 12, bottom: 8),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppTheme.border,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Text(
-                        'Select Students',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                    const Divider(color: AppTheme.border, height: 1),
-                    Expanded(
-                      child: FutureBuilder(
-                        future: ref.read(firestoreProvider).collection('students').get(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator(color: AppTheme.primaryGold));
-                          }
-                          if (snapshot.hasError) {
-                            return const Center(child: Text('Error loading students', style: TextStyle(color: AppTheme.errorRed)));
-                          }
-                          
-                          final docs = snapshot.data?.docs ?? [];
-                          if (docs.isEmpty) {
-                            return const Center(child: Text('No students found.'));
-                          }
+    if (_roster.any((s) => s.studentId.toLowerCase() == studentId.toLowerCase())) {
+      SnackBarUtils.showError(context, 'Student is already added to this trip.');
+      return;
+    }
 
-                          return ListView.builder(
-                            controller: scrollController,
-                            itemCount: docs.length,
-                            itemBuilder: (context, index) {
-                              final doc = docs[index];
-                              final student = StudentModel.fromJson(doc.data(), doc.id);
-                              final isSelected = _roster.any((s) => s.studentId == student.studentId);
+    setState(() {
+      _isAddingStudent = true;
+    });
 
-                              return CheckboxListTile(
-                                activeColor: AppTheme.primaryGold,
-                                checkColor: AppTheme.background,
-                                title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text(student.studentId),
-                                value: isSelected,
-                                onChanged: (value) {
-                                  setStateSheet(() {
-                                    if (value == true) {
-                                      _roster.add(student);
-                                    } else {
-                                      _roster.removeWhere((s) => s.studentId == student.studentId);
-                                    }
-                                  });
-                                  setState(() {}); 
-                                },
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Done'),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          },
-        );
-      },
-    );
+    try {
+      final doc = await ref.read(firestoreProvider).collection('students').doc(studentId).get();
+      if (!doc.exists) {
+        if (mounted) {
+          SnackBarUtils.showError(context, 'Student ID "$studentId" not found.');
+        }
+        return;
+      }
+
+      final student = StudentModel.fromJson(doc.data()!, doc.id);
+      if (mounted) {
+        setState(() {
+          _roster.add(student);
+          _studentIdAddController.clear();
+        });
+        SnackBarUtils.showSuccess(context, 'Linked ${student.name} successfully.');
+      }
+    } catch (e) {
+      if (mounted) {
+        SnackBarUtils.showError(context, 'Failed to fetch student: $e');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isAddingStudent = false;
+        });
+      }
+    }
   }
 
   Future<void> _submitTrip() async {
     if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    if (_selectedTime == null) {
-      SnackBarUtils.showError(context, 'Please pick an approximate start time.');
       return;
     }
 
@@ -246,15 +145,15 @@ class _EditTripScreenState extends ConsumerState<EditTripScreen> {
       final firestore = ref.read(firestoreProvider);
       
       final docRef = firestore.collection('trips').doc(widget.trip.tripId);
-      final durationMins = int.parse(_durationController.text.trim());
-      final formattedTime = _selectedTime!.format(context);
+      final durationMins = widget.trip.estimatedDuration;
+      final formattedTime = widget.trip.approxStartTime;
 
       final batch = firestore.batch();
       
       batch.update(docRef, {
         'trip_name': _nameController.text.trim(),
         'trip_type': _tripType,
-        'estimated_duration': '$durationMins mins',
+        'estimated_duration': durationMins,
         'approx_start_time': formattedTime,
       });
 
@@ -397,77 +296,56 @@ class _EditTripScreenState extends ConsumerState<EditTripScreen> {
                       },
                     ).animate().fade(delay: 350.ms).slideY(begin: 0.1),
 
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: _pickTime,
-                            borderRadius: BorderRadius.circular(16),
-                            child: InputDecorator(
-                              decoration: const InputDecoration(
-                                labelText: 'Start Time',
-                                prefixIcon: Icon(Icons.access_time_rounded, color: AppTheme.textSecondary),
-                              ),
-                              child: Text(
-                                _selectedTime?.format(context) ?? 'Select Time',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: _selectedTime != null ? AppTheme.textPrimary : AppTheme.textMuted,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _durationController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Duration (Mins)',
-                              prefixIcon: Icon(Icons.timer_outlined, color: AppTheme.textSecondary),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Required';
-                              }
-                              final intValue = int.tryParse(value);
-                              if (intValue == null || intValue <= 0) {
-                                return 'Invalid';
-                              }
-                              return null;
-                            },
-                          ),
-                        ),
-                      ],
-                    ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 20),
 
                     const Divider(color: AppTheme.border),
                     const SizedBox(height: 16),
                     Text(
                       'Edit Roster',
                       style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
+                    ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
                     const SizedBox(height: 16),
 
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: OutlinedButton.icon(
-                        onPressed: _openStudentSelector,
-                        icon: const Icon(Icons.group_add_rounded, color: AppTheme.primaryGold),
-                        label: const Text(
-                          'Select Students',
-                          style: TextStyle(color: AppTheme.primaryGold, fontSize: 16, fontWeight: FontWeight.bold),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: AppTheme.primaryGold, width: 2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    // Add Student by ID Section
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: _studentIdAddController,
+                            decoration: const InputDecoration(
+                              labelText: 'Link Student by ID',
+                              hintText: 'e.g. SP1001',
+                              prefixIcon: Icon(Icons.person_add_alt_1_rounded, color: AppTheme.textSecondary),
+                            ),
                           ),
                         ),
-                      ),
-                    ).animate().fade(delay: 600.ms).slideY(begin: 0.1),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: _isAddingStudent ? null : _linkStudentById,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryGold,
+                              foregroundColor: AppTheme.background,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: _isAddingStudent
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.background),
+                                    ),
+                                  )
+                                : const Text('Link'),
+                          ),
+                        ),
+                      ],
+                    ).animate().fade(delay: 450.ms).slideY(begin: 0.1),
                     const SizedBox(height: 24),
 
                     if (_roster.isEmpty)

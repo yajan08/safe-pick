@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
@@ -41,8 +42,8 @@ class DriverDashboard extends ConsumerWidget {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: Image.asset(
-          'assets/images/light_logo.jpg',
+        title: SvgPicture.asset(
+          'assets/images/logo.svg',
           height: 32,
         ),
         actions: [

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
@@ -58,7 +59,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                 }
               },
               loading: () {},
-              error: (_, __) {},
+              error: (e, s) {},
             );
           });
           SnackBarUtils.showSuccess(context, 'Trip session started! Location tracking active.');
@@ -189,8 +190,8 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: Image.asset(
-          'assets/images/light_logo.jpg',
+        title: SvgPicture.asset(
+          'assets/images/logo.svg',
           height: 32,
         ),
         leading: IconButton(
@@ -224,7 +225,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                 manifestAsync.when(
                                   data: (manifest) => _buildTripDetailsCard(theme, trip, session, manifest),
                                   loading: () => _buildTripDetailsCard(theme, trip, session, []),
-                                  error: (_, __) => _buildTripDetailsCard(theme, trip, session, []),
+                                  error: (e, s) => _buildTripDetailsCard(theme, trip, session, []),
                                 ),
                                 const SizedBox(height: 16),
 

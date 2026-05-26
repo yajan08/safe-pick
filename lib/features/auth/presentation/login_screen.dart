@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -71,8 +72,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Top Branding Section
                   Hero(
                     tag: 'app_logo',
-                    child: Image.asset(
-                      'assets/images/light_logo.jpg',
+                    child: SvgPicture.asset(
+                      'assets/images/logo.svg',
                       height: 100,
                     ),
                   ),  const SizedBox(height: 24),
