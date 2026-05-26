@@ -91,7 +91,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 3 Complete - Role Dashboards Configured**
+## 📈 Current Status: **Phase 4 Complete - Driver Workflow & Trip Manifest**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -112,10 +112,16 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
    - Renders trip card detailing route name, type (pickup/dropoff), status, duration, and route initiation controls.
 8. **AuthGate Router Upgrade (Phase 3):**
    - Modified [auth_gate.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/auth_gate.dart) to route users directly to their corresponding dashboards depending on their Firestore user profile role.
-9. **Testing & Checks:** Zero issues/warnings on `flutter analyze` and widget tests passing 100%.
+9. **Trip Service & Manifest (Phase 4):**
+   - Created `TripManifestModel` schema mirroring the `trip_manifest` subcollection under `trips/{trip_id}/trip_manifest`.
+   - Extended `TripService` with methods to stream manifest data sorted by stop order, and `startDailySession(tripId)` which instantiates a daily session document with `in_progress` status and a unique `mqtt_topic_id`.
+   - Built `TripDetailScreen` displaying metadata, a state-driven "Start Trip" button, and list cards for students on the manifest.
+   - Connected `DriverDashboard` to `TripDetailScreen` for both card-tap and action button actions.
+10. **Testing & Checks:** Zero issues/warnings on `flutter analyze` and widget tests passing 100%.
 
 ---
 
-## 🎯 Next Tasks (Phase 4)
-- **MQTT Real-Time Location stream:** Wire the driver location publishing streams and MQTT map listeners.
-- **Attendance Check-In Events:** Build check-in/check-out scanners/buttons inside the Driver's Passenger Manifest view.
+## 🎯 Next Tasks
+- **QR Code Scanner Integration:** Connect the placeholder button on each student card in the manifest list to open a barcode camera scanner, updating attendance subcollections upon scanning.
+- **MQTT Real-Time Location Stream:** Wire the driver location publishing streams and MQTT map listeners.
+

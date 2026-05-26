@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/trip_model.dart';
+import 'trip_detail_screen.dart';
 
 /// Real-time stream provider that fetches all trips assigned to the logged-in driver.
 final driverTripsProvider = StreamProvider<List<TripModel>>((ref) {
@@ -112,113 +113,121 @@ class DriverDashboard extends ConsumerWidget {
     final isActive = trip.status.toLowerCase() == 'active';
     final isCompleted = trip.status.toLowerCase() == 'completed';
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceDark,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.borderDark, width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Route Title
-              Expanded(
-                child: Text(
-                  trip.tripName,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (context) => TripDetailScreen(tripId: trip.tripId),
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceDark,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppTheme.borderDark, width: 1),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                // Route Title
+                Expanded(
+                  child: Text(
+                    trip.tripName,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-              // Status Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isCompleted
-                      ? AppTheme.successGreen.withValues(alpha: 0.15)
-                      : isActive
-                          ? AppTheme.primaryGold.withValues(alpha: 0.15)
-                          : AppTheme.textGrey.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  trip.status.toUpperCase(),
-                  style: theme.textTheme.labelLarge?.copyWith(
+                // Status Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
                     color: isCompleted
-                        ? AppTheme.successGreen
+                        ? AppTheme.successGreen.withValues(alpha: 0.15)
                         : isActive
-                            ? AppTheme.primaryGold
-                            : AppTheme.textGrey,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 10,
+                            ? AppTheme.primaryGold.withValues(alpha: 0.15)
+                            : AppTheme.textGrey.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    trip.status.toUpperCase(),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                      color: isCompleted
+                          ? AppTheme.successGreen
+                          : isActive
+                              ? AppTheme.primaryGold
+                              : AppTheme.textGrey,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(color: AppTheme.borderDark, height: 1),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              // Trip Type info
-              Icon(
-                isPickup ? Icons.login_rounded : Icons.logout_rounded,
-                color: AppTheme.primaryGold,
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                isPickup ? 'Morning Pick-Up' : 'Afternoon Drop-Off',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(color: AppTheme.borderDark, height: 1),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                // Trip Type info
+                Icon(
+                  isPickup ? Icons.login_rounded : Icons.logout_rounded,
+                  color: AppTheme.primaryGold,
+                  size: 20,
                 ),
-              ),
-              const Spacer(),
-              // Estimated Duration info
-              const Icon(
-                Icons.schedule_rounded,
-                color: AppTheme.textGrey,
-                size: 18,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                trip.estimatedDuration,
-                style: theme.textTheme.bodyMedium?.copyWith(
+                const SizedBox(width: 8),
+                Text(
+                  isPickup ? 'Morning Pick-Up' : 'Afternoon Drop-Off',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                // Estimated Duration info
+                const Icon(
+                  Icons.schedule_rounded,
                   color: AppTheme.textGrey,
+                  size: 18,
                 ),
+                const SizedBox(width: 6),
+                Text(
+                  trip.estimatedDuration,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textGrey,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
+            // Action button to start/view route details
+            ElevatedButton.icon(
+              onPressed: isCompleted
+                  ? null
+                  : () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => TripDetailScreen(tripId: trip.tripId),
+                        ),
+                      );
+                    },
+              icon: Icon(
+                isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded,
+                color: isCompleted ? AppTheme.textGrey : AppTheme.bgBlack,
               ),
-            ],
-          ),
-          const SizedBox(height: 18),
-          // Action button to start/view route details
-          ElevatedButton.icon(
-            onPressed: isCompleted
-                ? null
-                : () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Starting route: ${trip.tripName}...'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
-            icon: Icon(
-              isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded,
-              color: isCompleted ? AppTheme.textGrey : AppTheme.bgBlack,
+              label: Text(isCompleted ? 'Route Completed' : 'Start Route'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isCompleted ? AppTheme.borderDark : AppTheme.primaryGold,
+                foregroundColor: isCompleted ? AppTheme.textMuted : AppTheme.bgBlack,
+              ),
             ),
-            label: Text(isCompleted ? 'Route Completed' : 'Start Route'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isCompleted ? AppTheme.borderDark : AppTheme.primaryGold,
-              foregroundColor: isCompleted ? AppTheme.textMuted : AppTheme.bgBlack,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
