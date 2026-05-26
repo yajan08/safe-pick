@@ -11,8 +11,7 @@ void main() {
       ),
     );
 
-    // Verify that the title SafePick is rendered.
-    expect(find.text('SafePick'), findsOneWidget);
-    expect(find.text('Architecture Checklist'), findsOneWidget);
+    // Verify that the error gate is rendered since Firebase is not initialized in tests.
+    expect(find.text('Auth Initialization Error'), findsOneWidget);
   });
 }

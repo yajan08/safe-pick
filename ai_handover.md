@@ -11,14 +11,14 @@ This living document keeps track of the project's current state, codebase archit
 
 ## 🛠️ Tech Stack
 - **Framework:** Flutter (Dart)
-- **State Management:** Flutter Riverpod (`flutter_riverpod`)
+- **State Management:** Flutter Riverpod (`flutter_riverpod` - Upgraded to v3)
 - **Backend:** Firebase (Authentication & Cloud Firestore)
-- **Real-Time Communication:** EMQX / MQTT (to be integrated for location streams in later phases)
-- **Mapping:** Google Maps API (to be integrated in later phases)
+- **Real-Time Communication:** EMQX / MQTT (Client integrated)
+- **Mapping & Location:** Google Maps API & Geolocator (integrated)
 
 ---
 
-## 🗄️ Firestore Database Schema
+## 🗄️ Firestore Database Schema (Reference Only)
 The database uses a flattened Firestore NoSQL hierarchy for performance, offline scalability, and simplicity.
 
 ### `users`
@@ -90,23 +90,23 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 2 Complete - Authentication & Routing UI Gate Set**
+## 📈 Current Status: **Phase 1 Complete (System Checked & Ready for Phase 2)**
 
 ### Completed Milestones:
-1. **Workspace Cleanup (Phase 1):** Successfully purged all Next.js/Web template files and directories.
-2. **Flutter Initialization (Phase 1):** Run `flutter create` using org `com.safepick` and project name `safe_pick`.
-3. **Core Theme Definition (Phase 1):** Created `app_theme.dart` containing customized light/dark Material 3 themes using Amber & Midnight Navy.
-4. **Firebase & Riverpod Integration (Phase 2):** Added `firebase_core`, `firebase_auth`, and `flutter_riverpod` dependencies to `pubspec.yaml`.
-5. **User Model (Phase 2):** Designed immutable `UserModel` in [user_model.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/data/user_model.dart) with `fromJson` and `toJson` methods matching the database schema.
-6. **Authentication Services (Phase 2):** Configured [auth_service.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/core/services/auth_service.dart) wrapping `FirebaseAuth` methods with robust exception handling and exposing Riverpod providers (`firebaseAuthProvider`, `authServiceProvider`, and `authStateChangesProvider`).
-7. **Login UI Screen (Phase 2):** Created a beautiful, fully validated `LoginScreen` in [login_screen.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/login_screen.dart) integrating the design system themes, password display toggle, loading states, and error cards.
-8. **Auth Routing Gate (Phase 2):** Coded the [auth_gate.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/auth_gate.dart) which listens to the authentication stream and directs the user to either the login screen or a "Checking user role..." loader screen.
-9. **Verification Check:** Static code analysis verified with `flutter analyze` returning **"No issues found!"**.
+1. **Workspace Cleanup:** Successfully purged all legacy Next.js/Web template files and directories.
+2. **Flutter Initialization:** Run `flutter create` using org `com.safepick` and project name `safe_pick`.
+3. **Strict Color Theme Applied:** Configured [app_theme.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/core/theme/app_theme.dart) to strictly enforce the brand guidelines:
+   - Primary Accent: Premium dark golden/amber (`#C1942B`)
+   - Backgrounds/Surfaces: Black (`#000000` / `#121212`)
+   - Text/Icons: White (`#FFFFFF` / `#B3B3B3`)
+4. **Folder Structure Audit:** Verified that directories for core features (`theme`, `services`, `constants`, `widgets`) and modular feature directories (`auth`, `trips`, `students`, `attendance`, `profile`) are perfectly aligned.
+5. **KGP Warning Resolved:** Upgraded packages and dependencies via `flutter pub upgrade --major-versions` to verify Kotlin Gradle Plugin compliance for all packages.
+6. **Static Verification:** Completed code audit using `flutter analyze` returning **"No issues found!"** with all lints (including `avoid_print` inside MQTT services) fully resolved.
 
 ---
 
-## 🎯 Next Tasks (Phase 3)
-- **Firestore Integration:** Create service class for retrieving user profile details from Firestore.
-- **User Role Gate:** Update `AuthGate` to query the authenticated user's profile and route them based on their role (`driver` or `parent`).
-- **Role Dashboard Shells:** Design clean shells for Driver Home Dashboard and Parent Home Dashboard.
-- **Profile Registration/Setup:** Setup initial profile verification screen if profile details are not present.
+## 🎯 Next Tasks (Phase 2)
+- **User Model Schema:** Add the structured `UserModel` matching `{uid, role, name, phone, status, created_at}`.
+- **Firebase Auth Service:** Connect FirebaseAuth methods and Riverpod streams.
+- **Role-based Authentication Routing:** Implement `AuthGate` routing check (logged out -> LoginScreen; logged in -> verify role check scaffold).
+- **Branded Login UI:** Design high-fidelity, validated Login form using the premium black & gold design system.

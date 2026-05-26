@@ -28,7 +28,7 @@ class AuthGate extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryAmber),
+                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
               ),
               const SizedBox(height: 24),
               Text(
@@ -124,7 +124,7 @@ class CheckingRoleScreen extends ConsumerWidget {
                           height: 80,
                           child: CircularProgressIndicator(
                             strokeWidth: 4,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryAmber),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
                           ),
                         ),
                         Icon(

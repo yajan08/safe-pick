@@ -1,6 +1,7 @@
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 class MqttService {
   late MqttServerClient client;
@@ -24,29 +25,29 @@ class MqttService {
     client.connectionMessage = connMess;
 
     try {
-      print('Connecting to EMQX Broker...');
+      debugPrint('Connecting to EMQX Broker...');
       await client.connect();
     } on NoConnectionException catch (e) {
-      print('MQTT Client disconnected: $e');
+      debugPrint('MQTT Client disconnected: $e');
       client.disconnect();
       return false;
     } on SocketException catch (e) {
-      print('MQTT Socket exception: $e');
+      debugPrint('MQTT Socket exception: $e');
       client.disconnect();
       return false;
     }
 
     if (client.connectionStatus!.state == MqttConnectionState.connected) {
-      print('EMQX Connected Successfully!');
+      debugPrint('EMQX Connected Successfully!');
       return true;
     } else {
-      print('EMQX Connection failed, state is ${client.connectionStatus!.state}');
+      debugPrint('EMQX Connection failed, state is ${client.connectionStatus!.state}');
       client.disconnect();
       return false;
     }
   }
 
   void onDisconnected() {
-    print('EMQX Disconnected');
+    debugPrint('EMQX Disconnected');
   }
 }

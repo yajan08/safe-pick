@@ -56,7 +56,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
       body: SafeArea(
@@ -241,12 +240,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 24),
-
-                // Footer Section
                 Text(
                   'SafePick School Van Tracking System',
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary,
+                    color: AppTheme.textGrey,
                   ),
                   textAlign: TextAlign.center,
                 ),
