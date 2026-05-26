@@ -324,7 +324,7 @@ class DriverDashboard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  trip.approxStartTime?.isNotEmpty == true 
+                  trip.approxStartTime.isNotEmpty 
                     ? '${trip.approxStartTime} (${trip.estimatedDuration})' 
                     : trip.estimatedDuration,
                   style: theme.textTheme.bodyMedium?.copyWith(

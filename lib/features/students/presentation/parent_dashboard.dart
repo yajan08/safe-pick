@@ -25,7 +25,15 @@ final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
 });
 
 /// State provider for the currently selected student ID
-final selectedStudentIdProvider = StateProvider<String?>((ref) => null);
+class SelectedStudentIdNotifier extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void updateStudent(String? id) => state = id;
+}
+
+final selectedStudentIdProvider = NotifierProvider<SelectedStudentIdNotifier, String?>(
+  SelectedStudentIdNotifier.new,
+);
 
 class ParentDashboard extends ConsumerWidget {
   const ParentDashboard({super.key});
@@ -120,7 +128,7 @@ class ParentDashboard extends ConsumerWidget {
             // Auto-select the first child if none is selected
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (selectedId == null && students.isNotEmpty) {
-                ref.read(selectedStudentIdProvider.notifier).state = students.first.studentId;
+                ref.read(selectedStudentIdProvider.notifier).updateStudent(students.first.studentId);
               }
             });
 
@@ -236,7 +244,7 @@ class ParentDashboard extends ConsumerWidget {
               }).toList(),
               onChanged: (String? newValue) {
                 if (newValue != null) {
-                  ref.read(selectedStudentIdProvider.notifier).state = newValue;
+                  ref.read(selectedStudentIdProvider.notifier).updateStudent(newValue);
                 }
               },
             ),
