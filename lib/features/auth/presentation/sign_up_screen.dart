@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/theme/app_theme.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -103,10 +104,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Welcome Logo
-                Image.asset(
-                  'assets/images/light_logo.jpg',
-                  height: 100,
+                Hero(
+                  tag: 'app_logo',
+                  child: SvgPicture.asset(
+                    'assets/images/logo.svg',
+                    height: 100,
+                    colorFilter: const ColorFilter.mode(AppTheme.primaryGold, BlendMode.srcIn),
+                  ),
                 ).animate().fade().slideY(begin: -0.1),
                 const SizedBox(height: 16),
 
@@ -323,20 +327,23 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                           const SizedBox(height: 28),
 
                           // Submit Sign Up Button
-                          ElevatedButton(
-                            onPressed: _isLoading ? null : _handleSignUp,
-                            child: _isLoading
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppTheme.background,
+                          SizedBox(
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _handleSignUp,
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          AppTheme.background,
+                                        ),
                                       ),
-                                    ),
-                                  )
-                                : const Text('Sign Up'),
+                                    )
+                                  : const Text('Sign Up', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ),
                           ).animate().fade(delay: 450.ms).scale(begin: const Offset(0.95, 0.95)),
                         ],
                       ),

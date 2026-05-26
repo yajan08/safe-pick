@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../data/student_model.dart';
 import '../../profile/presentation/parent_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
@@ -51,9 +52,10 @@ class ParentDashboard extends ConsumerWidget {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: Image.asset(
-          'assets/images/light_logo.jpg',
-          height: 32,
+        title: SvgPicture.asset(
+          'assets/images/logo.svg',
+          height: 28,
+          colorFilter: const ColorFilter.mode(AppTheme.primaryGold, BlendMode.srcIn),
         ),
         actions: [
           GestureDetector(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/auth_service.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/theme/app_theme.dart';
 import 'sign_up_screen.dart';
 
@@ -69,13 +70,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // Top Branding Section
-                Column(
-                  children: [
-                    Image.asset(
-                      'assets/images/light_logo.jpg',
-                      height: 120,
+                  Hero(
+                    tag: 'app_logo',
+                    child: SvgPicture.asset(
+                      'assets/images/logo.svg',
+                      height: 100,
+                      colorFilter: const ColorFilter.mode(AppTheme.primaryGold, BlendMode.srcIn),
                     ),
-                    const SizedBox(height: 24),
+                  ),  const SizedBox(height: 24),
                     Text(
                       'Welcome to SafePick',
                       style: theme.textTheme.headlineSmall?.copyWith(
@@ -89,8 +91,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       style: theme.textTheme.bodyMedium,
                       textAlign: TextAlign.center,
                     ),
-                  ],
-                ),
                 const SizedBox(height: 48),
 
                 // Form Container Card
@@ -211,20 +211,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ],
 
                           // Submit Button
-                          ElevatedButton(
-                            onPressed: _isLoading ? null : _handleLogin,
-                            child: _isLoading
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      valueColor: AlwaysStoppedAnimation<Color>(
-                                        Colors.white,
+                          SizedBox(
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _handleLogin,
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      height: 24,
+                                      width: 24,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2.5,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white,
+                                        ),
                                       ),
-                                    ),
-                                  )
-                                : const Text('Sign In'),
+                                    )
+                                  : const Text('Sign In', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            ),
                           ),
                         ],
                       ),

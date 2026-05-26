@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../data/trip_model.dart';
 import '../data/trip_service.dart';
 import '../data/trip_manifest_model.dart';
@@ -121,6 +122,46 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     }
   }
 
+  Future<void> _handleReopenTrip(String sessionId) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        title: const Text('Reopen Trip', style: TextStyle(color: AppTheme.textPrimary)),
+        content: const Text('Are you sure you want to reopen this trip? This will set it back to In Progress.', style: TextStyle(color: AppTheme.textSecondary)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold, foregroundColor: Colors.white),
+            child: const Text('Reopen Trip'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final tripService = ref.read(tripServiceProvider);
+      await tripService.reopenDailySession(sessionId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Trip reopened successfully.'),
+            backgroundColor: AppTheme.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) _showError(e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -143,9 +184,10 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: Image.asset(
-          'assets/images/light_logo.jpg',
-          height: 32,
+        title: SvgPicture.asset(
+          'assets/images/logo.svg',
+          height: 28,
+          colorFilter: const ColorFilter.mode(AppTheme.primaryGold, BlendMode.srcIn),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
@@ -475,21 +517,18 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       );
     } else {
       // completed
-      return Container(
+      return SizedBox(
         width: double.infinity,
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.successGreen.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.3)),
-        ),
-        child: const Text(
-          'Trip Completed',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppTheme.successGreen,
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
+        height: 56,
+        child: ElevatedButton.icon(
+          onPressed: _isLoading ? null : () => _handleReopenTrip(session.sessionId),
+          icon: _isLoading
+              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Icon(Icons.refresh_rounded),
+          label: const Text('REDO / REOPEN TRIP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.primaryGold,
+            foregroundColor: Colors.white,
           ),
         ),
       );

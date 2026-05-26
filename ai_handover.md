@@ -97,7 +97,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 13 Complete - App-Wide UI/UX Refinement & Production Stabilization**
+## 📈 Current Status: **Phase 14 Complete - SVG Branding, Profile CRUD, Infinite Trips**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -184,6 +184,12 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
     - Polished form inputs across the app with `.trim()` on text extraction. 
     - Verified large touch targets and confirmation prompts for driver manual roster overrides.
 20. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
+21. **SVG Branding, Driver Profile, & Infinite Trips (Phase 14):**
+    - Transitioned branding to SVG (`flutter_svg`) using `assets/images/logo.svg` across Auth, Dashboards, and a new dedicated `SplashScreen` with Hero/FadeIn animations.
+    - Added `DriverProfileScreen` for full CRUD capabilities over Name, Phone, Gender, and Vehicle Number, integrated to Firestore.
+    - Upgraded `TripService` and `TripDetailScreen` to support "Infinite Trips" (allowing drivers to click "REDO / REOPEN TRIP" on completed sessions to convert them back to `in_progress`).
+    - Finalized End-to-End QR Sync fan-out: Scans/manual overrides now instantly update the global student record (`last_attendance_status`) so parents see real-time updates (e.g. "In Van", "At Home").
+    - Verified UX minimum button heights (56.0) across auth flows and primary actions.
 
 ---
 

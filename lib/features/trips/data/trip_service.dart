@@ -134,6 +134,13 @@ class TripService {
     await _firestore.collection('daily_sessions').doc(sessionId).update({'status': 'in_progress'});
   }
 
+  Future<void> reopenDailySession(String sessionId) async {
+    await _firestore.collection('daily_sessions').doc(sessionId).update({
+      'status': 'in_progress',
+      'end_time': FieldValue.delete(),
+    });
+  }
+
   Future<void> endDailySession(String sessionId, String tripId) async {
     final batch = _firestore.batch();
     batch.update(_firestore.collection('daily_sessions').doc(sessionId), {
@@ -196,6 +203,11 @@ class TripService {
         status: 'onboarded',
       );
       batch.set(rideHistoryRef, rideLog.toJson());
+      
+      // Sync to global student record
+      batch.update(_firestore.collection('students').doc(studentId), {
+        'last_attendance_status': 'In Van',
+      });
     } else if (currentStatus == 'onboarded') {
       // Alighting
       batch.update(attendanceRef, {
@@ -207,6 +219,11 @@ class TripService {
       batch.update(rideHistoryRef, {
         'status': 'dropped',
         'alighted_at': now,
+      });
+
+      // Sync to global student record
+      batch.update(_firestore.collection('students').doc(studentId), {
+        'last_attendance_status': 'At Home',
       });
     } else {
       throw 'Student has already been dropped off or is marked absent.';
@@ -270,6 +287,17 @@ class TripService {
       // Just update existing
       batch.update(rideHistoryRef, updateData);
     }
+
+    // Sync to global student record
+    String globalStatus = 'Unknown';
+    if (status == 'onboarded') globalStatus = 'In Van';
+    if (status == 'dropped') globalStatus = 'At Home';
+    if (status == 'absent') globalStatus = 'Absent';
+    if (status == 'pending') globalStatus = 'Pending';
+    
+    batch.update(_firestore.collection('students').doc(studentId), {
+      'last_attendance_status': globalStatus,
+    });
 
     await batch.commit();
   }

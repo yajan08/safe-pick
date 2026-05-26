@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import '../data/trip_model.dart';
 import 'trip_detail_screen.dart';
 import 'create_trip_screen.dart';
 import 'trip_history_screen.dart';
+import '../../profile/presentation/driver_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 
 /// Real-time stream provider that fetches all trips assigned to the logged-in driver.
@@ -103,18 +105,26 @@ class DriverDashboard extends ConsumerWidget {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: Image.asset(
-          'assets/images/light_logo.jpg',
-          height: 32,
+        title: SvgPicture.asset(
+          'assets/images/logo.svg',
+          height: 28,
+          colorFilter: const ColorFilter.mode(AppTheme.primaryGold, BlendMode.srcIn),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.history_rounded),
+            tooltip: 'Trip History',
             onPressed: () {
               Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const TripHistoryScreen(),
-                ),
+                MaterialPageRoute(builder: (context) => const TripHistoryScreen()),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_outline_rounded, color: AppTheme.primaryGold),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const DriverProfileScreen()),
               );
             },
           ),
@@ -122,6 +132,7 @@ class DriverDashboard extends ConsumerWidget {
             icon: const Icon(Icons.logout_rounded),
             onPressed: () => _handleSignOut(context, ref),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
