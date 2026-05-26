@@ -97,7 +97,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 7 Complete - Parent CRUD Polish, Sequential IDs, & Admin Prep**
+## 📈 Current Status: **Phase 8 Complete - Parent Profile, QR Codes, & Dashboard Cleanup**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -145,7 +145,13 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
     - Added "Remove Student" button with confirmation dialog implementing soft-delete (sets `status` to `inactive`).
     - Updated Firestore query in `parentStudentsProvider` to filter only `status == 'active'` students.
     - Updated `CreateTripScreen` search hint to reflect new SPXXXX format.
-13. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
+13. **Parent Profile, QR Codes, & Dashboard Cleanup (Phase 8):**
+    - Added `qr_flutter` package for QR code generation.
+    - Created [parent_profile_screen.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/profile/presentation/parent_profile_screen.dart) — dedicated hub for account management with user info card, child list, sign out, and "Add New Child" button.
+    - Created [student_detail_screen.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/profile/presentation/student_detail_screen.dart) — shows full student details with a visual QR code (`QrImageView`) encoding the `student_id` (e.g., `SP1005`). Includes Edit and Remove actions.
+    - Cleaned up `ParentDashboard`: removed FAB, removed sign out and remove button. Added a Profile avatar icon in AppBar that navigates to `ParentProfileScreen`.
+    - Dashboard now strictly focuses on child status monitoring (selector, status card, ETA card, map placeholder).
+14. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
 
 ---
 

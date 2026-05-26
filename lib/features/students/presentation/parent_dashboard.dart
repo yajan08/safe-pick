@@ -4,7 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
-import 'add_student_screen.dart';
+import '../../profile/presentation/parent_profile_screen.dart';
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
 final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
@@ -39,69 +39,6 @@ final selectedStudentIdProvider = NotifierProvider<SelectedStudentIdNotifier, St
 class ParentDashboard extends ConsumerWidget {
   const ParentDashboard({super.key});
 
-  Future<void> _handleSignOut(BuildContext context, WidgetRef ref) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppTheme.border, width: 1),
-        ),
-        title: const Text(
-          'Sign Out',
-          style: TextStyle(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text(
-          'Are you sure you want to sign out?',
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
-              'No',
-              style: TextStyle(color: AppTheme.textPrimary),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGold,
-              foregroundColor: AppTheme.background,
-              minimumSize: const Size(80, 40),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Yes'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm != true) return;
-
-    try {
-      await ref.read(authServiceProvider).signOut();
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -113,9 +50,22 @@ class ParentDashboard extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Parent Dashboard'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () => _handleSignOut(context, ref),
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const ParentProfileScreen(),
+                ),
+              );
+            },
+            child: Container(
+              margin: const EdgeInsets.only(right: 16),
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.15),
+                child: const Icon(Icons.person_rounded, color: AppTheme.primaryGold, size: 20),
+              ),
+            ),
           ),
         ],
       ),
@@ -161,8 +111,6 @@ class ParentDashboard extends ConsumerWidget {
                           _buildEtaCard(theme, selectedStudent),
                           const SizedBox(height: 16),
                           _buildMapCard(context, theme, selectedStudent),
-                          const SizedBox(height: 16),
-                          _buildRemoveButton(context, ref, selectedStudent),
                           const SizedBox(height: 32),
                         ],
                       ),
@@ -179,21 +127,6 @@ class ParentDashboard extends ConsumerWidget {
           ),
           error: (error, stackTrace) => _buildErrorState(theme, error.toString()),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppTheme.primaryGold,
-        foregroundColor: AppTheme.background,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => const AddStudentScreen(),
-            ),
-          );
-        },
-        child: const Icon(Icons.add_rounded),
       ),
     );
   }
@@ -300,17 +233,7 @@ class ParentDashboard extends ConsumerWidget {
               ],
             ),
           ),
-          IconButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => AddStudentScreen(student: student),
-                ),
-              );
-            },
-            icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryGold),
-            tooltip: 'Edit Details',
-          ),
+
         ],
       ),
     ).animate().fade(delay: 100.ms).slideY(begin: 0.1);
@@ -465,47 +388,6 @@ class ParentDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildRemoveButton(BuildContext context, WidgetRef ref, StudentModel student) {
-    return TextButton.icon(
-      onPressed: () async {
-        final confirm = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.background,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-              side: const BorderSide(color: AppTheme.border),
-            ),
-            title: const Text('Remove Student', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold)),
-            content: Text('Are you sure you want to remove ${student.name}? This will mark their profile as inactive.', style: const TextStyle(color: AppTheme.textSecondary)),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed, foregroundColor: AppTheme.background),
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Remove'),
-              ),
-            ],
-          ),
-        );
-
-        if (confirm == true) {
-          try {
-            await ref.read(firestoreProvider).collection('students').doc(student.studentId).update({'status': 'inactive'});
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Student removed successfully'), backgroundColor: AppTheme.successGreen));
-            }
-          } catch (e) {
-            if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to remove: $e'), backgroundColor: AppTheme.errorRed));
-            }
-          }
-        }
-      },
-      icon: const Icon(Icons.person_remove_rounded, color: AppTheme.errorRed),
-      label: const Text('Remove Student', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold)),
-    ).animate().fade(delay: 500.ms).slideY(begin: 0.1);
-  }
 
   Widget _buildEmptyState(ThemeData theme) {
     return Center(
