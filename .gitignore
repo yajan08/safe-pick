@@ -1,41 +1,74 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
 .DS_Store
-*.pem
+.atom
+.buildlog
+.history
+.project
+.vscode/
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
 
-# env files (can opt-in for committing if needed)
-.env*
+# The directory where the Flutter SDK is installed
+/flutter/
 
-# vercel
-.vercel
+# Flutter/Dart/Pub-related
+**/doc/api/
+**/ios/Flutter/.ios/
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/Flutter.app
+**/ios/Flutter/Flutter.framework
+**/ios/Flutter/Flutter.podspec
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/app.flx
+**/ios/Flutter/app.zip
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/flutter_play_store_key.gph
+**/ios/Flutter/flutter_service_worker.js
+**/ios/assets/
+**/.dart_tool/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.packages
+**/.pub-cache/
+**/.pub/
+**/pubspec.lock
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# Android related
+**/android/key.properties
+**/android/app/local.properties
+**/android/app/shared_local.properties
+**/android/app/generated_sig.keystore
+**/android/app/google-services.json
+
+# iOS related
+**/ios/Flutter/App.framework
+**/ios/Flutter/App.podspec
+**/ios/Flutter/App.zip
+**/ios/Flutter/Generated.xcconfig
+**/ios/Runner/GeneratedPluginRegistrant.h
+**/ios/Runner/GeneratedPluginRegistrant.m
+
+# Windows related
+**/windows/flutter/generated_plugin_registrant.h
+**/windows/flutter/generated_plugin_registrant.cc
+**/windows/flutter/generated_plugins.cmake
+
+# macOS related
+**/macos/Flutter/ephemeral/
+
+# Linux related
+**/linux/flutter/ephemeral/
+
+# Web related
+**/web/flutter_service_worker.js
+
+# Build artifacts
+**/build/
