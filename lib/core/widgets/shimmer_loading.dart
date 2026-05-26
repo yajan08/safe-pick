@@ -32,14 +32,11 @@ class ShimmerLoading extends StatelessWidget {
 }
 
 class ShimmerCard extends StatelessWidget {
-  final double height;
-  
-  const ShimmerCard({super.key, this.height = 120});
+  const ShimmerCard({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height,
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -49,6 +46,7 @@ class ShimmerCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           const ShimmerLoading(width: 150, height: 24, borderRadius: 12),
           const SizedBox(height: 16),
@@ -78,7 +76,7 @@ class ShimmerList extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       itemCount: itemCount,
       itemBuilder: (context, index) {
-        return ShimmerCard(height: itemHeight);
+        return const ShimmerCard();
       },
     );
   }

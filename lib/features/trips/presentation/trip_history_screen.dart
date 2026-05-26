@@ -81,12 +81,36 @@ class TripHistoryScreen extends ConsumerWidget {
         loading: () => const Center(
           child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold)),
         ),
-        error: (error, _) => Center(
-          child: Text(
-            'Error loading history: $error',
-            style: const TextStyle(color: AppTheme.errorRed),
-          ),
-        ),
+        error: (error, _) {
+          if (error.toString().contains('failed-precondition')) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.build_circle_outlined, size: 48, color: AppTheme.primaryGold),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Database index building.\nPlease check back in a few minutes.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: AppTheme.primaryGold,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+          return Center(
+            child: Text(
+              'Error loading history: $error',
+              style: const TextStyle(color: AppTheme.errorRed),
+            ),
+          );
+        },
       ),
     );
   }

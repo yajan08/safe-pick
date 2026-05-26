@@ -8,6 +8,7 @@ import '../data/trip_manifest_model.dart';
 import '../data/daily_session_model.dart';
 import 'qr_scanner_screen.dart';
 import 'trip_map_screen.dart';
+import 'edit_trip_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/services/location_broadcaster.dart';
@@ -244,7 +245,11 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                 const SizedBox(height: 20),
 
                                 // 2. Trip Details & Action Buttons
-                                _buildTripDetailsCard(theme, trip, session),
+                                manifestAsync.when(
+                                  data: (manifest) => _buildTripDetailsCard(theme, trip, session, manifest),
+                                  loading: () => _buildTripDetailsCard(theme, trip, session, []),
+                                  error: (_, __) => _buildTripDetailsCard(theme, trip, session, []),
+                                ),
                                 const SizedBox(height: 16),
 
                                 // 3. Map Card — tappable, opens real map
@@ -395,7 +400,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   // ─── 2. Trip Details & Action Buttons ────────────────────────────
-  Widget _buildTripDetailsCard(ThemeData theme, TripModel trip, DailySessionModel? session) {
+  Widget _buildTripDetailsCard(ThemeData theme, TripModel trip, DailySessionModel? session, List<TripManifestModel> manifest) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -416,18 +421,19 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   ),
                 ),
               ),
-              if (session?.status != 'completed' && trip.status.toLowerCase() != 'completed')
+              if (session == null || (session.status != 'in_progress' && session.status != 'paused'))
                 SizedBox(
                   width: 48,
                   height: 48,
                   child: IconButton(
                     icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryGold),
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Edit Trip Details... (Coming Soon)'),
-                          backgroundColor: AppTheme.primaryGold,
-                          behavior: SnackBarBehavior.floating,
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => EditTripScreen(
+                            trip: trip,
+                            initialManifest: manifest,
+                          ),
                         ),
                       );
                     },

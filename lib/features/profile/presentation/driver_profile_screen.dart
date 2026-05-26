@@ -27,6 +27,54 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     _loadProfile();
   }
 
+  Future<void> _handleSignOut() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppTheme.border, width: 1),
+        ),
+        title: const Text(
+          'Sign Out',
+          style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Are you sure you want to sign out?',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('No', style: TextStyle(color: AppTheme.textPrimary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorRed,
+              foregroundColor: AppTheme.background,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Yes'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ref.read(authServiceProvider).signOut();
+      if (mounted) {
+        // Pop all routes and let auth state changes handle navigation
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (mounted) SnackBarUtils.showError(context, e.toString());
+    }
+  }
+
   Future<void> _loadProfile() async {
     try {
       final user = ref.read(firebaseAuthProvider).currentUser;
@@ -177,6 +225,22 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                               : const Text('Save Profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                         ),
                       ).animate().fade(delay: 600.ms),
+                      const SizedBox(height: 24),
+                      
+                      SizedBox(
+                        height: 56,
+                        child: OutlinedButton.icon(
+                          onPressed: _handleSignOut,
+                          icon: const Icon(Icons.logout_rounded, color: AppTheme.errorRed),
+                          label: const Text('Sign Out', style: TextStyle(color: AppTheme.errorRed, fontSize: 16, fontWeight: FontWeight.bold)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppTheme.errorRed, width: 2),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                        ),
+                      ).animate().fade(delay: 700.ms),
                     ],
                   ),
                 ),

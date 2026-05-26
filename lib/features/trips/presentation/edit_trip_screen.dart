@@ -7,20 +7,27 @@ import '../../students/data/student_model.dart';
 import '../data/trip_model.dart';
 import '../data/trip_manifest_model.dart';
 
-class CreateTripScreen extends ConsumerStatefulWidget {
-  const CreateTripScreen({super.key});
+class EditTripScreen extends ConsumerStatefulWidget {
+  final TripModel trip;
+  final List<TripManifestModel> initialManifest;
+
+  const EditTripScreen({
+    super.key,
+    required this.trip,
+    required this.initialManifest,
+  });
 
   @override
-  ConsumerState<CreateTripScreen> createState() => _CreateTripScreenState();
+  ConsumerState<EditTripScreen> createState() => _EditTripScreenState();
 }
 
-class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
+class _EditTripScreenState extends ConsumerState<EditTripScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _durationController = TextEditingController();
-  final _vehicleController = TextEditingController();
+  late TextEditingController _nameController;
+  late TextEditingController _durationController;
+  late TextEditingController _vehicleController;
   
-  String _tripType = 'pickup';
+  late String _tripType;
   TimeOfDay? _selectedTime;
   bool _isSubmitting = false;
 
@@ -30,7 +37,42 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   @override
   void initState() {
     super.initState();
+    _nameController = TextEditingController(text: widget.trip.tripName);
+    _durationController = TextEditingController(text: widget.trip.estimatedDuration.replaceAll(RegExp(r'[^0-9]'), ''));
+    _vehicleController = TextEditingController();
+    _tripType = widget.trip.tripType.toLowerCase() == 'pickup' ? 'pickup' : 'dropoff';
+    
+    // Parse time
+    try {
+      if (widget.trip.approxStartTime.isNotEmpty) {
+        final timeParts = widget.trip.approxStartTime.split(' ');
+        final isPM = timeParts.length > 1 && timeParts[1].toUpperCase() == 'PM';
+        final hm = timeParts[0].split(':');
+        int h = int.parse(hm[0]);
+        final m = int.parse(hm[1]);
+        if (isPM && h < 12) h += 12;
+        if (!isPM && h == 12) h = 0;
+        _selectedTime = TimeOfDay(hour: h, minute: m);
+      }
+    } catch (_) {}
+
+    _initRoster();
     _loadDriverProfile();
+  }
+
+  void _initRoster() {
+    for (final m in widget.initialManifest) {
+      _roster.add(StudentModel(
+        studentId: m.studentId,
+        parentUid: '',
+        name: m.name,
+        schoolId: m.schoolId,
+        schoolName: m.schoolName,
+        grade: '',
+        status: 'active',
+        stats: const {},
+      ));
+    }
   }
 
   Future<void> _loadDriverProfile() async {
@@ -61,7 +103,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   Future<void> _pickTime() async {
     final time = await showTimePicker(
       context: context,
-      initialTime: TimeOfDay.now(),
+      initialTime: _selectedTime ?? TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
@@ -156,7 +198,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                                       _roster.removeWhere((s) => s.studentId == student.studentId);
                                     }
                                   });
-                                  // Update main state as well
                                   setState(() {}); 
                                 },
                               );
@@ -204,40 +245,34 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
 
     try {
       final firestore = ref.read(firestoreProvider);
-      final auth = ref.read(firebaseAuthProvider);
-      final currentUser = auth.currentUser;
-
-      if (currentUser == null) {
-        throw 'Driver user must be logged in to create a trip.';
-      }
-
-      final docRef = firestore.collection('trips').doc();
-      final tripId = docRef.id;
+      
+      final docRef = firestore.collection('trips').doc(widget.trip.tripId);
       final durationMins = int.parse(_durationController.text.trim());
       final formattedTime = _selectedTime!.format(context);
 
-      final newTrip = TripModel(
-        tripId: tripId,
-        driverUid: currentUser.uid,
-        tripName: _nameController.text.trim(),
-        tripType: _tripType,
-        schoolIds: const ['sch_default_01'],
-        status: 'inactive',
-        estimatedDuration: '$durationMins mins',
-        approxStartTime: formattedTime,
-      );
-
       final batch = firestore.batch();
-      batch.set(docRef, newTrip.toJson());
+      
+      batch.update(docRef, {
+        'trip_name': _nameController.text.trim(),
+        'trip_type': _tripType,
+        'estimated_duration': '$durationMins mins',
+        'approx_start_time': formattedTime,
+      });
 
-      // Write roster to manifest
+      // Clear existing manifest
+      final existingManifest = await docRef.collection('trip_manifest').get();
+      for (final doc in existingManifest.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // Write new roster to manifest
       for (int i = 0; i < _roster.length; i++) {
         final student = _roster[i];
         final manifestRef = docRef.collection('trip_manifest').doc(student.studentId);
         final manifestModel = TripManifestModel(
           studentId: student.studentId,
           stopOrder: i + 1,
-          expectedTime: formattedTime, // Simplified for now
+          expectedTime: formattedTime,
           status: 'pending',
           schoolId: student.schoolId,
           schoolName: student.schoolName,
@@ -251,7 +286,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Trip "${newTrip.tripName}" created with ${_roster.length} students!'),
+            content: Text('Trip "${_nameController.text.trim()}" updated!'),
             backgroundColor: AppTheme.successGreen,
             behavior: SnackBarBehavior.floating,
           ),
@@ -262,7 +297,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to create trip: $e'),
+            content: Text('Failed to update trip: $e'),
             backgroundColor: AppTheme.errorRed,
             behavior: SnackBarBehavior.floating,
           ),
@@ -283,7 +318,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Trip'),
+        title: const Text('Edit Trip'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -301,27 +336,24 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
                   children: [
-                    // Form Header Description
                     Text(
-                      'Set Up a Route',
+                      'Edit Route',
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ).animate().fade().slideY(begin: 0.1),
                     const SizedBox(height: 8),
                     Text(
-                      'Enter details to instantiate a new driving shift and build your roster.',
+                      'Modify details and roster for this template.',
                       style: theme.textTheme.bodyMedium,
                     ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
                     const SizedBox(height: 32),
 
-                    // Trip Name Field
                     TextFormField(
                       controller: _nameController,
                       textCapitalization: TextCapitalization.words,
                       decoration: const InputDecoration(
                         labelText: 'Trip Name',
-                        hintText: 'e.g. Route A Morning',
                         prefixIcon: Icon(Icons.directions_bus_outlined, color: AppTheme.textSecondary),
                       ),
                       validator: (value) {
@@ -333,7 +365,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                     ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
                     const SizedBox(height: 20),
 
-                    // Trip Type Dropdown
                     DropdownButtonFormField<String>(
                       initialValue: _tripType,
                       decoration: const InputDecoration(
@@ -341,7 +372,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                         prefixIcon: Icon(Icons.merge_type_rounded, color: AppTheme.textSecondary),
                       ),
                       dropdownColor: AppTheme.surface,
-                      iconEnabledColor: AppTheme.primaryGold,
                       items: const [
                         DropdownMenuItem(
                           value: 'pickup',
@@ -362,7 +392,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                     ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
                     const SizedBox(height: 20),
 
-                    // Vehicle Number
                     TextFormField(
                       controller: _vehicleController,
                       textCapitalization: TextCapitalization.characters,
@@ -378,7 +407,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                       },
                     ).animate().fade(delay: 350.ms).slideY(begin: 0.1),
 
-                    // Time Picker & Duration Row
                     Row(
                       children: [
                         Expanded(
@@ -406,7 +434,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                             keyboardType: TextInputType.number,
                             decoration: const InputDecoration(
                               labelText: 'Duration (Mins)',
-                              hintText: 'e.g. 45',
                               prefixIcon: Icon(Icons.timer_outlined, color: AppTheme.textSecondary),
                             ),
                             validator: (value) {
@@ -428,7 +455,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                     const Divider(color: AppTheme.border),
                     const SizedBox(height: 16),
                     Text(
-                      'Build Roster',
+                      'Edit Roster',
                       style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                     ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
                     const SizedBox(height: 16),
@@ -463,7 +490,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            'No students added yet.\nSearch by ID to build your manifest.',
+                            'No students added yet.\nSelect students to build your manifest.',
                             textAlign: TextAlign.center,
                             style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted),
                           ),
@@ -489,8 +516,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                   ],
                 ),
               ),
-
-              // Submit Button Area
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
@@ -508,7 +533,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                             valueColor: AlwaysStoppedAnimation<Color>(AppTheme.background),
                           ),
                         )
-                      : Text('Save Trip (${_roster.length} Students)'),
+                      : Text('Save Updates (${_roster.length} Students)'),
                 ),
               ),
             ],
