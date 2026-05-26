@@ -5,7 +5,17 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
 import '../../profile/presentation/parent_profile_screen.dart';
+import '../../../core/services/mqtt_service.dart';
 import '../../../core/widgets/shimmer_loading.dart';
+
+final telemetryStreamProvider = StreamProvider.family<Map<String, dynamic>, String>((ref, sessionId) async* {
+  final mqttService = ref.read(mqttServiceProvider);
+  final user = ref.read(firebaseAuthProvider).currentUser;
+  if (user != null) {
+    await mqttService.connect('parent_${user.uid}');
+    yield* mqttService.streamLocation(sessionId);
+  }
+});
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
 final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
@@ -119,7 +129,7 @@ class ParentDashboard extends ConsumerWidget {
                             const SizedBox(height: 16),
                             _buildEtaCard(theme, selectedStudent),
                             const SizedBox(height: 16),
-                            _buildMapCard(context, theme, selectedStudent),
+                            _buildMapCard(context, ref, theme, selectedStudent),
                             const SizedBox(height: 32),
                           ],
                         ),
@@ -357,55 +367,78 @@ class ParentDashboard extends ConsumerWidget {
     ).animate().fade(delay: 300.ms).slideY(begin: 0.1);
   }
 
-  Widget _buildMapCard(BuildContext context, ThemeData theme, StudentModel student) {
+  Widget _buildMapCard(BuildContext context, WidgetRef ref, ThemeData theme, StudentModel student) {
     final isInVan = student.lastAttendanceStatus == 'In Van';
+    final sessionId = student.currentSessionId;
 
-    return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isInVan ? 'Opening Live Tracking Map... (Coming Soon)' : 'Trip not started yet.',
+    return Container(
+      height: 180,
+      decoration: BoxDecoration(
+        color: isInVan ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isInVan ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.map_rounded,
+              size: 48,
+              color: isInVan ? AppTheme.primaryGold : AppTheme.textMuted,
             ),
-            backgroundColor: isInVan ? AppTheme.primaryGold : AppTheme.textSecondary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      },
-      child: Container(
-        height: 180,
-        decoration: BoxDecoration(
-          color: isInVan ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isInVan ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border),
-        ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.map_rounded,
-                size: 48,
-                color: isInVan ? AppTheme.primaryGold : AppTheme.textMuted,
+            const SizedBox(height: 12),
+            Text(
+              'Live Tracking Map',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: isInVan ? AppTheme.textPrimary : AppTheme.textMuted,
               ),
-              const SizedBox(height: 12),
+            ),
+            if (!isInVan)
               Text(
-                'Live Tracking Map',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: isInVan ? AppTheme.textPrimary : AppTheme.textMuted,
-                ),
+                'Map available when trip starts',
+                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
               ),
-              if (!isInVan)
-                Text(
-                  'Map available when trip starts',
-                  style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
-                ),
-            ],
-          ),
+            if (isInVan && sessionId != null)
+              Consumer(
+                builder: (context, ref, child) {
+                  final telemetryAsync = ref.watch(telemetryStreamProvider(sessionId));
+                  return telemetryAsync.when(
+                    data: (data) {
+                      final lat = data['latitude'] as double?;
+                      final lng = data['longitude'] as double?;
+                      final speed = data['speed'] as double?;
+                      if (lat != null && lng != null) {
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: Text(
+                            'Lat: ${lat.toStringAsFixed(4)}, Lng: ${lng.toStringAsFixed(4)}\nSpeed: ${speed?.toStringAsFixed(1) ?? '0.0'} m/s',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.primaryGold),
+                          ),
+                        );
+                      }
+                      return const SizedBox();
+                    },
+                    loading: () => const Padding(
+                      padding: EdgeInsets.only(top: 8.0),
+                      child: SizedBox(
+                        height: 16, width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryGold),
+                      ),
+                    ),
+                    error: (err, stack) => Text(
+                      'Error connecting to map',
+                      style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.errorRed),
+                    ),
+                  );
+                },
+              ),
+          ],
         ),
-      ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
-    );
+      ),
+    ).animate().fade(delay: 400.ms).slideY(begin: 0.1);
   }
 
 

@@ -207,6 +207,7 @@ class TripService {
       // Sync to global student record
       batch.update(_firestore.collection('students').doc(studentId), {
         'last_attendance_status': 'In Van',
+        'current_session_id': sessionId,
       });
     } else if (currentStatus == 'onboarded') {
       // Alighting
@@ -224,6 +225,7 @@ class TripService {
       // Sync to global student record
       batch.update(_firestore.collection('students').doc(studentId), {
         'last_attendance_status': 'At Home',
+        'current_session_id': FieldValue.delete(),
       });
     } else {
       throw 'Student has already been dropped off or is marked absent.';
@@ -295,9 +297,17 @@ class TripService {
     if (status == 'absent') globalStatus = 'Absent';
     if (status == 'pending') globalStatus = 'Pending';
     
-    batch.update(_firestore.collection('students').doc(studentId), {
+    final studentUpdate = <String, dynamic>{
       'last_attendance_status': globalStatus,
-    });
+    };
+    
+    if (status == 'onboarded') {
+      studentUpdate['current_session_id'] = sessionId;
+    } else if (status == 'dropped' || status == 'absent') {
+      studentUpdate['current_session_id'] = FieldValue.delete();
+    }
+    
+    batch.update(_firestore.collection('students').doc(studentId), studentUpdate);
 
     await batch.commit();
   }

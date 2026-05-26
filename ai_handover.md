@@ -97,7 +97,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 14 Complete - SVG Branding, Profile CRUD, Infinite Trips**
+## 📈 Current Status: **Phase 15 Complete - Live GPS Telemetry Pipeline via Secure MQTT**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -191,8 +191,14 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
     - Finalized End-to-End QR Sync fan-out: Scans/manual overrides now instantly update the global student record (`last_attendance_status`) so parents see real-time updates (e.g. "In Van", "At Home").
     - Verified UX minimum button heights (56.0) across auth flows and primary actions.
 
+22. **Live GPS Telemetry Pipeline via Secure MQTT (Phase 15):**
+    - Integrated `mqtt_client` and `geolocator` packages.
+    - Created `MqttService` connecting securely to EMQX Serverless (`x6ee8611.ala.asia-southeast1.emqxsl.com:8883`) using a root CA loaded from `assets/certs/emqxsl-ca.crt`.
+    - **Driver Pipeline:** Drivers now automatically broadcast their GPS coordinates (`latitude`, `longitude`, `speed`) every 3s (with a 5m filter) to `safepick/trips/{session_id}/telemetry` whenever a trip is "In Progress".
+    - **Parent Pipeline:** Parents automatically connect to EMQX and subscribe to the active telemetry topic of their child when the child is marked "In Van". The coordinates and speed are streamed and displayed directly on the `ParentDashboard` Map Placeholder card.
+
 ---
 
 ## 🎯 Next Tasks
-- **MQTT Real-Time Location Stream:** Wire the driver location publishing streams and MQTT map listeners.
+- **Map Visualizations:** Replace the text-based coordinate display on `ParentDashboard` with an actual Google Maps widget plotting the van's marker.
 - **Admin Dashboard:** Build school admin role with dashboard filtered by `managed_school_id`.
