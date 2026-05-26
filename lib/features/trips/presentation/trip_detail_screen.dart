@@ -73,6 +73,187 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     }
   }
 
+  Future<void> _showAddStudentDialog(BuildContext context) async {
+    final controller = TextEditingController();
+    final formKey = GlobalKey<FormState>();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.bgBlack,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: const BorderSide(color: AppTheme.borderDark, width: 1),
+              ),
+              title: const Text(
+                'Add Student to Roster',
+                style: TextStyle(
+                  color: AppTheme.textWhite,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Form(
+                key: formKey,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'Enter the 6-character alphanumeric student ID to add them to this trip manifest.',
+                      style: TextStyle(color: AppTheme.textGrey, fontSize: 13),
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: controller,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.characters,
+                      maxLength: 6,
+                      style: const TextStyle(color: AppTheme.textWhite),
+                      decoration: const InputDecoration(
+                        labelText: 'Student ID',
+                        hintText: 'e.g. A9X2KF',
+                        counterText: '',
+                      ),
+                      validator: (value) {
+                        if (value == null || value.trim().length != 6) {
+                          return 'Please enter a valid 6-character ID';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: AppTheme.textWhite),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) return;
+                          
+                          setState(() {
+                            isSubmitting = true;
+                          });
+
+                          final studentId = controller.text.trim().toUpperCase();
+                          final success = await _addStudentToManifest(studentId);
+
+                          if (success && context.mounted) {
+                            Navigator.of(context).pop();
+                          } else {
+                            setState(() {
+                              isSubmitting = false;
+                            });
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryGold,
+                    foregroundColor: AppTheme.bgBlack,
+                    minimumSize: const Size(80, 40),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: isSubmitting
+                      ? const SizedBox(
+                          height: 18,
+                          width: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.0,
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.bgBlack),
+                          ),
+                        )
+                      : const Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<bool> _addStudentToManifest(String studentId) async {
+    try {
+      final firestore = ref.read(firestoreProvider);
+      
+      final studentDoc = await firestore.collection('students').doc(studentId).get();
+      if (!studentDoc.exists) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Student ID "$studentId" not found in registration database.'),
+              backgroundColor: AppTheme.errorRed,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return false;
+      }
+
+      final studentData = studentDoc.data()!;
+      final studentName = studentData['name'] as String? ?? 'Unknown';
+      final studentSchoolId = studentData['school_id'] as String? ?? 'sch_default_01';
+
+      final manifestDocs = await firestore
+          .collection('trips')
+          .doc(widget.tripId)
+          .collection('trip_manifest')
+          .get();
+      
+      final nextStopOrder = manifestDocs.docs.length + 1;
+
+      final newManifestItem = TripManifestModel(
+        studentId: studentId,
+        schoolId: studentSchoolId,
+        name: studentName,
+        stopOrder: nextStopOrder,
+        status: 'active',
+        expectedTime: '07:30 AM',
+      );
+
+      await firestore
+          .collection('trips')
+          .doc(widget.tripId)
+          .collection('trip_manifest')
+          .doc(studentId)
+          .set(newManifestItem.toJson());
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$studentName added to manifest!'),
+            backgroundColor: AppTheme.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return true;
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to add student: $e'),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -86,6 +267,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.of(context).pop(),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_add_rounded),
+            onPressed: () => _showAddStudentDialog(context),
+          ),
+        ],
       ),
       body: SafeArea(
         child: tripAsync.when(

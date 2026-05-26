@@ -91,7 +91,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 4 Complete - Driver Workflow & Trip Manifest**
+## 📈 Current Status: **Phase 5 Complete - Data CRUD & Roster Building**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -117,11 +117,17 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
    - Extended `TripService` with methods to stream manifest data sorted by stop order, and `startDailySession(tripId)` which instantiates a daily session document with `in_progress` status and a unique `mqtt_topic_id`.
    - Built `TripDetailScreen` displaying metadata, a state-driven "Start Trip" button, and list cards for students on the manifest.
    - Connected `DriverDashboard` to `TripDetailScreen` for both card-tap and action button actions.
-10. **Testing & Checks:** Zero issues/warnings on `flutter analyze` and widget tests passing 100%.
+10. **Data CRUD & Roster Allocation (Phase 5):**
+    - Added styled log-out confirmation `AlertDialog` flows to both `ParentDashboard` and `DriverDashboard`.
+    - Implemented `AddStudentScreen` with form validation, FAB hooks, and Geolocator GPS capturing.
+    - Implemented `CreateTripScreen` with route setup fields and FAB hooks.
+    - Programmed student ID-lookup dialog inside `TripDetailScreen` enabling drivers to query and add students to the trip's manifest subcollection.
+11. **Testing & Checks:** Zero issues/warnings on `flutter analyze` and widget tests passing 100%.
 
 ---
 
 ## 🎯 Next Tasks
 - **QR Code Scanner Integration:** Connect the placeholder button on each student card in the manifest list to open a barcode camera scanner, updating attendance subcollections upon scanning.
 - **MQTT Real-Time Location Stream:** Wire the driver location publishing streams and MQTT map listeners.
+
 
