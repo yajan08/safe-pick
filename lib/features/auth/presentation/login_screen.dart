@@ -270,7 +270,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Text(
                   'SafePick School Van Tracking System',
                   style: theme.textTheme.labelLarge?.copyWith(
-                    color: AppTheme.textGrey,
+                    color: AppTheme.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),

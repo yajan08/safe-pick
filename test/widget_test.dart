@@ -11,7 +11,7 @@ void main() {
           // Override the auth state changes provider to return null (logged out)
           authStateChangesProvider.overrideWith((ref) => Stream.value(null)),
         ],
-        child: const SafePickApp(),
+        child: const SafePickApp(showOnboarding: false),
       ),
     );
 

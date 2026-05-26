@@ -31,22 +31,22 @@ class DriverDashboard extends ConsumerWidget {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.bgBlack,
+        backgroundColor: AppTheme.background,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppTheme.borderDark, width: 1),
+          side: const BorderSide(color: AppTheme.border, width: 1),
         ),
         title: const Text(
           'Sign Out',
           style: TextStyle(
-            color: AppTheme.textWhite,
+            color: AppTheme.textPrimary,
             fontWeight: FontWeight.bold,
           ),
         ),
         content: const Text(
           'Are you sure you want to sign out?',
           style: TextStyle(
-            color: AppTheme.textGrey,
+            color: AppTheme.textSecondary,
           ),
         ),
         actions: [
@@ -54,14 +54,14 @@ class DriverDashboard extends ConsumerWidget {
             onPressed: () => Navigator.of(context).pop(false),
             child: const Text(
               'No',
-              style: TextStyle(color: AppTheme.textWhite),
+              style: TextStyle(color: AppTheme.textPrimary),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryGold,
-              foregroundColor: AppTheme.bgBlack,
+              foregroundColor: AppTheme.background,
               minimumSize: const Size(80, 40),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
@@ -155,7 +155,7 @@ class DriverDashboard extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.primaryGold,
-        foregroundColor: AppTheme.bgBlack,
+        foregroundColor: AppTheme.background,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -188,9 +188,9 @@ class DriverDashboard extends ConsumerWidget {
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceDark,
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.borderDark, width: 1),
+          border: Border.all(color: AppTheme.border, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -215,7 +215,7 @@ class DriverDashboard extends ConsumerWidget {
                         ? AppTheme.successGreen.withValues(alpha: 0.15)
                         : isActive
                             ? AppTheme.primaryGold.withValues(alpha: 0.15)
-                            : AppTheme.textGrey.withValues(alpha: 0.15),
+                            : AppTheme.textSecondary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -225,7 +225,7 @@ class DriverDashboard extends ConsumerWidget {
                           ? AppTheme.successGreen
                           : isActive
                               ? AppTheme.primaryGold
-                              : AppTheme.textGrey,
+                              : AppTheme.textSecondary,
                       fontWeight: FontWeight.bold,
                       fontSize: 10,
                     ),
@@ -234,7 +234,7 @@ class DriverDashboard extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 16),
-            const Divider(color: AppTheme.borderDark, height: 1),
+            const Divider(color: AppTheme.border, height: 1),
             const SizedBox(height: 16),
             Row(
               children: [
@@ -255,14 +255,14 @@ class DriverDashboard extends ConsumerWidget {
                 // Estimated Duration info
                 const Icon(
                   Icons.schedule_rounded,
-                  color: AppTheme.textGrey,
+                  color: AppTheme.textSecondary,
                   size: 18,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   trip.estimatedDuration,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textGrey,
+                    color: AppTheme.textSecondary,
                   ),
                 ),
               ],
@@ -281,12 +281,12 @@ class DriverDashboard extends ConsumerWidget {
                     },
               icon: Icon(
                 isCompleted ? Icons.check_circle_rounded : Icons.play_arrow_rounded,
-                color: isCompleted ? AppTheme.textGrey : AppTheme.bgBlack,
+                color: isCompleted ? AppTheme.textSecondary : AppTheme.background,
               ),
               label: Text(isCompleted ? 'Route Completed' : 'Start Route'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: isCompleted ? AppTheme.borderDark : AppTheme.primaryGold,
-                foregroundColor: isCompleted ? AppTheme.textMuted : AppTheme.bgBlack,
+                backgroundColor: isCompleted ? AppTheme.border : AppTheme.primaryGold,
+                foregroundColor: isCompleted ? AppTheme.textMuted : AppTheme.background,
               ),
             ),
           ],

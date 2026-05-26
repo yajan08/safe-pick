@@ -131,7 +131,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Trip Name',
                     hintText: 'e.g. Route A Morning',
-                    prefixIcon: Icon(Icons.directions_bus_outlined, color: AppTheme.textGrey),
+                    prefixIcon: Icon(Icons.directions_bus_outlined, color: AppTheme.textSecondary),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -147,9 +147,9 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                   initialValue: _tripType,
                   decoration: const InputDecoration(
                     labelText: 'Trip Type',
-                    prefixIcon: Icon(Icons.merge_type_rounded, color: AppTheme.textGrey),
+                    prefixIcon: Icon(Icons.merge_type_rounded, color: AppTheme.textSecondary),
                   ),
-                  dropdownColor: AppTheme.surfaceDark,
+                  dropdownColor: AppTheme.surface,
                   iconEnabledColor: AppTheme.primaryGold,
                   items: const [
                     DropdownMenuItem(
@@ -178,7 +178,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Estimated Duration (Minutes)',
                     hintText: 'e.g. 45',
-                    prefixIcon: Icon(Icons.timer_outlined, color: AppTheme.textGrey),
+                    prefixIcon: Icon(Icons.timer_outlined, color: AppTheme.textSecondary),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -202,7 +202,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                           width: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.bgBlack),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.background),
                           ),
                         )
                       : const Text('Create Trip'),

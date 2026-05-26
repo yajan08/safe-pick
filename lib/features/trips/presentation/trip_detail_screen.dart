@@ -85,15 +85,15 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              backgroundColor: AppTheme.bgBlack,
+              backgroundColor: AppTheme.background,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
-                side: const BorderSide(color: AppTheme.borderDark, width: 1),
+                side: const BorderSide(color: AppTheme.border, width: 1),
               ),
               title: const Text(
                 'Add Student to Roster',
                 style: TextStyle(
-                  color: AppTheme.textWhite,
+                  color: AppTheme.textPrimary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -104,7 +104,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   children: [
                     const Text(
                       'Enter the 6-character alphanumeric student ID to add them to this trip manifest.',
-                      style: TextStyle(color: AppTheme.textGrey, fontSize: 13),
+                      style: TextStyle(color: AppTheme.textSecondary, fontSize: 13),
                     ),
                     const SizedBox(height: 20),
                     TextFormField(
@@ -112,7 +112,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                       autofocus: true,
                       textCapitalization: TextCapitalization.characters,
                       maxLength: 6,
-                      style: const TextStyle(color: AppTheme.textWhite),
+                      style: const TextStyle(color: AppTheme.textPrimary),
                       decoration: const InputDecoration(
                         labelText: 'Student ID',
                         hintText: 'e.g. A9X2KF',
@@ -133,7 +133,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   onPressed: isSubmitting ? null : () => Navigator.of(context).pop(),
                   child: const Text(
                     'Cancel',
-                    style: TextStyle(color: AppTheme.textWhite),
+                    style: TextStyle(color: AppTheme.textPrimary),
                   ),
                 ),
                 ElevatedButton(
@@ -159,7 +159,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                         },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryGold,
-                    foregroundColor: AppTheme.bgBlack,
+                    foregroundColor: AppTheme.background,
                     minimumSize: const Size(80, 40),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
@@ -171,7 +171,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                           width: 18,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.0,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.bgBlack),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.background),
                           ),
                         )
                       : const Text('Add'),
@@ -289,9 +289,9 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   child: Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppTheme.surfaceDark,
+                      color: AppTheme.surface,
                       borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppTheme.borderDark, width: 1),
+                      border: Border.all(color: AppTheme.border, width: 1),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -318,20 +318,20 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                   ? 'Morning Pick-Up'
                                   : 'Afternoon Drop-Off',
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.textGrey,
+                                color: AppTheme.textSecondary,
                               ),
                             ),
                             const SizedBox(width: 16),
                             const Icon(
                               Icons.schedule_rounded,
-                              color: AppTheme.textGrey,
+                              color: AppTheme.textSecondary,
                               size: 16,
                             ),
                             const SizedBox(width: 6),
                             Text(
                               trip.estimatedDuration,
                               style: theme.textTheme.bodyMedium?.copyWith(
-                                color: AppTheme.textGrey,
+                                color: AppTheme.textSecondary,
                               ),
                             ),
                           ],
@@ -345,11 +345,11 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                               : _handleStartTrip,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: isAlreadyActive
-                                ? AppTheme.borderDark
+                                ? AppTheme.border
                                 : AppTheme.primaryGold,
                             foregroundColor: isAlreadyActive
                                 ? AppTheme.textMuted
-                                : AppTheme.bgBlack,
+                                : AppTheme.background,
                           ),
                           child: _isStarting
                               ? const SizedBox(
@@ -358,7 +358,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2.5,
                                     valueColor: AlwaysStoppedAnimation<Color>(
-                                      AppTheme.bgBlack,
+                                      AppTheme.background,
                                     ),
                                   ),
                                 )
@@ -450,16 +450,16 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceDark,
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderDark, width: 1),
+        border: Border.all(color: AppTheme.border, width: 1),
       ),
       child: Row(
         children: [
           // Stop Order Badge
           CircleAvatar(
             radius: 18,
-            backgroundColor: AppTheme.borderDark,
+            backgroundColor: AppTheme.border,
             child: Text(
               '${student.stopOrder}',
               style: theme.textTheme.titleMedium?.copyWith(
@@ -487,7 +487,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                     Text(
                       'School: ${student.schoolId}',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textGrey,
+                        color: AppTheme.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -501,7 +501,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                     Text(
                       student.expectedTime,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textGrey,
+                        color: AppTheme.textSecondary,
                         fontSize: 12,
                       ),
                     ),

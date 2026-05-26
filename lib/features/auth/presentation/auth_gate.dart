@@ -124,7 +124,7 @@ class AuthGate extends ConsumerWidget {
                   Text(
                     'Loading account profile...',
                     style: TextStyle(
-                      color: AppTheme.textGrey,
+                      color: AppTheme.textSecondary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),

@@ -216,7 +216,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Full Name',
                     hintText: 'Enter student name',
-                    prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.textGrey),
+                    prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.textSecondary),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -233,7 +233,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                   decoration: const InputDecoration(
                     labelText: 'Grade / Class',
                     hintText: 'e.g. Grade 5, Grade A',
-                    prefixIcon: Icon(Icons.school_outlined, color: AppTheme.textGrey),
+                    prefixIcon: Icon(Icons.school_outlined, color: AppTheme.textSecondary),
                   ),
                   validator: (value) {
                     if (value == null || value.trim().isEmpty) {
@@ -248,9 +248,9 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: AppTheme.surfaceDark,
+                    color: AppTheme.surface,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.borderDark, width: 1),
+                    border: Border.all(color: AppTheme.border, width: 1),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -308,14 +308,14 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                                 width: 18,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.bgBlack),
+                                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.background),
                                 ),
                               )
                             : const Icon(Icons.my_location_rounded, size: 18),
                         label: Text(_fetchingLocation ? 'Fetching GPS...' : 'Set Home Location (Current GPS)'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.borderDark,
-                          foregroundColor: AppTheme.textWhite,
+                          backgroundColor: AppTheme.border,
+                          foregroundColor: AppTheme.textPrimary,
                         ),
                       ),
                     ],
@@ -332,7 +332,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                           width: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.bgBlack),
+                            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.background),
                           ),
                         )
                       : const Text('Register Student'),

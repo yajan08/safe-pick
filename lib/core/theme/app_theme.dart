@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 /// A class that houses all the color and theme configuration for SafePick.
 /// Strictly enforces the finalized brand guidelines:
 /// - Primary/Accent: #C1942B (A premium dark golden/amber)
-/// - Backgrounds/Surfaces: Black (#000000 or very dark grey variants)
-/// - Text/Icons: White (#FFFFFF)
+/// - Backgrounds/Surfaces: Light grey/White for Light Mode
+/// - Text/Icons: Dark grey/Black for Light Mode
 class AppTheme {
   AppTheme._();
 
@@ -13,63 +13,64 @@ class AppTheme {
   static const Color primaryGoldDark = Color(0xFF9E751D);
   static const Color primaryGoldLight = Color(0xFFE4C374);
 
-  // Backgrounds & Surfaces
-  static const Color bgBlack = Color(0xFF000000); // Pure Black
-  static const Color surfaceDark = Color(0xFF121212); // Very Dark Grey (Elevated Surface)
-  static const Color surfaceCard = Color(0xFF1E1E1E); // Elevated Card Surface
+  // Backgrounds & Surfaces (Light Mode)
+  static const Color background = Color(0xFFF8F9FA); // Off-white premium background
+  static const Color surface = Color(0xFFFFFFFF); // Pure White Surface
+  static const Color surfaceCard = Color(0xFFFFFFFF); // Elevated Card Surface
 
-  // Text & Icons
-  static const Color textWhite = Color(0xFFFFFFFF); // Pure White
-  static const Color textGrey = Color(0xFFB3B3B3); // Light Grey for secondary text
-  static const Color textMuted = Color(0xFF757575); // Darker Grey for subtle labels
+  // Text & Icons (Light Mode)
+  static const Color textPrimary = Color(0xFF1A1A1A); // Almost Black
+  static const Color textSecondary = Color(0xFF4A4A4A); // Medium Grey for secondary text
+  static const Color textMuted = Color(0xFF8E8E93); // Light Grey for subtle labels
 
   // Borders & Accents
-  static const Color borderDark = Color(0xFF2C2C2C); // Subtle borders
-  static const Color errorRed = Color(0xFFCF6679); // Material dark mode error red
-  static const Color successGreen = Color(0xFF03DAC6); // Emerald/Teal success accent
-  static const Color warningOrange = Color(0xFFF59E0B);
+  static const Color border = Color(0xFFE5E5EA); // Subtle borders
+  static const Color errorRed = Color(0xFFD32F2F); // Material light mode error red
+  static const Color successGreen = Color(0xFF388E3C); // Emerald/Teal success accent
+  static const Color warningOrange = Color(0xFFF57C00);
 
-  /// Helper to build the dark theme config shared by both system modes.
-  static ThemeData _buildPremiumDarkTheme() {
+  /// Helper to build the premium light theme config.
+  static ThemeData _buildPremiumLightTheme() {
     return ThemeData(
       useMaterial3: true,
-      brightness: Brightness.dark, // Ensures white status bar icons and text defaults
-      colorScheme: const ColorScheme.dark(
+      brightness: Brightness.light, 
+      colorScheme: const ColorScheme.light(
         primary: primaryGold,
-        onPrimary: bgBlack,
+        onPrimary: surface,
         secondary: primaryGold,
-        onSecondary: bgBlack,
+        onSecondary: surface,
         error: errorRed,
-        onError: bgBlack,
-        surface: surfaceDark,
-        onSurface: textWhite,
+        onError: surface,
+        surface: surface,
+        onSurface: textPrimary,
       ),
-      scaffoldBackgroundColor: bgBlack,
+      scaffoldBackgroundColor: background,
       appBarTheme: const AppBarTheme(
-        backgroundColor: bgBlack,
-        foregroundColor: textWhite,
+        backgroundColor: background,
+        foregroundColor: textPrimary,
         elevation: 0,
         centerTitle: true,
-        iconTheme: IconThemeData(color: textWhite),
+        iconTheme: IconThemeData(color: textPrimary),
         titleTextStyle: TextStyle(
-          color: textWhite,
+          color: textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.bold,
           letterSpacing: -0.5,
         ),
       ),
       cardTheme: CardThemeData(
-        color: surfaceDark,
-        elevation: 0,
+        color: surfaceCard,
+        elevation: 2,
+        shadowColor: Colors.black.withValues(alpha: 0.05),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: borderDark, width: 1),
+          side: const BorderSide(color: border, width: 1),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: primaryGold,
-          foregroundColor: bgBlack,
+          foregroundColor: surface,
           elevation: 0,
           minimumSize: const Size(double.infinity, 54),
           shape: RoundedRectangleBorder(
@@ -84,8 +85,8 @@ class AppTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: textWhite,
-          side: const BorderSide(color: borderDark, width: 1.5),
+          foregroundColor: textPrimary,
+          side: const BorderSide(color: border, width: 1.5),
           minimumSize: const Size(double.infinity, 54),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
@@ -98,15 +99,15 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surfaceDark,
+        fillColor: surface,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: borderDark, width: 1),
+          borderSide: const BorderSide(color: border, width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: borderDark, width: 1),
+          borderSide: const BorderSide(color: border, width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -116,24 +117,25 @@ class AppTheme {
           borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: errorRed, width: 1),
         ),
-        labelStyle: const TextStyle(color: textGrey, fontSize: 14),
+        labelStyle: const TextStyle(color: textSecondary, fontSize: 14),
         hintStyle: const TextStyle(color: textMuted, fontSize: 14),
       ),
       textTheme: const TextTheme(
-        displayLarge: TextStyle(color: textWhite, fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -1.0),
-        headlineMedium: TextStyle(color: textWhite, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
-        titleLarge: TextStyle(color: textWhite, fontSize: 20, fontWeight: FontWeight.w600, letterSpacing: -0.5),
-        titleMedium: TextStyle(color: textWhite, fontSize: 16, fontWeight: FontWeight.w600),
-        bodyLarge: TextStyle(color: textWhite, fontSize: 16, height: 1.5),
-        bodyMedium: TextStyle(color: textGrey, fontSize: 14, height: 1.4),
+        displayLarge: TextStyle(color: textPrimary, fontSize: 32, fontWeight: FontWeight.bold, letterSpacing: -1.0),
+        headlineMedium: TextStyle(color: textPrimary, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: -0.5),
+        titleLarge: TextStyle(color: textPrimary, fontSize: 20, fontWeight: FontWeight.w600, letterSpacing: -0.5),
+        titleMedium: TextStyle(color: textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(color: textPrimary, fontSize: 16, height: 1.5),
+        bodyMedium: TextStyle(color: textSecondary, fontSize: 14, height: 1.4),
         labelLarge: TextStyle(color: textMuted, fontSize: 12, fontWeight: FontWeight.w500),
       ),
     );
   }
 
-  /// Light Theme Configuration (Redirected to Premium Dark)
-  static ThemeData get lightTheme => _buildPremiumDarkTheme();
+  /// Light Theme Configuration
+  static ThemeData get lightTheme => _buildPremiumLightTheme();
 
-  /// Dark Theme Configuration
-  static ThemeData get darkTheme => _buildPremiumDarkTheme();
+  /// Dark Theme Configuration (Mapped to Light for complete conversion as requested)
+  static ThemeData get darkTheme => _buildPremiumLightTheme();
 }
+

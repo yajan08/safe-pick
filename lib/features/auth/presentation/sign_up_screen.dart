@@ -235,7 +235,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               labelText: 'Select Role',
                               prefixIcon: Icon(Icons.badge_outlined),
                             ),
-                            dropdownColor: AppTheme.surfaceDark,
+                            dropdownColor: AppTheme.surface,
                             style: theme.textTheme.bodyLarge,
                             items: const [
                               DropdownMenuItem(
@@ -267,7 +267,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2.5,
                                       valueColor: AlwaysStoppedAnimation<Color>(
-                                        AppTheme.bgBlack,
+                                        AppTheme.background,
                                       ),
                                     ),
                                   )
