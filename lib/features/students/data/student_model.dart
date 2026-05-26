@@ -10,6 +10,9 @@ class StudentModel {
   final String grade;
   final GeoPoint? homeLocation;
   final String status; // 'active' | 'inactive'
+  final String schoolName;
+  final String note;
+  final String lastAttendanceStatus; // 'At Home' | 'In Van' | 'At School'
   final Map<String, dynamic> stats; // e.g. {'total_trips': 0, 'attendance_rate': 1.0}
 
   const StudentModel({
@@ -20,6 +23,9 @@ class StudentModel {
     required this.grade,
     this.homeLocation,
     required this.status,
+    this.schoolName = '',
+    this.note = '',
+    this.lastAttendanceStatus = 'At Home',
     required this.stats,
   });
 
@@ -33,6 +39,9 @@ class StudentModel {
       grade: json['grade'] as String? ?? '',
       homeLocation: json['home_location'] as GeoPoint?,
       status: json['status'] as String? ?? 'active',
+      schoolName: json['school_name'] as String? ?? '',
+      note: json['note'] as String? ?? '',
+      lastAttendanceStatus: json['last_attendance_status'] as String? ?? 'At Home',
       stats: json['stats'] as Map<String, dynamic>? ?? const {},
     );
   }
@@ -46,6 +55,9 @@ class StudentModel {
       'grade': grade,
       'home_location': homeLocation,
       'status': status,
+      'school_name': schoolName,
+      'note': note,
+      'last_attendance_status': lastAttendanceStatus,
       'stats': stats,
     };
   }
@@ -59,6 +71,9 @@ class StudentModel {
     String? grade,
     GeoPoint? homeLocation,
     String? status,
+    String? schoolName,
+    String? note,
+    String? lastAttendanceStatus,
     Map<String, dynamic>? stats,
   }) {
     return StudentModel(
@@ -69,12 +84,15 @@ class StudentModel {
       grade: grade ?? this.grade,
       homeLocation: homeLocation ?? this.homeLocation,
       status: status ?? this.status,
+      schoolName: schoolName ?? this.schoolName,
+      note: note ?? this.note,
+      lastAttendanceStatus: lastAttendanceStatus ?? this.lastAttendanceStatus,
       stats: stats ?? this.stats,
     );
   }
 
   @override
   String toString() {
-    return 'StudentModel(studentId: $studentId, parentUid: $parentUid, schoolId: $schoolId, name: $name, grade: $grade, status: $status)';
+    return 'StudentModel(studentId: $studentId, name: $name, schoolName: $schoolName, status: $status, lastAttendanceStatus: $lastAttendanceStatus)';
   }
 }

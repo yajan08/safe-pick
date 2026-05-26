@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
@@ -22,6 +23,9 @@ final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
           .map((doc) => StudentModel.fromJson(doc.data(), doc.id))
           .toList());
 });
+
+/// State provider for the currently selected student ID
+final selectedStudentIdProvider = StateProvider<String?>((ref) => null);
 
 class ParentDashboard extends ConsumerWidget {
   const ParentDashboard({super.key});
@@ -93,8 +97,10 @@ class ParentDashboard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final studentsAsync = ref.watch(parentStudentsProvider);
+    final selectedId = ref.watch(selectedStudentIdProvider);
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Parent Dashboard'),
         actions: [
@@ -105,51 +111,62 @@ class ParentDashboard extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Welcome Text
-              Text(
-                'Your Children',
-                style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Monitor transport status and attendance logs below.',
-                style: theme.textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 24),
+        child: studentsAsync.when(
+          data: (students) {
+            if (students.isEmpty) {
+              return _buildEmptyState(theme);
+            }
 
-              // Students List
-              Expanded(
-                child: studentsAsync.when(
-                  data: (students) {
-                    if (students.isEmpty) {
-                      return _buildEmptyState(theme);
-                    }
-                    return ListView.builder(
+            // Auto-select the first child if none is selected
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (selectedId == null && students.isNotEmpty) {
+                ref.read(selectedStudentIdProvider.notifier).state = students.first.studentId;
+              }
+            });
+
+            final selectedStudent = students.firstWhere(
+              (s) => s.studentId == selectedId,
+              orElse: () => students.first,
+            );
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Child Selector Header
+                  _buildHeader(context, ref, theme, students, selectedStudent),
+                  const SizedBox(height: 24),
+                  
+                  // Dashboard Content for Selected Student
+                  Expanded(
+                    child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
-                      itemCount: students.length,
-                      itemBuilder: (context, index) {
-                        final student = students[index];
-                        return _buildStudentCard(context, theme, student);
-                      },
-                    );
-                  },
-                  loading: () => const Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildProfileCard(context, theme, selectedStudent),
+                          const SizedBox(height: 16),
+                          _buildStatusCard(theme, selectedStudent),
+                          const SizedBox(height: 16),
+                          _buildEtaCard(theme, selectedStudent),
+                          const SizedBox(height: 16),
+                          _buildMapCard(context, theme, selectedStudent),
+                          const SizedBox(height: 32),
+                        ],
+                      ),
                     ),
                   ),
-                  error: (error, stackTrace) => _buildErrorState(theme, error.toString()),
-                ),
+                ],
               ),
-            ],
+            );
+          },
+          loading: () => const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
+            ),
           ),
+          error: (error, stackTrace) => _buildErrorState(theme, error.toString()),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -170,98 +187,258 @@ class ParentDashboard extends ConsumerWidget {
     );
   }
 
-  Widget _buildStudentCard(BuildContext context, ThemeData theme, StudentModel student) {
-    final isActive = student.status.toLowerCase() == 'active';
-    final totalTrips = student.stats['total_trips'] ?? 0;
-    final attendanceRate = (student.stats['attendance_rate'] ?? 0.0) * 100;
+  Widget _buildHeader(BuildContext context, WidgetRef ref, ThemeData theme, List<StudentModel> students, StudentModel selected) {
+    if (students.length == 1) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Child',
+            style: theme.textTheme.labelLarge?.copyWith(color: AppTheme.textSecondary),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            selected.name,
+            style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+          ),
+        ],
+      ).animate().fade().slideY(begin: -0.1);
+    }
 
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Select Child',
+          style: theme.textTheme.labelLarge?.copyWith(color: AppTheme.textSecondary),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppTheme.border),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: selected.studentId,
+              isExpanded: true,
+              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primaryGold),
+              items: students.map((StudentModel student) {
+                return DropdownMenuItem<String>(
+                  value: student.studentId,
+                  child: Text(
+                    student.name,
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                if (newValue != null) {
+                  ref.read(selectedStudentIdProvider.notifier).state = newValue;
+                }
+              },
+            ),
+          ),
+        ),
+      ],
+    ).animate().fade().slideY(begin: -0.1);
+  }
+
+  Widget _buildProfileCard(BuildContext context, ThemeData theme, StudentModel student) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border, width: 1),
+        border: Border.all(color: AppTheme.border),
       ),
-      child: ClipRRect(
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.15),
+            child: const Icon(Icons.person_rounded, color: AppTheme.primaryGold, size: 32),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student.schoolName.isNotEmpty ? student.schoolName : 'No School Set',
+                  style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
+                ),
+                Text(
+                  'Grade: ${student.grade}',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AddStudentScreen(student: student),
+                ),
+              );
+            },
+            icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryGold),
+            tooltip: 'Edit Details',
+          ),
+        ],
+      ),
+    ).animate().fade(delay: 100.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildStatusCard(ThemeData theme, StudentModel student) {
+    Color statusColor;
+    IconData statusIcon;
+
+    switch (student.lastAttendanceStatus) {
+      case 'In Van':
+        statusColor = AppTheme.warningOrange;
+        statusIcon = Icons.directions_bus_rounded;
+        break;
+      case 'At School':
+        statusColor = AppTheme.primaryGold;
+        statusIcon = Icons.school_rounded;
+        break;
+      case 'At Home':
+      default:
+        statusColor = AppTheme.successGreen;
+        statusIcon = Icons.home_rounded;
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        child: Theme(
-          data: theme.copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            leading: CircleAvatar(
-              backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.15),
-              child: const Icon(
-                Icons.child_care_rounded,
-                color: AppTheme.primaryGold,
-              ),
-            ),
-            title: Text(
-              student.name,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            subtitle: Text(
-              'Grade: ${student.grade}',
-              style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-            ),
-            trailing: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: isActive
-                    ? AppTheme.successGreen.withValues(alpha: 0.15)
-                    : AppTheme.errorRed.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                student.status.toUpperCase(),
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: isActive ? AppTheme.successGreen : AppTheme.errorRed,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
+        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(statusIcon, color: statusColor, size: 36),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Current Status',
+                  style: theme.textTheme.labelMedium?.copyWith(color: AppTheme.textSecondary),
                 ),
-              ),
+                Text(
+                  student.lastAttendanceStatus,
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    ).animate().fade(delay: 200.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildEtaCard(ThemeData theme, StudentModel student) {
+    String etaText;
+    switch (student.lastAttendanceStatus) {
+      case 'In Van':
+        etaText = 'ETA: 15 mins';
+        break;
+      case 'At Home':
+        etaText = 'Already at Home';
+        break;
+      case 'At School':
+      default:
+        etaText = 'Trip not started yet';
+        break;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.textPrimary.withValues(alpha: 0.05),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.access_time_rounded, color: AppTheme.textPrimary),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              etaText,
+              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fade(delay: 300.ms).slideY(begin: 0.1);
+  }
+
+  Widget _buildMapCard(BuildContext context, ThemeData theme, StudentModel student) {
+    final isInVan = student.lastAttendanceStatus == 'In Van';
+
+    return GestureDetector(
+      onTap: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isInVan ? 'Opening Live Tracking Map... (Coming Soon)' : 'Trip not started yet.',
+            ),
+            backgroundColor: isInVan ? AppTheme.primaryGold : AppTheme.textSecondary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+      child: Container(
+        height: 180,
+        decoration: BoxDecoration(
+          color: isInVan ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isInVan ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  children: [
-                    const Divider(color: AppTheme.border, height: 1),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildStatCol(theme, 'Total Trips', '$totalTrips'),
-                        _buildStatCol(theme, 'Attendance', '${attendanceRate.toStringAsFixed(0)}%'),
-                        _buildStatCol(theme, 'School ID', student.schoolId.toUpperCase()),
-                      ],
-                    ),
-                  ],
+              Icon(
+                Icons.map_rounded,
+                size: 48,
+                color: isInVan ? AppTheme.primaryGold : AppTheme.textMuted,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Live Tracking Map',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: isInVan ? AppTheme.textPrimary : AppTheme.textMuted,
                 ),
               ),
+              if (!isInVan)
+                Text(
+                  'Map available when trip starts',
+                  style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
+                ),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildStatCol(ThemeData theme, String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: theme.textTheme.titleMedium?.copyWith(
-            color: AppTheme.primaryGold,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: theme.textTheme.labelLarge,
-        ),
-      ],
+      ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
     );
   }
 
@@ -291,12 +468,12 @@ class ParentDashboard extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Please contact your school administrator to register your child.',
+            'Add a child using the button below.',
             style: theme.textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),
         ],
-      ),
+      ).animate().fade(duration: 500.ms).scale(begin: const Offset(0.9, 0.9)),
     );
   }
 

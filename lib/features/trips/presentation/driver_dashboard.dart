@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/trip_model.dart';
@@ -96,6 +97,7 @@ class DriverDashboard extends ConsumerWidget {
     final tripsAsync = ref.watch(driverTripsProvider);
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
         title: const Text('Driver Dashboard'),
         actions: [
@@ -109,7 +111,7 @@ class DriverDashboard extends ConsumerWidget {
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // Welcome Header
               Text(
@@ -117,28 +119,44 @@ class DriverDashboard extends ConsumerWidget {
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
-              ),
+              ).animate().fade().slideY(begin: -0.1),
               const SizedBox(height: 8),
               Text(
                 'Assigned transport routes and manifests.',
                 style: theme.textTheme.bodyMedium,
-              ),
+              ).animate().fade(delay: 100.ms).slideY(begin: -0.1),
               const SizedBox(height: 24),
 
-              // Assigned Trips List
+              // Summary & List
               Expanded(
                 child: tripsAsync.when(
                   data: (trips) {
                     if (trips.isEmpty) {
                       return _buildEmptyState(theme);
                     }
-                    return ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: trips.length,
-                      itemBuilder: (context, index) {
-                        final trip = trips[index];
-                        return _buildTripCard(context, theme, trip);
-                      },
+
+                    final totalTrips = trips.length;
+                    final pendingTrips = trips.where((t) => t.status != 'completed').length;
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildSummaryTile(theme, totalTrips, pendingTrips),
+                        const SizedBox(height: 24),
+                        Expanded(
+                          child: ListView.builder(
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: trips.length,
+                            itemBuilder: (context, index) {
+                              final trip = trips[index];
+                              return _buildTripCard(context, theme, trip)
+                                  .animate()
+                                  .fade(delay: Duration(milliseconds: 300 + (index * 100)))
+                                  .slideY(begin: 0.1);
+                            },
+                          ),
+                        ),
+                      ],
                     );
                   },
                   loading: () => const Center(
@@ -168,6 +186,52 @@ class DriverDashboard extends ConsumerWidget {
         },
         child: const Icon(Icons.add_rounded),
       ),
+    );
+  }
+
+  Widget _buildSummaryTile(ThemeData theme, int total, int pending) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.primaryGold,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryGold.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _buildSummaryItem(theme, 'Total Trips', total.toString()),
+          Container(width: 1, height: 40, color: AppTheme.background.withValues(alpha: 0.3)),
+          _buildSummaryItem(theme, 'Pending', pending.toString()),
+        ],
+      ),
+    ).animate().fade(delay: 200.ms).scale(begin: const Offset(0.9, 0.9));
+  }
+
+  Widget _buildSummaryItem(ThemeData theme, String label, String value) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: theme.textTheme.headlineMedium?.copyWith(
+            color: AppTheme.background,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: AppTheme.background.withValues(alpha: 0.8),
+          ),
+        ),
+      ],
     );
   }
 
@@ -260,7 +324,9 @@ class DriverDashboard extends ConsumerWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  trip.estimatedDuration,
+                  trip.approxStartTime?.isNotEmpty == true 
+                    ? '${trip.approxStartTime} (${trip.estimatedDuration})' 
+                    : trip.estimatedDuration,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppTheme.textSecondary,
                   ),
@@ -326,7 +392,7 @@ class DriverDashboard extends ConsumerWidget {
             textAlign: TextAlign.center,
           ),
         ],
-      ),
+      ).animate().fade().scale(begin: const Offset(0.9, 0.9)),
     );
   }
 

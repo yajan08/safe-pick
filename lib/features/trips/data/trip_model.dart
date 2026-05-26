@@ -9,6 +9,7 @@ class TripModel {
   final List<String> schoolIds;
   final String status; // 'active' | 'inactive' | 'completed'
   final String estimatedDuration; // e.g. "45 mins"
+  final String approxStartTime; // e.g. "07:30 AM"
 
   const TripModel({
     required this.tripId,
@@ -18,6 +19,7 @@ class TripModel {
     required this.schoolIds,
     required this.status,
     required this.estimatedDuration,
+    this.approxStartTime = '',
   });
 
   /// Factory constructor to create a TripModel from a Map
@@ -30,6 +32,7 @@ class TripModel {
       schoolIds: List<String>.from(json['school_ids'] as List? ?? const []),
       status: json['status'] as String? ?? 'inactive',
       estimatedDuration: json['estimated_duration'] as String? ?? '45 mins',
+      approxStartTime: json['approx_start_time'] as String? ?? '',
     );
   }
 
@@ -42,6 +45,7 @@ class TripModel {
       'school_ids': schoolIds,
       'status': status,
       'estimated_duration': estimatedDuration,
+      'approx_start_time': approxStartTime,
     };
   }
 
@@ -54,6 +58,7 @@ class TripModel {
     List<String>? schoolIds,
     String? status,
     String? estimatedDuration,
+    String? approxStartTime,
   }) {
     return TripModel(
       tripId: tripId ?? this.tripId,
@@ -63,11 +68,12 @@ class TripModel {
       schoolIds: schoolIds ?? this.schoolIds,
       status: status ?? this.status,
       estimatedDuration: estimatedDuration ?? this.estimatedDuration,
+      approxStartTime: approxStartTime ?? this.approxStartTime,
     );
   }
 
   @override
   String toString() {
-    return 'TripModel(tripId: $tripId, driverUid: $driverUid, tripName: $tripName, tripType: $tripType, status: $status, estimatedDuration: $estimatedDuration)';
+    return 'TripModel(tripId: $tripId, driverUid: $driverUid, tripName: $tripName, tripType: $tripType, status: $status, approxStartTime: $approxStartTime, estimatedDuration: $estimatedDuration)';
   }
 }

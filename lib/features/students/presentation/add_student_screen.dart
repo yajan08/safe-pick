@@ -3,12 +3,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
 
 class AddStudentScreen extends ConsumerStatefulWidget {
-  const AddStudentScreen({super.key});
+  final StudentModel? student;
+
+  const AddStudentScreen({super.key, this.student});
 
   @override
   ConsumerState<AddStudentScreen> createState() => _AddStudentScreenState();
@@ -16,23 +19,37 @@ class AddStudentScreen extends ConsumerStatefulWidget {
 
 class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
-  final _gradeController = TextEditingController();
+  late final TextEditingController _nameController;
+  late final TextEditingController _gradeController;
+  late final TextEditingController _schoolNameController;
+  late final TextEditingController _noteController;
   
   bool _fetchingLocation = false;
   bool _isSubmitting = false;
   GeoPoint? _capturedLocation;
 
   @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.student?.name ?? '');
+    _gradeController = TextEditingController(text: widget.student?.grade ?? '');
+    _schoolNameController = TextEditingController(text: widget.student?.schoolName ?? '');
+    _noteController = TextEditingController(text: widget.student?.note ?? '');
+    _capturedLocation = widget.student?.homeLocation;
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _gradeController.dispose();
+    _schoolNameController.dispose();
+    _noteController.dispose();
     super.dispose();
   }
 
   String _generateRandomId() {
     final random = Random();
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid easily confused chars like I, O, 0, 1
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Avoid easily confused chars
     return List.generate(6, (index) => chars[random.nextInt(chars.length)]).join();
   }
 
@@ -126,28 +143,36 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
         throw 'Parent user must be logged in to register a student.';
       }
 
-      final studentId = _generateRandomId();
+      final isEditing = widget.student != null;
+      final studentId = isEditing ? widget.student!.studentId : _generateRandomId();
       
-      final newStudent = StudentModel(
+      final studentData = StudentModel(
         studentId: studentId,
         parentUid: currentUser.uid,
-        schoolId: 'sch_default_01',
+        schoolId: isEditing ? widget.student!.schoolId : 'sch_default_01',
         name: _nameController.text.trim(),
         grade: _gradeController.text.trim(),
+        schoolName: _schoolNameController.text.trim(),
+        note: _noteController.text.trim(),
         homeLocation: _capturedLocation,
-        status: 'active',
-        stats: const {
+        status: isEditing ? widget.student!.status : 'active',
+        lastAttendanceStatus: isEditing ? widget.student!.lastAttendanceStatus : 'At Home',
+        stats: isEditing ? widget.student!.stats : const {
           'total_trips': 0,
           'attendance_rate': 1.0,
         },
       );
 
-      await firestore.collection('students').doc(studentId).set(newStudent.toJson());
+      if (isEditing) {
+        await firestore.collection('students').doc(studentId).update(studentData.toJson());
+      } else {
+        await firestore.collection('students').doc(studentId).set(studentData.toJson());
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Student ${newStudent.name} registered! ID: $studentId'),
+            content: Text(isEditing ? 'Student ${studentData.name} updated!' : 'Student ${studentData.name} registered! ID: $studentId'),
             backgroundColor: AppTheme.successGreen,
             behavior: SnackBarBehavior.floating,
           ),
@@ -158,7 +183,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to register student: $e'),
+            content: Text('Failed to save student: $e'),
             backgroundColor: AppTheme.errorRed,
             behavior: SnackBarBehavior.floating,
           ),
@@ -176,10 +201,11 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isEditing = widget.student != null;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Add Student'),
+        title: Text(isEditing ? 'Edit Student' : 'Add Student'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -196,16 +222,16 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
               children: [
                 // Form Header description
                 Text(
-                  'Register a Child',
+                  isEditing ? 'Update Details' : 'Register a Child',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
-                ),
+                ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
                 const SizedBox(height: 8),
                 Text(
                   'Provide student details and record their primary pickup/dropoff home location.',
                   style: theme.textTheme.bodyMedium,
-                ),
+                ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1),
                 const SizedBox(height: 32),
 
                 // Name Field
@@ -224,7 +250,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                     }
                     return null;
                   },
-                ),
+                ).animate().fade(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1),
                 const SizedBox(height: 20),
 
                 // Grade Field
@@ -241,7 +267,32 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                     }
                     return null;
                   },
-                ),
+                ).animate().fade(duration: 400.ms, delay: 300.ms).slideY(begin: 0.1),
+                const SizedBox(height: 20),
+
+                // School Name Field
+                TextFormField(
+                  controller: _schoolNameController,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'School Name',
+                    hintText: 'e.g. Springfield Elementary',
+                    prefixIcon: Icon(Icons.account_balance_outlined, color: AppTheme.textSecondary),
+                  ),
+                ).animate().fade(duration: 400.ms, delay: 400.ms).slideY(begin: 0.1),
+                const SizedBox(height: 20),
+
+                // Note Field
+                TextFormField(
+                  controller: _noteController,
+                  textCapitalization: TextCapitalization.sentences,
+                  maxLines: 2,
+                  decoration: const InputDecoration(
+                    labelText: 'Special Note',
+                    hintText: 'e.g. Needs front seat, allergies, etc.',
+                    prefixIcon: Icon(Icons.note_alt_outlined, color: AppTheme.textSecondary),
+                  ),
+                ).animate().fade(duration: 400.ms, delay: 500.ms).slideY(begin: 0.1),
                 const SizedBox(height: 30),
 
                 // GPS Location Capture Container
@@ -320,7 +371,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                       ),
                     ],
                   ),
-                ),
+                ).animate().fade(duration: 400.ms, delay: 600.ms).slideY(begin: 0.1),
                 const SizedBox(height: 40),
 
                 // Register Student Submit Button
@@ -335,8 +386,8 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                             valueColor: AlwaysStoppedAnimation<Color>(AppTheme.background),
                           ),
                         )
-                      : const Text('Register Student'),
-                ),
+                      : Text(isEditing ? 'Update Details' : 'Register Student'),
+                ).animate().fade(duration: 400.ms, delay: 700.ms).slideY(begin: 0.1),
               ],
             ),
           ),
