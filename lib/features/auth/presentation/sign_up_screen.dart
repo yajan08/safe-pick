@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../../../core/theme/app_theme.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
@@ -106,8 +105,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               children: [
                 Hero(
                   tag: 'app_logo',
-                  child: SvgPicture.asset(
-                    'assets/images/logo_dark.svg',
+                  child: Image.asset(
+                    'assets/images/light_logo.jpg',
                     height: 100,
                   ),
                 ).animate().fade().slideY(begin: -0.1),

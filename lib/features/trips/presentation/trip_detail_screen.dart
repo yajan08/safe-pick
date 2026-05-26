@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../data/trip_model.dart';
 import '../data/trip_service.dart';
 import '../data/trip_manifest_model.dart';
@@ -184,9 +183,9 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: SvgPicture.asset(
-          'assets/images/logo_dark.svg',
-          height: 28,
+        title: Image.asset(
+          'assets/images/light_logo.jpg',
+          height: 32,
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),

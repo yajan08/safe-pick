@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../data/trip_model.dart';
 import 'trip_detail_screen.dart';
 import 'create_trip_screen.dart';
@@ -105,9 +104,9 @@ class DriverDashboard extends ConsumerWidget {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: SvgPicture.asset(
-          'assets/images/logo_dark.svg',
-          height: 28,
+        title: Image.asset(
+          'assets/images/light_logo.jpg',
+          height: 32,
         ),
         actions: [
           IconButton(

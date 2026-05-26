@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/app_theme.dart';
@@ -48,9 +48,9 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Center(
         child: Hero(
           tag: 'app_logo',
-          child: SvgPicture.asset(
-            'assets/images/logo_dark.svg',
-            width: 180,
+          child: Image.asset(
+            'assets/images/light_logo.jpg',
+            height: 100,
           ),
         ).animate()
          .fadeIn(duration: 800.ms)
