@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 @immutable
 class TripModel {
@@ -9,7 +10,7 @@ class TripModel {
   final List<String> schoolIds;
   final String status; // 'active' | 'inactive' | 'completed'
   final String estimatedDuration; // e.g. "45 mins"
-  final String approxStartTime; // e.g. "07:30 AM"
+  final DateTime? lastCompletedDate;
 
   const TripModel({
     required this.tripId,
@@ -19,11 +20,18 @@ class TripModel {
     required this.schoolIds,
     required this.status,
     required this.estimatedDuration,
-    this.approxStartTime = '',
+    this.lastCompletedDate,
   });
 
   /// Factory constructor to create a TripModel from a Map
   factory TripModel.fromJson(Map<String, dynamic> json, String id) {
+    final rawDate = json['last_completed_date'];
+    DateTime? parsedDate;
+    if (rawDate is Timestamp) {
+      parsedDate = rawDate.toDate();
+    } else if (rawDate is String) {
+      parsedDate = DateTime.tryParse(rawDate);
+    }
     return TripModel(
       tripId: id,
       driverUid: json['driver_uid'] as String? ?? '',
@@ -32,7 +40,7 @@ class TripModel {
       schoolIds: List<String>.from(json['school_ids'] as List? ?? const []),
       status: json['status'] as String? ?? 'inactive',
       estimatedDuration: json['estimated_duration'] as String? ?? '45 mins',
-      approxStartTime: json['approx_start_time'] as String? ?? '',
+      lastCompletedDate: parsedDate,
     );
   }
 
@@ -45,7 +53,7 @@ class TripModel {
       'school_ids': schoolIds,
       'status': status,
       'estimated_duration': estimatedDuration,
-      'approx_start_time': approxStartTime,
+      'last_completed_date': lastCompletedDate != null ? Timestamp.fromDate(lastCompletedDate!) : null,
     };
   }
 
@@ -58,7 +66,7 @@ class TripModel {
     List<String>? schoolIds,
     String? status,
     String? estimatedDuration,
-    String? approxStartTime,
+    DateTime? lastCompletedDate,
   }) {
     return TripModel(
       tripId: tripId ?? this.tripId,
@@ -68,12 +76,12 @@ class TripModel {
       schoolIds: schoolIds ?? this.schoolIds,
       status: status ?? this.status,
       estimatedDuration: estimatedDuration ?? this.estimatedDuration,
-      approxStartTime: approxStartTime ?? this.approxStartTime,
+      lastCompletedDate: lastCompletedDate ?? this.lastCompletedDate,
     );
   }
 
   @override
   String toString() {
-    return 'TripModel(tripId: $tripId, driverUid: $driverUid, tripName: $tripName, tripType: $tripType, status: $status, approxStartTime: $approxStartTime, estimatedDuration: $estimatedDuration)';
+    return 'TripModel(tripId: $tripId, driverUid: $driverUid, tripName: $tripName, tripType: $tripType, status: $status, estimatedDuration: $estimatedDuration, lastCompletedDate: $lastCompletedDate)';
   }
 }

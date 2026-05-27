@@ -31,6 +31,15 @@ final driverTripsProvider = StreamProvider<List<TripModel>>((ref) {
 class DriverDashboard extends ConsumerWidget {
   const DriverDashboard({super.key});
 
+  bool _isTripCompletedToday(TripModel trip) {
+    if (trip.lastCompletedDate == null) return false;
+    final now = DateTime.now();
+    final completedDate = trip.lastCompletedDate!;
+    return completedDate.year == now.year &&
+        completedDate.month == now.month &&
+        completedDate.day == now.day;
+  }
+
   Future<void> _handleSignOut(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -109,26 +118,68 @@ class DriverDashboard extends ConsumerWidget {
           height: 32,
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.history_rounded),
-            tooltip: 'Trip History',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const TripHistoryScreen()),
-              );
-            },
-          ),
-          IconButton(
+          PopupMenuButton<String>(
             icon: const Icon(Icons.person_outline_rounded, color: AppTheme.primaryGold),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const DriverProfileScreen()),
-              );
+            onSelected: (value) {
+              if (value == 'profile') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const DriverProfileScreen()),
+                );
+              } else if (value == 'history') {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const TripHistoryScreen()),
+                );
+              } else if (value == 'settings') {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Settings (Coming Soon)'), behavior: SnackBarBehavior.floating),
+                );
+              } else if (value == 'logout') {
+                _handleSignOut(context, ref);
+              }
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_rounded),
-            onPressed: () => _handleSignOut(context, ref),
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_rounded, color: AppTheme.textSecondary),
+                    SizedBox(width: 12),
+                    Text('Profile'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'history',
+                child: Row(
+                  children: [
+                    Icon(Icons.history_rounded, color: AppTheme.textSecondary),
+                    SizedBox(width: 12),
+                    Text('Trip History'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings_rounded, color: AppTheme.textSecondary),
+                    SizedBox(width: 12),
+                    Text('Settings'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout_rounded, color: AppTheme.errorRed),
+                    SizedBox(width: 12),
+                    Text('Logout', style: TextStyle(color: AppTheme.errorRed)),
+                  ],
+                ),
+              ),
+            ],
           ),
           const SizedBox(width: 8),
         ],
@@ -162,7 +213,11 @@ class DriverDashboard extends ConsumerWidget {
                     }
 
                     final totalTrips = trips.length;
-                    final pendingTrips = trips.where((t) => t.status != 'completed').length;
+                    final pendingTrips = trips.where((t) {
+                      final isCompletedToday = _isTripCompletedToday(t);
+                      final isActive = t.status == 'active';
+                      return !isCompletedToday && !isActive;
+                    }).length;
 
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -191,12 +246,12 @@ class DriverDashboard extends ConsumerWidget {
                       Row(
                         children: [
                           Expanded(child: ShimmerLoading(width: double.infinity, height: 100, borderRadius: 20)),
-                          SizedBox(width: 16),
+                          const SizedBox(width: 16),
                           Expanded(child: ShimmerLoading(width: double.infinity, height: 100, borderRadius: 20)),
                         ],
                       ),
-                      SizedBox(height: 24),
-                      Expanded(child: ShimmerList(itemCount: 4, itemHeight: 140)),
+                      const SizedBox(height: 24),
+                      const Expanded(child: ShimmerList(itemCount: 4, itemHeight: 140)),
                     ],
                   ),
                   error: (error, stackTrace) => _buildErrorState(theme, error.toString()),
@@ -278,7 +333,21 @@ class DriverDashboard extends ConsumerWidget {
   Widget _buildTripCard(BuildContext context, ThemeData theme, TripModel trip) {
     final isPickup = trip.tripType.toLowerCase() == 'pickup';
     final isActive = trip.status.toLowerCase() == 'active';
-    final isCompleted = trip.status.toLowerCase() == 'completed';
+    final isCompletedToday = _isTripCompletedToday(trip);
+
+    // Dynamic UI states based on daily reset logic
+    final String statusLabel;
+    final Color badgeColor;
+    if (isActive) {
+      statusLabel = 'ACTIVE';
+      badgeColor = AppTheme.primaryGold;
+    } else if (isCompletedToday) {
+      statusLabel = 'COMPLETED';
+      badgeColor = AppTheme.successGreen;
+    } else {
+      statusLabel = 'READY';
+      badgeColor = const Color(0xFFE0E0E0);
+    }
 
     return GestureDetector(
       onTap: () {
@@ -294,7 +363,7 @@ class DriverDashboard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: AppTheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border, width: 2), // Thicker border for contrast
+          border: Border.all(color: AppTheme.border, width: 2),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -342,21 +411,16 @@ class DriverDashboard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                // Large Status Badge
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isCompleted
-                        ? AppTheme.successGreen
-                        : isActive
-                            ? AppTheme.primaryGold
-                            : const Color(0xFFE0E0E0),
+                    color: badgeColor,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    trip.status.toUpperCase(),
+                    statusLabel,
                     style: theme.textTheme.titleSmall?.copyWith(
-                      color: (isCompleted || isActive) ? Colors.white : AppTheme.textPrimary,
+                      color: (isCompletedToday || isActive) ? Colors.white : AppTheme.textPrimary,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
                     ),

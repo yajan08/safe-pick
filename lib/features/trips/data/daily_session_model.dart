@@ -9,7 +9,6 @@ class DailySessionModel {
   final String date;
   final String status; // 'not_started' | 'in_progress' | 'paused' | 'completed'
   final String mqttTopicId;
-  final DateTime startTime;
   final DateTime? endTime;
 
   const DailySessionModel({
@@ -19,22 +18,10 @@ class DailySessionModel {
     required this.date,
     required this.status,
     required this.mqttTopicId,
-    required this.startTime,
     this.endTime,
   });
 
   factory DailySessionModel.fromJson(Map<String, dynamic> json, String id) {
-    DateTime parseDate(dynamic raw) {
-      if (raw == null) return DateTime.now();
-      if (raw is DateTime) return raw;
-      if (raw is String) return DateTime.tryParse(raw) ?? DateTime.now();
-      try {
-        return (raw as dynamic).toDate() as DateTime;
-      } catch (_) {
-        return DateTime.now();
-      }
-    }
-
     DateTime? parseOptionalDate(dynamic raw) {
       if (raw == null) return null;
       if (raw is DateTime) return raw;
@@ -53,7 +40,6 @@ class DailySessionModel {
       date: json['date'] as String? ?? '',
       status: json['status'] as String? ?? 'not_started',
       mqttTopicId: json['mqtt_topic_id'] as String? ?? '',
-      startTime: parseDate(json['start_time']),
       endTime: parseOptionalDate(json['end_time']),
     );
   }
@@ -65,7 +51,6 @@ class DailySessionModel {
       'date': date,
       'status': status,
       'mqtt_topic_id': mqttTopicId,
-      'start_time': Timestamp.fromDate(startTime),
       if (endTime != null) 'end_time': Timestamp.fromDate(endTime!),
     };
   }
@@ -77,7 +62,6 @@ class DailySessionModel {
     String? date,
     String? status,
     String? mqttTopicId,
-    DateTime? startTime,
     DateTime? endTime,
   }) {
     return DailySessionModel(
@@ -87,7 +71,6 @@ class DailySessionModel {
       date: date ?? this.date,
       status: status ?? this.status,
       mqttTopicId: mqttTopicId ?? this.mqttTopicId,
-      startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
     );
   }

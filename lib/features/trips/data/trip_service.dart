@@ -81,7 +81,7 @@ class TripService {
   }
 
   /// Creates a new document in the daily_sessions collection, starting a trip.
-  /// Returns the generated session_id / mqtt_topic_id.
+  /// Returns the generated session_id.
   Future<String> startDailySession(String tripId) async {
     try {
       final currentUser = _auth.currentUser;
@@ -103,11 +103,15 @@ class TripService {
         'date': dateString,
         'status': 'in_progress',
         'mqtt_topic_id': sessionId,
-        'start_time': Timestamp.fromDate(now),
       };
 
       final batch = _firestore.batch();
       batch.set(docRef, sessionData);
+      
+      // Update trip template status
+      batch.update(_firestore.collection('trips').doc(tripId), {
+        'status': 'active',
+      });
 
       // Initialize attendance records from manifest
       final manifestDocs = await _firestore.collection('trips').doc(tripId).collection('trip_manifest').get();
@@ -126,19 +130,17 @@ class TripService {
     }
   }
 
-  Future<void> pauseDailySession(String sessionId) async {
-    await _firestore.collection('daily_sessions').doc(sessionId).update({'status': 'paused'});
-  }
-
-  Future<void> resumeDailySession(String sessionId) async {
-    await _firestore.collection('daily_sessions').doc(sessionId).update({'status': 'in_progress'});
-  }
-
-  Future<void> reopenDailySession(String sessionId) async {
-    await _firestore.collection('daily_sessions').doc(sessionId).update({
+  Future<void> reopenDailySession(String sessionId, String tripId) async {
+    final batch = _firestore.batch();
+    batch.update(_firestore.collection('daily_sessions').doc(sessionId), {
       'status': 'in_progress',
       'end_time': FieldValue.delete(),
     });
+    batch.update(_firestore.collection('trips').doc(tripId), {
+      'status': 'active',
+      'last_completed_date': FieldValue.delete(),
+    });
+    await batch.commit();
   }
 
   Future<void> endDailySession(String sessionId, String tripId) async {
@@ -146,6 +148,10 @@ class TripService {
     batch.update(_firestore.collection('daily_sessions').doc(sessionId), {
       'status': 'completed',
       'end_time': Timestamp.fromDate(DateTime.now()),
+    });
+    batch.update(_firestore.collection('trips').doc(tripId), {
+      'status': 'completed',
+      'last_completed_date': Timestamp.fromDate(DateTime.now()),
     });
     await batch.commit();
   }
@@ -280,13 +286,7 @@ class TripService {
       status: status,
     );
     
-    if (status == 'onboarded' || status == 'absent') {
-      // First time log creation
-      batch.set(rideHistoryRef, rideLog.toJson());
-    } else {
-      // Just update existing
-      batch.update(rideHistoryRef, updateData);
-    }
+    batch.set(rideHistoryRef, rideLog.toJson(), SetOptions(merge: true));
 
     // Sync to global student record
     String globalStatus = 'Unknown';
@@ -300,5 +300,12 @@ class TripService {
     });
 
     await batch.commit();
+  }
+
+  /// Update basic trip details (like trip name)
+  Future<void> updateTripDetails(String tripId, String tripName) async {
+    await _firestore.collection('trips').doc(tripId).update({
+      'trip_name': tripName,
+    });
   }
 }

@@ -188,6 +188,15 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
     - Upgraded `TripService` and `TripDetailScreen` to support "Infinite Trips" (allowing drivers to click "REDO / REOPEN TRIP" on completed sessions to convert them back to `in_progress`).
     - Finalized End-to-End QR Sync fan-out: Scans/manual overrides now instantly update the global student record (`last_attendance_status`) so parents see real-time updates (e.g. "In Van", "At Home").
     - Verified UX minimum button heights (56.0) across auth flows and primary actions.
+22. **Driver UI/UX Overhaul & Logic Refactor (Phase 14.2):**
+    - Standardized Profile Menu under a single `PopupMenuButton` in the App Bar.
+    - Implemented Active Trip screen lock using `PopScope` and hidden back navigation.
+    - Completely removed Pause/Resume trip flow.
+    - Added Name Editing capability to the details screen.
+    - Cleaned up models and Firestore updates to remove `start_time` and `approx_start_time`.
+    - Added `lastCompletedDate` logic for daily reset and redo capability.
+    - Built a centered row of toggleable Boarded/Offboarded/Absent buttons for each student card on active trips.
+    - Fixed Create Trip layout blank screen and restricted ID entry to exact matches.
 
 ---
 

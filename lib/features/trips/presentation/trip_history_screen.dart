@@ -15,7 +15,7 @@ final driverHistoryProvider = StreamProvider<List<DailySessionModel>>((ref) {
       .collection('daily_sessions')
       .where('driver_uid', isEqualTo: currentUser.uid)
       .where('status', isEqualTo: 'completed')
-      .orderBy('start_time', descending: true)
+      .orderBy('end_time', descending: true)
       .snapshots()
       .map((snapshot) => snapshot.docs
           .map((doc) => DailySessionModel.fromJson(doc.data(), doc.id))
@@ -93,10 +93,20 @@ class TripHistoryScreen extends ConsumerWidget {
 
   Widget _buildHistoryCard(BuildContext context, WidgetRef ref, ThemeData theme, DailySessionModel session) {
     final nameAsync = ref.watch(tripNameProvider(session.tripId));
-    final dateFormat = DateFormat('MMM dd, yyyy');
     final timeFormat = DateFormat('hh:mm a');
 
-    final startTimeStr = timeFormat.format(session.startTime);
+    // Parse date from String
+    String dateStr = session.date;
+    try {
+      final dateParts = session.date.split('-');
+      if (dateParts.length == 3) {
+        final year = int.parse(dateParts[0]);
+        final month = int.parse(dateParts[1]);
+        final day = int.parse(dateParts[2]);
+        dateStr = DateFormat('MMM dd, yyyy').format(DateTime(year, month, day));
+      }
+    } catch (_) {}
+
     final endTimeStr = session.endTime != null ? timeFormat.format(session.endTime!) : '--:--';
 
     return Container(
@@ -147,7 +157,7 @@ class TripHistoryScreen extends ConsumerWidget {
               const Icon(Icons.calendar_today_rounded, size: 16, color: AppTheme.textMuted),
               const SizedBox(width: 8),
               Text(
-                dateFormat.format(session.startTime),
+                dateStr,
                 style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
               ),
             ],
@@ -158,7 +168,7 @@ class TripHistoryScreen extends ConsumerWidget {
               const Icon(Icons.access_time_rounded, size: 16, color: AppTheme.textMuted),
               const SizedBox(width: 8),
               Text(
-                '$startTimeStr - $endTimeStr',
+                'Completed at: $endTimeStr',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   color: AppTheme.textPrimary,

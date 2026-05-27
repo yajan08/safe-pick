@@ -21,7 +21,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   final _searchController = TextEditingController();
   
   String _tripType = 'pickup';
-  TimeOfDay? _selectedTime;
   bool _isSubmitting = false;
   bool _isSearching = false;
 
@@ -33,30 +32,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
     _durationController.dispose();
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppTheme.primaryGold,
-              onPrimary: AppTheme.background,
-              onSurface: AppTheme.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-    if (time != null) {
-      setState(() {
-        _selectedTime = time;
-      });
-    }
   }
 
   Future<void> _searchStudent() async {
@@ -117,9 +92,9 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
       return;
     }
 
-    if (_selectedTime == null) {
+    if (_roster.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please pick an approximate start time.')),
+        const SnackBar(content: Text('Please link at least one student.')),
       );
       return;
     }
@@ -140,7 +115,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
       final docRef = firestore.collection('trips').doc();
       final tripId = docRef.id;
       final durationMins = int.parse(_durationController.text.trim());
-      final formattedTime = _selectedTime!.format(context);
 
       final newTrip = TripModel(
         tripId: tripId,
@@ -150,7 +124,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
         schoolIds: const ['sch_default_01'],
         status: 'inactive',
         estimatedDuration: '$durationMins mins',
-        approxStartTime: formattedTime,
       );
 
       final batch = firestore.batch();
@@ -162,12 +135,12 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
         final manifestRef = docRef.collection('trip_manifest').doc(student.studentId);
         final manifestModel = TripManifestModel(
           studentId: student.studentId,
-          stopOrder: i + 1,
-          expectedTime: formattedTime, // Simplified for now
-          status: 'pending',
           schoolId: student.schoolId,
-          schoolName: student.schoolName,
           name: student.name,
+          schoolName: student.schoolName,
+          stopOrder: i + 1,
+          status: 'pending',
+          expectedTime: '',
         );
         batch.set(manifestRef, manifestModel.toJson());
       }
@@ -221,187 +194,181 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
           child: Column(
             children: [
               Expanded(
-                child: ListView(
+                child: SingleChildScrollView(
                   physics: const BouncingScrollPhysics(),
                   padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-                  children: [
-                    // Form Header Description
-                    Text(
-                      'Set Up a Route',
-                      style: theme.textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ).animate().fade().slideY(begin: 0.1),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Enter details to instantiate a new driving shift and build your roster.',
-                      style: theme.textTheme.bodyMedium,
-                    ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
-                    const SizedBox(height: 32),
-
-                    // Trip Name Field
-                    TextFormField(
-                      controller: _nameController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Trip Name',
-                        hintText: 'e.g. Route A Morning',
-                        prefixIcon: Icon(Icons.directions_bus_outlined, color: AppTheme.textSecondary),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Please enter a name for the trip';
-                        }
-                        return null;
-                      },
-                    ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
-                    const SizedBox(height: 20),
-
-                    // Trip Type Dropdown
-                    DropdownButtonFormField<String>(
-                      initialValue: _tripType,
-                      decoration: const InputDecoration(
-                        labelText: 'Trip Type',
-                        prefixIcon: Icon(Icons.merge_type_rounded, color: AppTheme.textSecondary),
-                      ),
-                      dropdownColor: AppTheme.surface,
-                      iconEnabledColor: AppTheme.primaryGold,
-                      items: const [
-                        DropdownMenuItem(
-                          value: 'pickup',
-                          child: Text('Morning Pick-Up'),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Set Up a Route',
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
-                        DropdownMenuItem(
-                          value: 'dropoff',
-                          child: Text('Afternoon Drop-Off'),
-                        ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) {
-                          setState(() {
-                            _tripType = value;
-                          });
-                        }
-                      },
-                    ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
-                    const SizedBox(height: 20),
+                      ).animate().fade().slideY(begin: 0.1),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Enter details to instantiate a new driving shift and build your roster.',
+                        style: theme.textTheme.bodyMedium,
+                      ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 32),
 
-                    // Time Picker & Duration Row
-                    Row(
-                      children: [
-                        Expanded(
-                          child: InkWell(
-                            onTap: _pickTime,
-                            borderRadius: BorderRadius.circular(16),
-                            child: InputDecorator(
+                      // Trip Name Field
+                      TextFormField(
+                        controller: _nameController,
+                        textCapitalization: TextCapitalization.words,
+                        decoration: const InputDecoration(
+                          labelText: 'Trip Name',
+                          hintText: 'e.g. Route A Morning',
+                          prefixIcon: Icon(Icons.directions_bus_outlined, color: AppTheme.textSecondary),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Please enter a name for the trip';
+                          }
+                          return null;
+                        },
+                      ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 20),
+
+                      // Trip Type Dropdown
+                      DropdownButtonFormField<String>(
+                        initialValue: _tripType,
+                        decoration: const InputDecoration(
+                          labelText: 'Trip Type',
+                          prefixIcon: Icon(Icons.merge_type_rounded, color: AppTheme.textSecondary),
+                        ),
+                        dropdownColor: AppTheme.surface,
+                        iconEnabledColor: AppTheme.primaryGold,
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'pickup',
+                            child: Text('Morning Pick-Up'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'dropoff',
+                            child: Text('Afternoon Drop-Off'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              _tripType = value;
+                            });
+                          }
+                        },
+                      ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 20),
+
+                      // Duration Field
+                      TextFormField(
+                        controller: _durationController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Duration (Mins)',
+                          hintText: 'e.g. 45',
+                          prefixIcon: Icon(Icons.timer_outlined, color: AppTheme.textSecondary),
+                        ),
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Required';
+                          }
+                          final intValue = int.tryParse(value);
+                          if (intValue == null || intValue <= 0) {
+                            return 'Invalid';
+                          }
+                          return null;
+                        },
+                      ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 32),
+
+                      const Divider(color: AppTheme.border),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Link Students',
+                        style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                      ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 16),
+
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              textCapitalization: TextCapitalization.characters,
                               decoration: const InputDecoration(
-                                labelText: 'Start Time',
-                                prefixIcon: Icon(Icons.access_time_rounded, color: AppTheme.textSecondary),
+                                labelText: 'Enter exact Student ID',
+                                hintText: 'e.g. SP1005',
+                                prefixIcon: Icon(Icons.fingerprint_rounded, color: AppTheme.textSecondary),
                               ),
-                              child: Text(
-                                _selectedTime?.format(context) ?? 'Select Time',
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  color: _selectedTime != null ? AppTheme.textPrimary : AppTheme.textMuted,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: _isSearching ? null : _searchStudent,
+                              style: ElevatedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
+                              child: _isSearching 
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                : const Text('Link'),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _durationController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Duration (Mins)',
-                              hintText: 'e.g. 45',
-                              prefixIcon: Icon(Icons.timer_outlined, color: AppTheme.textSecondary),
-                            ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Required';
-                              }
-                              final intValue = int.tryParse(value);
-                              if (intValue == null || intValue <= 0) {
-                                return 'Invalid';
-                              }
-                              return null;
-                            },
+                        ],
+                      ).animate().fade(delay: 600.ms).slideY(begin: 0.1),
+                      const SizedBox(height: 24),
+
+                      if (_roster.isEmpty)
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surface,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppTheme.border),
                           ),
-                        ),
-                      ],
-                    ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
-                    const SizedBox(height: 32),
-
-                    const Divider(color: AppTheme.border),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Build Roster',
-                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
-                    const SizedBox(height: 16),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _searchController,
-                            textCapitalization: TextCapitalization.characters,
-                            decoration: const InputDecoration(
-                              labelText: 'Search by Student ID',
-                              hintText: 'e.g. SP1005',
-                              prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textSecondary),
+                          child: Center(
+                            child: Text(
+                              'No students added yet.\nEnter exact ID to link a student.',
+                              textAlign: TextAlign.center,
+                              style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        ElevatedButton(
-                          onPressed: _isSearching ? null : _searchStudent,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                          ),
-                          child: _isSearching 
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Text('Add'),
-                        ),
-                      ],
-                    ).animate().fade(delay: 600.ms).slideY(begin: 0.1),
-                    const SizedBox(height: 24),
-
-                    if (_roster.isEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.border),
-                        ),
-                        child: Center(
-                          child: Text(
-                            'No students added yet.\nSearch by ID to build your manifest.',
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted),
-                          ),
-                        ),
-                      ).animate().fade(delay: 700.ms)
-                    else
-                      ..._roster.map((s) => ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.2),
-                          child: const Icon(Icons.person, color: AppTheme.primaryGold),
-                        ),
-                        title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text(s.studentId),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.remove_circle_outline, color: AppTheme.errorRed),
-                          onPressed: () {
-                            setState(() {
-                              _roster.remove(s);
-                            });
+                        ).animate().fade(delay: 700.ms)
+                      else
+                        ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _roster.length,
+                          itemBuilder: (context, index) {
+                            final s = _roster[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: ListTile(
+                                leading: CircleAvatar(
+                                  backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.2),
+                                  child: const Icon(Icons.person, color: AppTheme.primaryGold),
+                                ),
+                                title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text(s.studentId),
+                                trailing: IconButton(
+                                  icon: const Icon(Icons.remove_circle_outline, color: AppTheme.errorRed),
+                                  onPressed: () {
+                                    setState(() {
+                                      _roster.remove(s);
+                                    });
+                                  },
+                                ),
+                              ),
+                            );
                           },
                         ),
-                      )),
-                  ],
+                    ],
+                  ),
                 ),
               ),
 
