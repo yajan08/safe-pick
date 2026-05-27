@@ -6,7 +6,7 @@ class TripModel {
   final String tripId;
   final String driverUid;
   final String tripName;
-  final String tripType; // 'pickup' | 'dropoff' (Morning/Evening)
+  final String tripType; // 'Morning' | 'Afternoon'
   final List<String> studentIds;
   final List<String> schoolIds;
   final String status; // 'active' | 'inactive' | 'completed'
@@ -36,7 +36,7 @@ class TripModel {
       tripId: id,
       driverUid: json['driver_uid'] as String? ?? '',
       tripName: json['trip_name'] as String? ?? '',
-      tripType: json['trip_type'] as String? ?? 'pickup',
+      tripType: json['trip_type'] as String? ?? 'Morning',
       studentIds: List<String>.from(json['student_ids'] as List? ?? const []),
       schoolIds: List<String>.from(json['school_ids'] as List? ?? const []),
       status: json['status'] as String? ?? 'inactive',

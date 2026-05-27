@@ -261,7 +261,7 @@ class ParentDashboard extends ConsumerWidget {
     Color statusColor;
     IconData statusIcon;
 
-    switch (student.lastAttendanceStatus) {
+    switch (student.currentStatus) {
       case 'In Van':
         statusColor = AppTheme.warningOrange;
         statusIcon = Icons.directions_bus_rounded;
@@ -284,7 +284,7 @@ class ParentDashboard extends ConsumerWidget {
     // Est Time displays either the student.estimatedArrival value or status-based fallback
     String etaText = student.estimatedArrival ?? '';
     if (etaText.isEmpty) {
-      switch (student.lastAttendanceStatus) {
+      switch (student.currentStatus) {
         case 'In Van':
           etaText = '15 mins';
           break;
@@ -338,7 +338,7 @@ class ParentDashboard extends ConsumerWidget {
                   FittedBox(
                     fit: BoxFit.scaleDown,
                     child: Text(
-                      student.lastAttendanceStatus,
+                      student.currentStatus,
                       style: TextStyle(
                         color: statusColor,
                         fontSize: 16,
@@ -405,7 +405,7 @@ class ParentDashboard extends ConsumerWidget {
   }
 
   Widget _buildMapCard(BuildContext context, ThemeData theme, StudentModel student) {
-    final isInVan = student.lastAttendanceStatus == 'In Van';
+    final isInVan = student.currentStatus == 'In Van';
 
     return GestureDetector(
       onTap: () {

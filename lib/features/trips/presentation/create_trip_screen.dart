@@ -19,7 +19,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   final _nameController = TextEditingController();
   final _searchController = TextEditingController();
   
-  String _tripType = 'pickup';
+  String _tripType = 'Morning';
   bool _isSubmitting = false;
   bool _isSearching = false;
 
@@ -138,7 +138,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
           name: student.name,
           schoolName: student.schoolName,
           stopOrder: i + 1,
-          status: _tripType.toLowerCase() == 'pickup' || _tripType.toLowerCase() == 'morning' ? 'At Home' : 'At School',
+          status: _tripType.toLowerCase() == 'morning' ? 'At Home' : 'At School',
         );
         batch.set(manifestRef, manifestModel.toJson());
       }
@@ -238,14 +238,14 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                         ),
                         dropdownColor: AppTheme.surface,
                         iconEnabledColor: AppTheme.primaryGold,
-                        items: const [
+                        items: [
                           DropdownMenuItem(
-                            value: 'pickup',
-                            child: Text('Morning Pick-Up'),
+                            value: 'Morning',
+                            child: Text('Morning Pick-Up', style: theme.textTheme.titleMedium),
                           ),
                           DropdownMenuItem(
-                            value: 'dropoff',
-                            child: Text('Afternoon Drop-Off'),
+                            value: 'Afternoon',
+                            child: Text('Afternoon Drop-Off', style: theme.textTheme.titleMedium),
                           ),
                         ],
                         onChanged: (value) {

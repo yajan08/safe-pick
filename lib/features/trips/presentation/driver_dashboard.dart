@@ -96,11 +96,18 @@ class DriverDashboard extends ConsumerWidget {
                     }
 
                     // Sort trips: completed today goes to the bottom, active/pending on top
+                    // For pending, Morning trips appear first, followed by Afternoon
                     final sortedTrips = List<TripModel>.from(trips)..sort((a, b) {
                       final aCompleted = _isTripCompletedToday(a);
                       final bCompleted = _isTripCompletedToday(b);
                       if (aCompleted && !bCompleted) return 1;
                       if (!aCompleted && bCompleted) return -1;
+                      
+                      // Both are either completed or pending. Sort by type: Morning first
+                      final aType = a.tripType.toLowerCase();
+                      final bType = b.tripType.toLowerCase();
+                      if (aType == 'morning' && bType != 'morning') return -1;
+                      if (aType != 'morning' && bType == 'morning') return 1;
                       return 0;
                     });
 
@@ -223,7 +230,7 @@ class DriverDashboard extends ConsumerWidget {
   }
 
   Widget _buildTripCard(BuildContext context, ThemeData theme, TripModel trip) {
-    final isPickup = trip.tripType.toLowerCase() == 'pickup';
+    final isMorning = trip.tripType.toLowerCase() == 'morning';
     final isActive = trip.status.toLowerCase() == 'active';
     final isCompletedToday = _isTripCompletedToday(trip);
 
@@ -286,13 +293,13 @@ class DriverDashboard extends ConsumerWidget {
                       Row(
                         children: [
                           Icon(
-                            isPickup ? Icons.login_rounded : Icons.logout_rounded,
+                            isMorning ? Icons.login_rounded : Icons.logout_rounded,
                             color: AppTheme.primaryGold,
                             size: 24,
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            isPickup ? 'Morning Pick-Up' : 'Afternoon Drop-Off',
+                            isMorning ? 'Morning Pick-Up' : 'Afternoon Drop-Off',
                             style: theme.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                               color: AppTheme.textSecondary,

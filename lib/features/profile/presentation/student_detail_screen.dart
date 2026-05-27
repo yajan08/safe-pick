@@ -240,10 +240,10 @@ class StudentDetailScreen extends ConsumerWidget {
             theme,
             Icons.circle,
             'Status',
-            student.lastAttendanceStatus,
-            valueColor: student.lastAttendanceStatus == 'At Home'
+            student.currentStatus,
+            valueColor: student.currentStatus == 'At Home'
                 ? AppTheme.successGreen
-                : student.lastAttendanceStatus == 'In Van'
+                : student.currentStatus == 'In Van'
                     ? AppTheme.warningOrange
                     : AppTheme.primaryGold,
           ),

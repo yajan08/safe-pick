@@ -1,0 +1,12 @@
+- `[x]` Update `StudentModel` (rename `lastAttendanceStatus` to `currentStatus`)
+- `[x]` Update `TripModel` types (`Morning`, `Afternoon`)
+- `[x]` Update all global references of `lastAttendanceStatus` to `currentStatus`
+  - `[x]` `trip_service.dart`
+  - `[x]` `trip_detail_screen.dart`
+  - `[x]` `parent_dashboard.dart`
+- `[x]` Update UI logic to use `Morning` and `Afternoon` instead of `pickup`/`dropoff`
+  - `[x]` `trip_detail_screen.dart`
+  - `[x]` `driver_dashboard.dart`
+- `[x]` Update Driver Dashboard sorting logic (Morning first, then Afternoon, completed trips at the bottom)
+- `[x]` Implement End Trip Cleanup in `trip_service.dart` (Auto-update `In Van` students)
+- `[x]` Verify with `flutter analyze`

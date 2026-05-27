@@ -12,7 +12,7 @@ class StudentModel {
   final String status; // 'active' | 'inactive'
   final String schoolName;
   final String note;
-  final String lastAttendanceStatus; // 'At Home' | 'In Van' | 'At School' | 'Absent'
+  final String currentStatus; // 'At Home' | 'In Van' | 'At School' | 'Absent'
   final Map<String, dynamic> stats; // e.g. {'total_trips': 0, 'attendance_rate': 1.0}
   final String? estimatedArrival;
 
@@ -26,7 +26,7 @@ class StudentModel {
     required this.status,
     this.schoolName = '',
     this.note = '',
-    this.lastAttendanceStatus = 'At Home',
+    this.currentStatus = 'At Home',
     required this.stats,
     this.estimatedArrival,
   });
@@ -43,7 +43,7 @@ class StudentModel {
       status: json['status'] as String? ?? 'active',
       schoolName: json['school_name'] as String? ?? '',
       note: json['note'] as String? ?? '',
-      lastAttendanceStatus: json['last_attendance_status'] as String? ?? 'At Home',
+      currentStatus: json['current_status'] as String? ?? json['last_attendance_status'] as String? ?? 'At Home',
       stats: json['stats'] as Map<String, dynamic>? ?? const {},
       estimatedArrival: json['estimated_arrival'] as String?,
     );
@@ -60,7 +60,7 @@ class StudentModel {
       'status': status,
       'school_name': schoolName,
       'note': note,
-      'last_attendance_status': lastAttendanceStatus,
+      'current_status': currentStatus,
       'stats': stats,
       'estimated_arrival': estimatedArrival,
     };
@@ -77,7 +77,7 @@ class StudentModel {
     String? status,
     String? schoolName,
     String? note,
-    String? lastAttendanceStatus,
+    String? currentStatus,
     Map<String, dynamic>? stats,
     String? estimatedArrival,
   }) {
@@ -91,7 +91,7 @@ class StudentModel {
       status: status ?? this.status,
       schoolName: schoolName ?? this.schoolName,
       note: note ?? this.note,
-      lastAttendanceStatus: lastAttendanceStatus ?? this.lastAttendanceStatus,
+      currentStatus: currentStatus ?? this.currentStatus,
       stats: stats ?? this.stats,
       estimatedArrival: estimatedArrival ?? this.estimatedArrival,
     );
@@ -99,6 +99,6 @@ class StudentModel {
 
   @override
   String toString() {
-    return 'StudentModel(studentId: $studentId, name: $name, schoolName: $schoolName, status: $status, lastAttendanceStatus: $lastAttendanceStatus, estimatedArrival: $estimatedArrival)';
+    return 'StudentModel(studentId: $studentId, name: $name, schoolName: $schoolName, status: $status, currentStatus: $currentStatus, estimatedArrival: $estimatedArrival)';
   }
 }

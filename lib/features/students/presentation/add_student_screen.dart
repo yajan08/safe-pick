@@ -154,7 +154,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
         note: _noteController.text.trim(),
         homeLocation: _capturedLocation,
         status: isEditing ? widget.student!.status : 'active',
-        lastAttendanceStatus: isEditing ? widget.student!.lastAttendanceStatus : 'At Home',
+        currentStatus: isEditing ? widget.student!.currentStatus : 'At Home',
         stats: isEditing ? widget.student!.stats : const {
           'total_trips': 0,
           'attendance_rate': 1.0,

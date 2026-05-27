@@ -94,8 +94,8 @@ class TripService {
       if (!tripSnap.exists) {
         throw 'Trip template not found.';
       }
-      final tripType = tripSnap.data()?['trip_type'] as String? ?? 'pickup';
-      final isMorning = tripType.toLowerCase() == 'pickup' || tripType.toLowerCase() == 'morning';
+      final tripType = tripSnap.data()?['trip_type'] as String? ?? 'Morning';
+      final isMorning = tripType.toLowerCase() == 'morning';
 
       // Generate a unique session ID using Firestore doc ID generator
       final docRef = _firestore.collection('daily_sessions').doc();
@@ -128,7 +128,7 @@ class TripService {
 
         // Fetch student's current Firebase status
         final studentDoc = await _firestore.collection('students').doc(studentId).get();
-        final studentStatus = studentDoc.data()?['last_attendance_status'] as String? ?? 'At Home';
+        final studentStatus = studentDoc.data()?['current_status'] as String? ?? 'At Home';
 
         String studentInitialStatus;
         if (isMorning) {
@@ -149,7 +149,7 @@ class TripService {
 
         // Set global student status as well
         batch.update(_firestore.collection('students').doc(studentId), {
-          'last_attendance_status': studentInitialStatus,
+          'current_status': studentInitialStatus,
         });
       }
 
@@ -174,8 +174,34 @@ class TripService {
   }
 
   Future<void> endDailySession(String sessionId, String tripId) async {
+    // 1. Fetch trip document to get tripType for proper cleanup status
+    final tripDoc = await _firestore.collection('trips').doc(tripId).get();
+    if (!tripDoc.exists) return;
+
+    final tripData = tripDoc.data()!;
+    final tripType = tripData['trip_type'] as String? ?? 'Morning';
+    final isMorning = tripType.toLowerCase() == 'morning';
+    final autoUpdateStatus = isMorning ? 'At School' : 'At Home';
+
     final batch = _firestore.batch();
-    batch.update(_firestore.collection('daily_sessions').doc(sessionId), {
+    final sessionRef = _firestore.collection('daily_sessions').doc(sessionId);
+
+    // 2. Fetch all attendance records for this session and clean up "In Van"
+    final attendanceDocs = await sessionRef.collection('attendance').get();
+    for (var doc in attendanceDocs.docs) {
+      final currentStatus = doc.data()['status'] as String? ?? '';
+      if (currentStatus == 'In Van') {
+        // Auto-update student accidentally left in van
+        batch.update(doc.reference, {'status': autoUpdateStatus});
+        // Sync to global student record
+        batch.update(_firestore.collection('students').doc(doc.id), {
+          'current_status': autoUpdateStatus,
+        });
+      }
+    }
+
+    // 3. Mark session and trip as completed
+    batch.update(sessionRef, {
       'status': 'completed',
       'end_time': Timestamp.fromDate(DateTime.now()),
     });
@@ -183,6 +209,7 @@ class TripService {
       'status': 'completed',
       'last_completed_date': Timestamp.fromDate(DateTime.now()),
     });
+
     await batch.commit();
   }
 
@@ -202,7 +229,7 @@ class TripService {
     // Fetch trip details
     final tripSnap = await _firestore.collection('trips').doc(tripId).get();
     final tripName = tripSnap.data()?['trip_name'] as String? ?? 'Unknown Trip';
-    final tripType = tripSnap.data()?['trip_type'] as String? ?? 'pickup';
+    final tripType = tripSnap.data()?['trip_type'] as String? ?? 'Morning';
 
     // Fetch driver details
     final driverSnap = await _firestore.collection('users').doc(driverUid).get();
@@ -221,7 +248,7 @@ class TripService {
     final batch = _firestore.batch();
     final now = Timestamp.fromDate(overrideTimestamp ?? DateTime.now());
 
-    final isMorning = tripType.toLowerCase() == 'pickup' || tripType.toLowerCase() == 'morning';
+    final isMorning = tripType.toLowerCase() == 'morning';
     String nextStatus;
 
     if (isMorning) {
@@ -269,7 +296,7 @@ class TripService {
     
     // Sync to global student record
     batch.update(_firestore.collection('students').doc(studentId), {
-      'last_attendance_status': nextStatus,
+      'current_status': nextStatus,
     });
 
     await batch.commit();
@@ -328,7 +355,7 @@ class TripService {
 
     // Sync to global student record
     batch.update(_firestore.collection('students').doc(studentId), {
-      'last_attendance_status': status,
+      'current_status': status,
     });
 
     await batch.commit();

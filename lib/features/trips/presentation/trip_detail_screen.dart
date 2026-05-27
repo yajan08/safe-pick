@@ -391,7 +391,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       return;
     }
 
-    // 2. Read the trip details to know the trip type (pickup vs dropoff/morning vs afternoon)
+    // 2. Read the trip details to know the trip type (morning vs afternoon)
     final tripAsync = ref.read(tripDetailsProvider(widget.tripId));
     if (!tripAsync.hasValue) {
       _showError("Trip details are still loading. Please try again.");
@@ -404,7 +404,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     final currentStatus = attendanceMap[studentId] ?? manifestStudent.status;
 
     // 4. State Machine check
-    final isMorning = trip.tripType.toLowerCase() == 'pickup' || trip.tripType.toLowerCase() == 'morning';
+    final isMorning = trip.tripType.toLowerCase() == 'morning';
     String nextStatus;
 
     if (isMorning) {
@@ -717,11 +717,11 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           const SizedBox(height: 12),
           _buildInfoRow(
             theme,
-            trip.tripType.toLowerCase() == 'pickup' || trip.tripType.toLowerCase() == 'morning'
+            trip.tripType.toLowerCase() == 'morning'
                 ? Icons.login_rounded
                 : Icons.logout_rounded,
             'Type',
-            trip.tripType.toLowerCase() == 'pickup' || trip.tripType.toLowerCase() == 'morning'
+            trip.tripType.toLowerCase() == 'morning'
                 ? 'Morning Pick-Up'
                 : 'Afternoon Drop-Off',
           ),
