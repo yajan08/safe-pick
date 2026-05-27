@@ -12,6 +12,7 @@ class TestMqttService {
       8883,
     );
 
+    client.setProtocolV311(); 
     client.secure = true;
     client.logging(on: true);
     client.keepAlivePeriod = 60;
@@ -33,8 +34,8 @@ class TestMqttService {
     final connMessage = MqttConnectMessage()
         .withClientIdentifier('test_driver_123')
         .authenticateAs('safepick_app_client', 'Emqxpassword@1')
-        .startClean()
-        .withWillQos(MqttQos.atLeastOnce);
+        .startClean();
+
     client.connectionMessage = connMessage;
 
     try {
