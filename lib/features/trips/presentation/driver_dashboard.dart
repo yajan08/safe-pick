@@ -8,6 +8,7 @@ import 'trip_detail_screen.dart';
 import 'create_trip_screen.dart';
 import '../../profile/presentation/driver_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
+import '../../../core/services/test_mqtt_service.dart';
 
 /// Real-time stream provider that fetches all trips assigned to the logged-in driver.
 final driverTripsProvider = StreamProvider<List<TripModel>>((ref) {
@@ -56,6 +57,10 @@ class DriverDashboard extends ConsumerWidget {
           height: 32,
         ),
         actions: [
+          TextButton(
+            onPressed: () => TestMqttService().testConnection(),
+            child: const Text('TEST MQTT', style: TextStyle(color: AppTheme.primaryGold, fontWeight: FontWeight.bold)),
+          ),
           IconButton(
             icon: const Icon(Icons.person_outline_rounded, color: AppTheme.primaryGold),
             onPressed: () {
