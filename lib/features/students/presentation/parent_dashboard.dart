@@ -79,7 +79,7 @@ class ParentDashboard extends ConsumerWidget {
         child: studentsAsync.when(
           data: (students) {
             if (students.isEmpty) {
-              return _buildEmptyState(theme);
+              return _buildEmptyState(context, theme);
             }
 
             // Auto-select the first child if none is selected
@@ -409,38 +409,55 @@ class ParentDashboard extends ConsumerWidget {
   }
 
 
-  Widget _buildEmptyState(ThemeData theme) {
+  Widget _buildEmptyState(BuildContext context, ThemeData theme) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryGold.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGold.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.child_care_rounded,
+                color: AppTheme.primaryGold,
+                size: 48,
+              ),
             ),
-            child: const Icon(
-              Icons.child_care_rounded,
-              color: AppTheme.primaryGold,
-              size: 48,
+            const SizedBox(height: 24),
+            Text(
+              'No students linked yet.',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            'No students linked yet.',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+            const SizedBox(height: 8),
+            Text(
+              'Add a student to your account in the Profile screen to start tracking.',
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Add a child using the button below.',
-            style: theme.textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ).animate().fade(duration: 500.ms).scale(begin: const Offset(0.9, 0.9)),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: 200,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ParentProfileScreen(),
+                    ),
+                  );
+                },
+                child: const Text('Go to Profile'),
+              ),
+            ),
+          ],
+        ).animate().fade(duration: 500.ms).scale(begin: const Offset(0.9, 0.9)),
+      ),
     );
   }
 

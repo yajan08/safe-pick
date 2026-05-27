@@ -396,7 +396,7 @@ class DriverDashboard extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Check back later or contact transport dispatch.',
+            'Check back later, contact transport dispatch, or create a new trip using the button below.',
             style: theme.textTheme.bodyMedium,
             textAlign: TextAlign.center,
           ),

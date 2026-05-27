@@ -63,7 +63,9 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
     double lng = 0.0;
     try {
       final position = await Geolocator.getCurrentPosition(
-        timeLimit: const Duration(seconds: 2),
+        locationSettings: const LocationSettings(
+          timeLimit: Duration(seconds: 2),
+        ),
       );
       lat = position.latitude;
       lng = position.longitude;

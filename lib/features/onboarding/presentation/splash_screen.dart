@@ -26,6 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     final showOnboarding = !(prefs.getBool('onboarding_complete') ?? false);
 
     Navigator.of(context).pushReplacement(
