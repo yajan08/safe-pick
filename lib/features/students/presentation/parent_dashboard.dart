@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:safe_pick/features/students/presentation/parent_live_tracking_screen.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
@@ -409,15 +410,22 @@ class ParentDashboard extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              isInVan ? 'Opening Live Tracking Map... (Coming Soon)' : 'Trip not started yet.',
+        if (isInVan) {
+          // Navigate to the new tracking screen!
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ParentLiveTrackingScreen(student: student),
             ),
-            backgroundColor: isInVan ? AppTheme.primaryGold : AppTheme.textSecondary,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Trip not started yet or student not in van.'),
+              backgroundColor: AppTheme.textSecondary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       },
       child: Container(
         height: 180,

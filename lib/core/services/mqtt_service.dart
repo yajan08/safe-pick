@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'package:flutter/services.dart' show rootBundle;
@@ -7,6 +8,10 @@ import 'package:flutter/foundation.dart';
 
 class MqttService {
   MqttServerClient? client;
+
+  // --- ADD THESE TWO LINES FOR PARENT LISTENING ---
+  final StreamController<Map<String, dynamic>> _telemetryController = StreamController<Map<String, dynamic>>.broadcast();
+  Stream<Map<String, dynamic>> get telemetryStream => _telemetryController.stream;
 
   /// Connects to the EMQX broker. Returns true if successful.
   Future<bool> connect(String clientId) async {
@@ -52,6 +57,20 @@ class MqttService {
 
     if (client!.connectionStatus?.state == MqttConnectionState.connected) {
       debugPrint('====== EMQX CONNECTED SUCCESSFULLY ======');
+      
+      // --- ADD THIS LISTENER TO CATCH INCOMING DATA ---
+      client!.updates?.listen((List<MqttReceivedMessage<MqttMessage>> c) {
+        final recMess = c[0].payload as MqttPublishMessage;
+        final payloadString = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
+        try {
+          final data = jsonDecode(payloadString) as Map<String, dynamic>;
+          _telemetryController.add(data); // Pushes data to the Parent UI
+        } catch (e) {
+          debugPrint('Error parsing payload: $e');
+        }
+      });
+      // ------------------------------------------------
+
       return true;
     } else {
       debugPrint('Connection failed with state: ${client!.connectionStatus?.state}');
@@ -79,6 +98,14 @@ class MqttService {
 
     client!.publishMessage(topic, MqttQos.atMostOnce, builder.payload!);
     debugPrint('📍 Published Location to $topic');
+  }
+
+  /// Parent App: Subscribes to the live trip data
+  void subscribeToTrip(String sessionId) {
+    if (client == null || client!.connectionStatus?.state != MqttConnectionState.connected) return;
+    final topic = 'safepick/trips/$sessionId/telemetry';
+    client!.subscribe(topic, MqttQos.atMostOnce);
+    debugPrint('🎧 Subscribed to listening channel: $topic');
   }
 
   /// Cleanly ends the connection

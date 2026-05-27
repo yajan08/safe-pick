@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:safe_pick/core/services/mqtt_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/trip_model.dart';
 import '../data/trip_service.dart';
@@ -9,6 +12,7 @@ import '../data/daily_session_model.dart';
 import 'qr_scanner_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 import '../../../core/services/auth_service.dart';
+import 'package:geolocator/geolocator.dart';
 
 /// Future provider to fetch details of a specific trip.
 final tripDetailsProvider = FutureProvider.family<TripModel, String>((ref, tripId) async {
@@ -35,6 +39,83 @@ class TripDetailScreen extends ConsumerStatefulWidget {
 class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   bool _isLoading = false;
 
+  final MqttService _mqttService = MqttService();
+  StreamSubscription<Position>? _positionStream;
+  bool _isLiveTracking = false;
+
+  Timer? _publishTimer;
+  Position? _currentPosition;
+
+  // ─── LIVE TRACKING ENGINE ────────────────────────────
+  
+  // ─── LIVE TRACKING ENGINE ────────────────────────────
+  
+  Future<void> _startLiveTracking(String sessionId) async {
+    if (_isLiveTracking) return;
+
+    // 1. Check GPS Permissions
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        if (mounted) _showError('Location permissions are required for live tracking.');
+        return;
+      }
+    }
+
+    // 2. Connect to EMQX
+    final connected = await _mqttService.connect('driver_${widget.tripId}');
+    if (!connected) {
+      if (mounted) _showError('Failed to connect to tracking server.');
+      return;
+    }
+
+    setState(() => _isLiveTracking = true);
+
+    // 3. Start the GPS Stream (It just updates the variable silently)
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 0, 
+      ),
+    ).listen((Position position) {
+      _currentPosition = position; 
+    });
+
+    // 4. The Heartbeat Timer forces a publish exactly every 3 seconds
+    _publishTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      if (_currentPosition != null && _isLiveTracking) {
+        _mqttService.publishLocation(
+          sessionId,
+          _currentPosition!.latitude,
+          _currentPosition!.longitude,
+          _currentPosition!.speed,
+        );
+      }
+    });
+  }
+
+  void _stopLiveTracking() {
+    // Kill the GPS stream
+    _positionStream?.cancel();
+    _positionStream = null;
+    
+    // Kill the 3-second timer
+    _publishTimer?.cancel();
+    _publishTimer = null;
+    _currentPosition = null;
+
+    // Disconnect from EMQX
+    _mqttService.disconnect();
+    _isLiveTracking = false;
+  }
+
+  @override
+  void dispose() {
+    _stopLiveTracking(); // Ensure we don't leave a ghost connection if they close the app!
+    super.dispose();
+  }
+
   Future<void> _handleStartTrip() async {
     setState(() => _isLoading = true);
     try {
@@ -42,6 +123,17 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       await tripService.startDailySession(widget.tripId);
       ref.invalidate(tripDetailsProvider(widget.tripId));
       
+      // --- ADD THIS BLOCK TO START TRACKING ---
+      try {
+        final newSession = await ref.read(activeSessionProvider(widget.tripId).future);
+        if (newSession != null) {
+          await _startLiveTracking(newSession.sessionId);
+        }
+      } catch (e) {
+        debugPrint('Could not immediately start tracking: $e');
+      }
+      // ----------------------------------------
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -77,6 +169,10 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     );
 
     if (confirm != true) return;
+
+    // --- ADD THIS LINE ---
+    _stopLiveTracking();
+    // ---------------------
 
     setState(() => _isLoading = true);
     try {
@@ -124,6 +220,15 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       final tripService = ref.read(tripServiceProvider);
       await tripService.reopenDailySession(sessionId, widget.tripId);
       ref.invalidate(tripDetailsProvider(widget.tripId));
+
+      // --- ADD THIS BLOCK TO START TRACKING ON REOPEN ---
+      try {
+        await _startLiveTracking(sessionId);
+      } catch (e) {
+        debugPrint('Could not immediately start tracking: $e');
+      }
+      // --------------------------------------------------
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -623,7 +728,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                             }).toList(),
                                           );
                                         },
-                                        loading: () => const ShimmerList(itemCount: 3, itemHeight: 80),
+                                        loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppTheme.primaryGold))),
                                         error: (err, _) => _buildErrorState(theme, err.toString()),
                                       ),
                                   const SizedBox(height: 100),
