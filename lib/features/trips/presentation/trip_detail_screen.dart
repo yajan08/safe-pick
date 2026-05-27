@@ -350,6 +350,168 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     }
   }
 
+  Future<void> _handleScannedStudent(String studentId, String sessionId) async {
+    // 1. Get current manifest to validate if student is part of the trip
+    final manifestAsync = ref.read(tripManifestProvider(widget.tripId));
+    if (!manifestAsync.hasValue) {
+      _showError("Roster manifest is still loading. Please try again.");
+      return;
+    }
+
+    final manifest = manifestAsync.value!;
+    final manifestStudent = manifest.where((s) => s.studentId == studentId).firstOrNull;
+
+    if (manifestStudent == null) {
+      // Student NOT in the active trip
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.background,
+            title: const Text(
+              'Error',
+              style: TextStyle(
+                color: AppTheme.errorRed,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              'Error: Student $studentId is not part of this trip.',
+              style: const TextStyle(color: AppTheme.textPrimary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    // 2. Read the trip details to know the trip type (pickup vs dropoff/morning vs afternoon)
+    final tripAsync = ref.read(tripDetailsProvider(widget.tripId));
+    if (!tripAsync.hasValue) {
+      _showError("Trip details are still loading. Please try again.");
+      return;
+    }
+    final trip = tripAsync.value!;
+
+    // 3. Read current status from attendance map
+    final attendanceMap = ref.read(sessionAttendanceProvider(sessionId)).value ?? const {};
+    final currentStatus = attendanceMap[studentId] ?? manifestStudent.status;
+
+    // 4. State Machine check
+    final isMorning = trip.tripType.toLowerCase() == 'pickup' || trip.tripType.toLowerCase() == 'morning';
+    String nextStatus;
+
+    if (isMorning) {
+      if (currentStatus == 'At Home') {
+        nextStatus = 'In Van';
+      } else if (currentStatus == 'In Van') {
+        nextStatus = 'At School';
+      } else {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: AppTheme.background,
+              title: const Text(
+                'Scan Error',
+                style: TextStyle(
+                  color: AppTheme.errorRed,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Text(
+                'Student ${manifestStudent.name} is already at school.',
+                style: const TextStyle(color: AppTheme.textPrimary),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    } else {
+      if (currentStatus == 'At School' || currentStatus == 'Absent') {
+        nextStatus = 'In Van';
+      } else if (currentStatus == 'In Van') {
+        nextStatus = 'At Home';
+      } else {
+        if (mounted) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              backgroundColor: AppTheme.background,
+              title: const Text(
+                'Scan Error',
+                style: TextStyle(
+                  color: AppTheme.errorRed,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Text(
+                'Student ${manifestStudent.name} is already at home.',
+                style: const TextStyle(color: AppTheme.textPrimary),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+        return;
+      }
+    }
+
+    // 5. Show clean, centered AlertDialog popup feedback immediately
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppTheme.background,
+          title: const Text(
+            'Status Updated',
+            style: TextStyle(
+              color: AppTheme.successGreen,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: Text(
+            'Student ${manifestStudent.name} ($studentId) is now $nextStatus.',
+            style: const TextStyle(color: AppTheme.textPrimary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 6. Execute the Firebase update to commit this new status to the database
+    try {
+      await ref.read(tripServiceProvider).processQrScan(studentId, sessionId);
+    } catch (e) {
+      if (mounted) {
+        _showError(e.toString());
+      }
+    }
+  }
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -491,12 +653,15 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   backgroundColor: AppTheme.primaryGold,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  onPressed: () {
-                    Navigator.of(context).push(
+                  onPressed: () async {
+                    final scannedId = await Navigator.of(context).push<String>(
                       MaterialPageRoute(
                         builder: (context) => QRScannerScreen(sessionId: session.sessionId),
                       ),
                     );
+                    if (scannedId != null && scannedId.isNotEmpty) {
+                      _handleScannedStudent(scannedId, session.sessionId);
+                    }
                   },
                   child: const Icon(Icons.qr_code_scanner_rounded, size: 36),
                 ),
@@ -772,16 +937,18 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.background,
         title: Text(
-          status == 'onboarded'
+          status == 'In Van'
               ? 'Board Student'
-              : status == 'dropped'
-                  ? 'Offboard Student'
-                  : 'Mark Student Absent',
+              : status == 'At School'
+                  ? 'Offboard Student (At School)'
+                  : status == 'At Home'
+                      ? 'Offboard Student (At Home)'
+                      : 'Mark Student Absent',
           style: const TextStyle(color: AppTheme.textPrimary),
         ),
         content: Text(
           'Are you sure you want to mark this student as '
-          '${status == 'onboarded' ? 'boarded (in the van)' : status == 'dropped' ? 'offboarded (dropped off)' : 'absent'}?',
+          '${status == 'In Van' ? 'boarded (in the van)' : status == 'At School' ? 'offboarded (at school)' : status == 'At Home' ? 'offboarded (at home)' : 'absent'}?',
           style: const TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
@@ -789,9 +956,9 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: status == 'onboarded'
+              backgroundColor: status == 'In Van'
                   ? AppTheme.primaryGold
-                  : status == 'dropped'
+                  : (status == 'At School' || status == 'At Home')
                       ? AppTheme.successGreen
                       : AppTheme.errorRed,
               foregroundColor: Colors.white,
@@ -881,6 +1048,10 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   value: 'At School',
                   child: Text('At School', style: TextStyle(color: AppTheme.textPrimary)),
                 ),
+                const PopupMenuItem(
+                  value: 'Absent',
+                  child: Text('Absent', style: TextStyle(color: AppTheme.textPrimary)),
+                ),
               ],
             ),
           ],
@@ -911,6 +1082,11 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         chipColor = Colors.blue.withValues(alpha: 0.15);
         textColor = Colors.blue;
         label = 'At Home';
+        break;
+      case 'absent':
+        chipColor = AppTheme.errorRed.withValues(alpha: 0.15);
+        textColor = AppTheme.errorRed;
+        label = 'Absent';
         break;
       default:
         chipColor = AppTheme.border;

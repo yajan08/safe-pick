@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:flutter/services.dart';
-import 'package:geolocator/geolocator.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/services/sync_queue_service.dart';
 
 class QRScannerScreen extends ConsumerStatefulWidget {
   final String sessionId;
@@ -58,64 +56,9 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
     // 1. Success Beep / Haptic
     HapticFeedback.heavyImpact();
 
-    // 2. Grab GPS (fallback to 0.0 if failing offline, timeout 2s)
-    double lat = 0.0;
-    double lng = 0.0;
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          timeLimit: Duration(seconds: 2),
-        ),
-      );
-      lat = position.latitude;
-      lng = position.longitude;
-    } catch (_) {
-      // Ignore and use fallback
-    }
-
-    // 3. Write locally to Queue
-    try {
-      final syncQueue = ref.read(syncQueueServiceProvider);
-      final log = SyncLog(
-        studentId: rawValue,
-        sessionId: widget.sessionId,
-        scannedAt: DateTime.now(),
-        latitude: lat,
-        longitude: lng,
-      );
-      
-      await syncQueue.addToQueue(log);
-      
-      if (mounted) {
-        // Quick visual alert
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Scanned $rawValue - Queued', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
-            backgroundColor: AppTheme.primaryGold,
-            behavior: SnackBarBehavior.floating,
-            duration: const Duration(milliseconds: 1500),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error queuing scan: $e'),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } finally {
-      // 4. Immediately reset for next scan (e.g. within 1 second)
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) {
-          setState(() {
-            _isProcessing = false;
-          });
-        }
-      });
+    // 2. Immediately close the scanner screen and return the code
+    if (mounted) {
+      Navigator.of(context).pop(rawValue);
     }
   }
 
