@@ -285,6 +285,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                             child: ElevatedButton(
                               onPressed: _isSearching ? null : _searchStudent,
                               style: ElevatedButton.styleFrom(
+                                minimumSize: const Size(100, 56), // Override double.infinity to prevent layout crashes in Row
                                 padding: const EdgeInsets.symmetric(horizontal: 20),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),

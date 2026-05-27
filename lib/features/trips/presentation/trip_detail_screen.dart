@@ -271,6 +271,9 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                           height: 56,
                           child: ElevatedButton(
                             onPressed: isSearching ? null : addStudent,
+                            style: ElevatedButton.styleFrom(
+                              minimumSize: const Size(80, 56), // Override double.infinity to prevent layout crashes in Row
+                            ),
                             child: isSearching
                                 ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
                                 : const Text('Add'),

@@ -39,68 +39,7 @@ class DriverDashboard extends ConsumerWidget {
         completedDate.day == now.day;
   }
 
-  Future<void> _handleSignOut(BuildContext context, WidgetRef ref) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppTheme.border, width: 1),
-        ),
-        title: const Text(
-          'Sign Out',
-          style: TextStyle(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text(
-          'Are you sure you want to sign out?',
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
-              'No',
-              style: TextStyle(color: AppTheme.textPrimary),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGold,
-              foregroundColor: AppTheme.background,
-              minimumSize: const Size(80, 40),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Yes'),
-          ),
-        ],
-      ),
-    );
 
-    if (confirm != true) return;
-
-    try {
-      await ref.read(authServiceProvider).signOut();
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -117,54 +56,13 @@ class DriverDashboard extends ConsumerWidget {
           height: 32,
         ),
         actions: [
-          PopupMenuButton<String>(
+          IconButton(
             icon: const Icon(Icons.person_outline_rounded, color: AppTheme.primaryGold),
-            onSelected: (value) {
-              if (value == 'profile') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const DriverProfileScreen()),
-                );
-              } else if (value == 'settings') {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Settings (Coming Soon)'), behavior: SnackBarBehavior.floating),
-                );
-              } else if (value == 'logout') {
-                _handleSignOut(context, ref);
-              }
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const DriverProfileScreen()),
+              );
             },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(Icons.person_rounded, color: AppTheme.textSecondary),
-                    SizedBox(width: 12),
-                    Text('Profile'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'settings',
-                child: Row(
-                  children: [
-                    Icon(Icons.settings_rounded, color: AppTheme.textSecondary),
-                    SizedBox(width: 12),
-                    Text('Settings'),
-                  ],
-                ),
-              ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout_rounded, color: AppTheme.errorRed),
-                    SizedBox(width: 12),
-                    Text('Logout', style: TextStyle(color: AppTheme.errorRed)),
-                  ],
-                ),
-              ),
-            ],
           ),
           const SizedBox(width: 8),
         ],
@@ -197,8 +95,17 @@ class DriverDashboard extends ConsumerWidget {
                       return _buildEmptyState(theme);
                     }
 
-                    final totalTrips = trips.length;
-                    final pendingTrips = trips.where((t) {
+                    // Sort trips: completed today goes to the bottom, active/pending on top
+                    final sortedTrips = List<TripModel>.from(trips)..sort((a, b) {
+                      final aCompleted = _isTripCompletedToday(a);
+                      final bCompleted = _isTripCompletedToday(b);
+                      if (aCompleted && !bCompleted) return 1;
+                      if (!aCompleted && bCompleted) return -1;
+                      return 0;
+                    });
+
+                    final totalTrips = sortedTrips.length;
+                    final pendingTrips = sortedTrips.where((t) {
                       final isCompletedToday = _isTripCompletedToday(t);
                       final isActive = t.status == 'active';
                       return !isCompletedToday && !isActive;
@@ -212,9 +119,9 @@ class DriverDashboard extends ConsumerWidget {
                         Expanded(
                           child: ListView.builder(
                             physics: const BouncingScrollPhysics(),
-                            itemCount: trips.length,
+                            itemCount: sortedTrips.length,
                             itemBuilder: (context, index) {
-                              final trip = trips[index];
+                              final trip = sortedTrips[index];
                               return _buildTripCard(context, theme, trip)
                                   .animate()
                                   .fade(delay: Duration(milliseconds: 300 + (index * 100)))

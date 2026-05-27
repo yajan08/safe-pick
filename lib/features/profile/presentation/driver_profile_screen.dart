@@ -81,60 +81,13 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   }
 
   Future<void> _handleSignOut() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppTheme.border, width: 1),
-        ),
-        title: const Text(
-          'Sign Out',
-          style: TextStyle(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text(
-          'Are you sure you want to sign out?',
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
-              'No',
-              style: TextStyle(color: AppTheme.textPrimary),
-            ),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGold,
-              foregroundColor: AppTheme.background,
-              minimumSize: const Size(80, 40),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-            ),
-            child: const Text('Yes', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true) {
-      try {
-        await ref.read(authServiceProvider).signOut();
-        if (mounted) {
-          Navigator.of(context).popUntil((route) => route.isFirst);
-        }
-      } catch (e) {
-        if (mounted) SnackBarUtils.showError(context, 'Error signing out: $e');
+    try {
+      await ref.read(authServiceProvider).signOut();
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
       }
+    } catch (e) {
+      if (mounted) SnackBarUtils.showError(context, 'Error signing out: $e');
     }
   }
 
