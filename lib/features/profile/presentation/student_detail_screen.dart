@@ -2,9 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import '../../../core/services/parent_service.dart';
+import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/snackbar_utils.dart';
 import '../../students/data/student_model.dart';
 import '../../students/presentation/add_student_screen.dart';
 
@@ -50,14 +49,30 @@ class StudentDetailScreen extends ConsumerWidget {
 
     if (confirm == true) {
       try {
-        await ref.read(parentServiceProvider).deleteChild(student.studentId);
+        await ref
+            .read(firestoreProvider)
+            .collection('students')
+            .doc(student.studentId)
+            .update({'status': 'inactive'});
         if (context.mounted) {
-          SnackBarUtils.showSuccess(context, 'Student removed successfully');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Student removed successfully'),
+              backgroundColor: AppTheme.successGreen,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
           Navigator.pop(context); // Go back to profile
         }
       } catch (e) {
         if (context.mounted) {
-          SnackBarUtils.showError(context, 'Failed to remove: $e');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to remove: $e'),
+              backgroundColor: AppTheme.errorRed,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
         }
       }
     }

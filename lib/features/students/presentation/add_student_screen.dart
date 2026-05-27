@@ -6,7 +6,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/snackbar_utils.dart';
 import '../data/student_model.dart';
 
 class AddStudentScreen extends ConsumerStatefulWidget {
@@ -84,11 +83,23 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       });
 
       if (mounted) {
-        SnackBarUtils.showSuccess(context, 'GPS coordinates captured successfully!');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('GPS coordinates captured successfully!'),
+            backgroundColor: AppTheme.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, e.toString());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -105,7 +116,13 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     }
 
     if (_capturedLocation == null) {
-      SnackBarUtils.showError(context, 'Please set the home location using current GPS coordinates.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please set the home location using current GPS coordinates.'),
+          backgroundColor: AppTheme.errorRed,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
       return;
     }
 
@@ -147,25 +164,28 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       if (isEditing) {
         await firestore.collection('students').doc(studentId).update(studentData.toJson());
       } else {
-        // Write the student doc and update the parent's children array
-        final batch = firestore.batch();
-        batch.set(firestore.collection('students').doc(studentId), studentData.toJson());
-        batch.update(firestore.collection('users').doc(currentUser.uid), {
-          'children': FieldValue.arrayUnion([studentId])
-        });
-        await batch.commit();
+        await firestore.collection('students').doc(studentId).set(studentData.toJson());
       }
 
       if (mounted) {
-        SnackBarUtils.showSuccess(
-          context,
-          isEditing ? 'Student ${studentData.name} updated!' : 'Student ${studentData.name} registered! ID: $studentId',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(isEditing ? 'Student ${studentData.name} updated!' : 'Student ${studentData.name} registered! ID: $studentId'),
+            backgroundColor: AppTheme.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, 'Failed to save student: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save student: $e'),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) {

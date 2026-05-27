@@ -60,46 +60,6 @@ final sessionAttendanceProvider = StreamProvider.family<Map<String, String>, Str
       });
 });
 
-/// Enriches the trip manifest with each student's home_location GeoPoint.
-/// Fetches each student document once and merges the coordinate data.
-/// Used by the driver map to render home-pin markers.
-final manifestWithLocationsProvider =
-    FutureProvider.family<List<TripManifestModel>, String>((ref, tripId) async {
-  final firestore = ref.watch(firestoreProvider);
-
-  // 1. Get manifest list
-  final manifestSnap = await firestore
-      .collection('trips')
-      .doc(tripId)
-      .collection('trip_manifest')
-      .orderBy('stop_order')
-      .get();
-
-  final List<TripManifestModel> enriched = [];
-
-  for (final doc in manifestSnap.docs) {
-    var model = TripManifestModel.fromJson(doc.data(), doc.id);
-
-    // 2. Fetch the matching student document for their home_location
-    try {
-      final studentSnap =
-          await firestore.collection('students').doc(doc.id).get();
-      if (studentSnap.exists) {
-        final loc = studentSnap.data()?['home_location'];
-        if (loc != null) {
-          model = model.copyWith(homeLocation: loc as GeoPoint);
-        }
-      }
-    } catch (_) {
-      // If a student doc is missing, skip silently — map still renders
-    }
-
-    enriched.add(model);
-  }
-
-  return enriched;
-});
-
 /// Service class responsible for Firestore Trip and Manifest operations.
 class TripService {
   final FirebaseFirestore _firestore;
@@ -149,15 +109,13 @@ class TripService {
       final batch = _firestore.batch();
       batch.set(docRef, sessionData);
 
-      // Initialize attendance records from manifest, and stamp active_session_id on each student.
+      // Initialize attendance records from manifest
       final manifestDocs = await _firestore.collection('trips').doc(tripId).collection('trip_manifest').get();
       for (var manifestDoc in manifestDocs.docs) {
         final studentId = manifestDoc.id;
         final attendanceRef = docRef.collection('attendance').doc(studentId);
-        batch.set(attendanceRef, {'status': 'pending'});
-        // Fan-out: write active_session_id so parent can subscribe to the MQTT topic.
-        batch.update(_firestore.collection('students').doc(studentId), {
-          'stats.active_session_id': sessionId,
+        batch.set(attendanceRef, {
+          'status': 'pending',
         });
       }
 
@@ -189,13 +147,6 @@ class TripService {
       'status': 'completed',
       'end_time': Timestamp.fromDate(DateTime.now()),
     });
-    // Clear active_session_id from all manifest students.
-    final manifestDocs = await _firestore.collection('trips').doc(tripId).collection('trip_manifest').get();
-    for (var doc in manifestDocs.docs) {
-      batch.update(_firestore.collection('students').doc(doc.id), {
-        'stats.active_session_id': FieldValue.delete(),
-      });
-    }
     await batch.commit();
   }
 
@@ -277,61 +228,6 @@ class TripService {
     } else {
       throw 'Student has already been dropped off or is marked absent.';
     }
-
-    await batch.commit();
-  }
-
-  /// Manually onboard a student during an active trip
-  Future<void> manualOnboard(String sessionId, String studentId) async {
-    final sessionRef = _firestore.collection('daily_sessions').doc(sessionId);
-    final attendanceRef = sessionRef.collection('attendance').doc(studentId);
-    
-    final sessionSnap = await sessionRef.get();
-    if (!sessionSnap.exists) throw 'Active trip session not found.';
-
-    final tripId = sessionSnap.data()?['trip_id'] as String? ?? '';
-    final dateString = sessionSnap.data()?['date'] as String? ?? '';
-    final driverUid = sessionSnap.data()?['driver_uid'] as String? ?? '';
-
-    // Fetch details for ride log
-    final tripSnap = await _firestore.collection('trips').doc(tripId).get();
-    final tripName = tripSnap.data()?['trip_name'] as String? ?? 'Unknown Trip';
-
-    final driverSnap = await _firestore.collection('users').doc(driverUid).get();
-    final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
-    final vehicleNumber = driverSnap.data()?['vehicle_number'] as String? ?? '';
-
-    final batch = _firestore.batch();
-    
-    // Set status: 'onboarded' and boarded_at: FieldValue.serverTimestamp()
-    batch.update(attendanceRef, {
-      'status': 'onboarded',
-      'boarded_at': FieldValue.serverTimestamp(),
-    });
-
-    // Ride History
-    final rideHistoryRef = _firestore.collection('students').doc(studentId).collection('ride_history').doc(sessionId);
-    
-    final rideLog = StudentRideLogModel(
-      logId: sessionId,
-      sessionId: sessionId,
-      tripName: tripName,
-      driverName: driverName,
-      vehicleNumber: vehicleNumber,
-      date: dateString,
-      boardedAt: DateTime.now(), // Local fallback
-      status: 'onboarded',
-    );
-    
-    batch.set(rideHistoryRef, rideLog.toJson());
-    batch.update(rideHistoryRef, {
-      'boarded_at': FieldValue.serverTimestamp(),
-    });
-
-    // Sync to global student record
-    batch.update(_firestore.collection('students').doc(studentId), {
-      'last_attendance_status': 'In Van',
-    });
 
     await batch.commit();
   }

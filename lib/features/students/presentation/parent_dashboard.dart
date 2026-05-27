@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
@@ -7,10 +6,6 @@ import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
 import '../../profile/presentation/parent_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
-import '../../../core/services/telemetry_consumer.dart';
-import '../../../core/services/mqtt_service.dart';
-import 'live_tracking_map_screen.dart';
-import '../../../core/utils/snackbar_utils.dart';
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
 final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
@@ -56,8 +51,8 @@ class ParentDashboard extends ConsumerWidget {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: SvgPicture.asset(
-          'assets/images/logo.svg',
+        title: Image.asset(
+          'assets/images/light_logo.jpg',
           height: 32,
         ),
         actions: [
@@ -124,7 +119,7 @@ class ParentDashboard extends ConsumerWidget {
                             const SizedBox(height: 16),
                             _buildEtaCard(theme, selectedStudent),
                             const SizedBox(height: 16),
-                            _buildMapCard(context, ref, theme, selectedStudent),
+                            _buildMapCard(context, theme, selectedStudent),
                             const SizedBox(height: 32),
                           ],
                         ),
@@ -144,9 +139,9 @@ class ParentDashboard extends ConsumerWidget {
                 const SizedBox(height: 8),
                 const ShimmerLoading(width: double.infinity, height: 48),
                 const SizedBox(height: 24),
-                const ShimmerCard(),
-                const ShimmerCard(),
-                const ShimmerCard(),
+                const ShimmerCard(height: 140),
+                const ShimmerCard(height: 100),
+                const ShimmerCard(height: 100),
               ],
             ),
           ),
@@ -362,143 +357,50 @@ class ParentDashboard extends ConsumerWidget {
     ).animate().fade(delay: 300.ms).slideY(begin: 0.1);
   }
 
-  /// The map card shows a live telemetry readout when the student is In Van.
-  /// It subscribes via [parentTelemetryProvider] using the active session_id
-  /// stored on the student document. When the status changes away from 'In Van'
-  /// Riverpod disposes the provider and TelemetryConsumer disconnects cleanly.
-  Widget _buildMapCard(BuildContext context, WidgetRef ref, ThemeData theme, StudentModel student) {
-    // The active session id is stored on the student doc (set by TripService fan-out).
-    final sessionId = student.stats['active_session_id'] as String? ?? '';
-    final isTripActive = sessionId.isNotEmpty;
-    // Subscribe to MQTT when there is an active session
-    final telemetryAsync = isTripActive
-        ? ref.watch(parentTelemetryProvider(sessionId))
-        : const AsyncValue<TelemetryPayload?>.data(null);
+  Widget _buildMapCard(BuildContext context, ThemeData theme, StudentModel student) {
+    final isInVan = student.lastAttendanceStatus == 'In Van';
 
     return GestureDetector(
       onTap: () {
-        if (isTripActive) {
-          // Navigate to full-screen live tracking map
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => LiveTrackingMapScreen(
-                student: student,
-                sessionId: sessionId,
-              ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              isInVan ? 'Opening Live Tracking Map... (Coming Soon)' : 'Trip not started yet.',
             ),
-          );
-        } else {
-          SnackBarUtils.showInfo(context, 'Live tracking is available once the trip starts.');
-        }
+            backgroundColor: isInVan ? AppTheme.primaryGold : AppTheme.textSecondary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       },
       child: Container(
-        height: 200,
+        height: 180,
         decoration: BoxDecoration(
-          color: isTripActive ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
+          color: isInVan ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isTripActive ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border),
+          border: Border.all(color: isInVan ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border),
         ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
-                isTripActive ? Icons.gps_fixed_rounded : Icons.map_rounded,
-                size: 40,
-                color: isTripActive ? AppTheme.primaryGold : AppTheme.textMuted,
+                Icons.map_rounded,
+                size: 48,
+                color: isInVan ? AppTheme.primaryGold : AppTheme.textMuted,
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 12),
               Text(
-                isTripActive ? 'Live Tracking Active' : 'Live Tracking Map',
+                'Live Tracking Map',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isTripActive ? AppTheme.textPrimary : AppTheme.textMuted,
+                  color: isInVan ? AppTheme.textPrimary : AppTheme.textMuted,
                 ),
               ),
-              const SizedBox(height: 8),
-              if (isTripActive) ...[      
-                telemetryAsync.when(
-                  data: (payload) => payload != null
-                      ? Column(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryGold.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
-                              ),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.location_on, color: AppTheme.primaryGold, size: 16),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        '${payload.latitude.toStringAsFixed(5)}, ${payload.longitude.toStringAsFixed(5)}',
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          fontFamily: 'monospace',
-                                          fontWeight: FontWeight.bold,
-                                          color: AppTheme.primaryGold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    'Speed: ${(payload.speed * 3.6).toStringAsFixed(1)} km/h',
-                                    style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        )
-                      : Text(
-                          'Waiting for GPS signal…',
-                          style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
-                        ),
-                  loading: () => Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const SizedBox(height: 14, width: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primaryGold)),
-                      const SizedBox(width: 8),
-                      Text('Connecting to van…', style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted)),
-                    ],
-                  ),
-                  error: (e, _) => Text('Signal error: $e', style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.errorRed)),
-                ),
-                const SizedBox(height: 10),
-                // Tap CTA
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGold,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.open_in_new_rounded, color: Colors.white, size: 14),
-                      SizedBox(width: 6),
-                      Text(
-                        'Open Full Map',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ] else ...[                
+              if (!isInVan)
                 Text(
                   'Map available when trip starts',
                   style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
                 ),
-              ],
             ],
           ),
         ),

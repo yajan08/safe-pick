@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/snackbar_utils.dart';
 
 class SignUpScreen extends ConsumerStatefulWidget {
   const SignUpScreen({super.key});
@@ -57,11 +55,23 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
       // On success, AuthGate handles routing automatically.
       if (mounted) {
-        SnackBarUtils.showSuccess(context, 'Account registered successfully!');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Account registered successfully!'),
+            backgroundColor: AppTheme.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, e.toString());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -95,8 +105,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               children: [
                 Hero(
                   tag: 'app_logo',
-                  child: SvgPicture.asset(
-                    'assets/images/logo.svg',
+                  child: Image.asset(
+                    'assets/images/light_logo.jpg',
                     height: 100,
                   ),
                 ).animate().fade().slideY(begin: -0.1),

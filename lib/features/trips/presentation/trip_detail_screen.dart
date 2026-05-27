@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/theme/app_theme.dart';
@@ -8,12 +7,8 @@ import '../data/trip_service.dart';
 import '../data/trip_manifest_model.dart';
 import '../data/daily_session_model.dart';
 import 'qr_scanner_screen.dart';
-import 'trip_map_screen.dart';
-import 'edit_trip_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/services/location_broadcaster.dart';
-import '../../../core/utils/snackbar_utils.dart';
 
 /// Future provider to fetch details of a specific trip.
 final tripDetailsProvider = FutureProvider.family<TripModel, String>((ref, tripId) async {
@@ -45,25 +40,16 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     try {
       final tripService = ref.read(tripServiceProvider);
       await tripService.startDailySession(widget.tripId);
-            if (mounted) {
-          final uid = ref.read(firebaseAuthProvider).currentUser?.uid ?? 'unknown';
-          // Get the newly created session id from the stream to start broadcasting
-          // We read it after a brief tick to let Firestore stream update
-          Future.delayed(const Duration(milliseconds: 800), () {
-            if (!mounted) return;
-            final sessionValue = ref.read(activeSessionProvider(widget.tripId));
-            sessionValue.when(
-              data: (session) {
-                if (session != null && mounted) {
-                  ref.read(locationBroadcasterProvider).start(sessionId: session.sessionId, driverUid: uid);
-                }
-              },
-              loading: () {},
-              error: (e, s) {},
-            );
-          });
-          SnackBarUtils.showSuccess(context, 'Trip session started! Location tracking active.');
-        }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Trip session started! Location tracking active.'),
+            backgroundColor: AppTheme.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) _showError(e.toString());
     } finally {
@@ -76,7 +62,6 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     try {
       final tripService = ref.read(tripServiceProvider);
       await tripService.pauseDailySession(sessionId);
-      await ref.read(locationBroadcasterProvider).stop(); // Stop GPS broadcasting on pause
     } catch (e) {
       if (mounted) _showError(e.toString());
     } finally {
@@ -89,9 +74,6 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     try {
       final tripService = ref.read(tripServiceProvider);
       await tripService.resumeDailySession(sessionId);
-      // Resume GPS broadcasting
-      final uid = ref.read(firebaseAuthProvider).currentUser?.uid ?? 'unknown';
-      ref.read(locationBroadcasterProvider).start(sessionId: sessionId, driverUid: uid);
     } catch (e) {
       if (mounted) _showError(e.toString());
     } finally {
@@ -123,9 +105,14 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     try {
       final tripService = ref.read(tripServiceProvider);
       await tripService.endDailySession(sessionId, widget.tripId);
-      await ref.read(locationBroadcasterProvider).stop(); // Disconnect GPS broadcast on end
       if (mounted) {
-        SnackBarUtils.showSuccess(context, 'Trip ended successfully.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Trip ended successfully.'),
+            backgroundColor: AppTheme.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) _showError(e.toString());
@@ -159,7 +146,13 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       final tripService = ref.read(tripServiceProvider);
       await tripService.reopenDailySession(sessionId);
       if (mounted) {
-        SnackBarUtils.showSuccess(context, 'Trip reopened successfully.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Trip reopened successfully.'),
+            backgroundColor: AppTheme.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } catch (e) {
       if (mounted) _showError(e.toString());
@@ -190,8 +183,8 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: SvgPicture.asset(
-          'assets/images/logo.svg',
+        title: Image.asset(
+          'assets/images/light_logo.jpg',
           height: 32,
         ),
         leading: IconButton(
@@ -222,15 +215,11 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                 const SizedBox(height: 20),
 
                                 // 2. Trip Details & Action Buttons
-                                manifestAsync.when(
-                                  data: (manifest) => _buildTripDetailsCard(theme, trip, session, manifest),
-                                  loading: () => _buildTripDetailsCard(theme, trip, session, []),
-                                  error: (e, s) => _buildTripDetailsCard(theme, trip, session, []),
-                                ),
+                                _buildTripDetailsCard(theme, trip, session),
                                 const SizedBox(height: 16),
 
-                                // 3. Map Card — tappable, opens real map
-                                _buildMapCard(theme, trip, session),
+                                // 3. Map Placeholder
+                                _buildMapPlaceholder(theme),
                                 const SizedBox(height: 16),
 
                                 // 4. Target Schools Summary
@@ -377,7 +366,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   // ─── 2. Trip Details & Action Buttons ────────────────────────────
-  Widget _buildTripDetailsCard(ThemeData theme, TripModel trip, DailySessionModel? session, List<TripManifestModel> manifest) {
+  Widget _buildTripDetailsCard(ThemeData theme, TripModel trip, DailySessionModel? session) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -398,19 +387,18 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   ),
                 ),
               ),
-              if (session == null || (session.status != 'in_progress' && session.status != 'paused'))
+              if (session?.status != 'completed' && trip.status.toLowerCase() != 'completed')
                 SizedBox(
                   width: 48,
                   height: 48,
                   child: IconButton(
                     icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryGold),
                     onPressed: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => EditTripScreen(
-                            trip: trip,
-                            initialManifest: manifest,
-                          ),
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Edit Trip Details... (Coming Soon)'),
+                          backgroundColor: AppTheme.primaryGold,
+                          behavior: SnackBarBehavior.floating,
                         ),
                       );
                     },
@@ -565,72 +553,49 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   // ─── 3. Map Placeholder ────────────────────────────────
-  // ─── 3. Map Card ────────────────────────────────────────
-  Widget _buildMapCard(ThemeData theme, TripModel trip, DailySessionModel? session) {
-    final isActive = session?.status == 'in_progress' || session?.status == 'paused';
+  Widget _buildMapPlaceholder(ThemeData theme) {
     return GestureDetector(
       onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => TripMapScreen(
-              tripId: widget.tripId,
-              tripName: trip.tripName,
-            ),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Map View loading... (Coming Soon)'),
+            backgroundColor: AppTheme.primaryGold,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       },
       child: Container(
-        height: 200,
+        height: 160,
         decoration: BoxDecoration(
-          color: isActive ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
+          color: const Color(0xFFF0F0F0),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isActive ? AppTheme.primaryGold.withValues(alpha: 0.6) : AppTheme.border,
-            width: isActive ? 1.5 : 1,
-          ),
+          border: Border.all(color: AppTheme.border),
         ),
         child: Stack(
           children: [
-            // Grid background hint
-            ClipRRect(
-              borderRadius: BorderRadius.circular(20),
-              child: CustomPaint(
-                size: const Size(double.infinity, 200),
-                painter: _MapGridPainter(),
-              ),
+            CustomPaint(
+              size: const Size(double.infinity, 160),
+              painter: _MapGridPainter(),
             ),
             Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.92),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 8,
-                    ),
-                  ],
+                  color: Colors.white.withValues(alpha: 0.9),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      isActive ? Icons.gps_fixed_rounded : Icons.map_rounded,
-                      color: AppTheme.primaryGold,
-                      size: 24,
-                    ),
-                    const SizedBox(width: 10),
+                    const Icon(Icons.map_rounded, color: AppTheme.primaryGold, size: 24),
+                    const SizedBox(width: 8),
                     Text(
-                      isActive ? 'Open Live Map' : 'View Student Stops',
+                      'View Live Map',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: AppTheme.textPrimary,
                       ),
                     ),
-                    const SizedBox(width: 6),
-                    const Icon(Icons.arrow_forward_ios_rounded,
-                        color: AppTheme.primaryGold, size: 14),
                   ],
                 ),
               ),
@@ -723,18 +688,13 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.background,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text(status == 'onboarded' ? 'Manual Onboard' : 'Mark Absent', style: const TextStyle(color: AppTheme.textPrimary)),
         content: Text('Are you sure you want to mark this student as ${status == 'onboarded' ? 'onboarded' : 'absent'}?', style: const TextStyle(color: AppTheme.textSecondary)),
         actions: [
           TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: status == 'onboarded' ? AppTheme.primaryGold : AppTheme.errorRed,
-              foregroundColor: status == 'onboarded' ? Colors.black : Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: status == 'onboarded' ? AppTheme.primaryGold : AppTheme.errorRed, foregroundColor: Colors.white),
             child: const Text('Confirm'),
           ),
         ],
@@ -743,11 +703,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
     if (confirm != true) return;
     try {
-      if (status == 'onboarded') {
-        await ref.read(tripServiceProvider).manualOnboard(sessionId, studentId);
-      } else {
-        await ref.read(tripServiceProvider).manualAttendanceOverride(sessionId, studentId, status);
-      }
+      await ref.read(tripServiceProvider).manualAttendanceOverride(sessionId, studentId, status);
     } catch (e) {
       if (mounted) _showError(e.toString());
     }
@@ -789,8 +745,6 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                     fontWeight: FontWeight.bold,
                     fontSize: 15,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
                 ),
                 if (student.schoolName.isNotEmpty)
                   Text(

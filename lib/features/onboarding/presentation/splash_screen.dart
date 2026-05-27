@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -29,9 +28,7 @@ class _SplashScreenState extends State<SplashScreen> {
     final prefs = await SharedPreferences.getInstance();
     final showOnboarding = !(prefs.getBool('onboarding_complete') ?? false);
 
-    if (!mounted) return;
-    final navigator = Navigator.of(context);
-    navigator.pushReplacement(
+    Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
             showOnboarding ? const OnboardingScreen() : const AuthGate(),
@@ -50,8 +47,8 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Center(
         child: Hero(
           tag: 'app_logo',
-          child: SvgPicture.asset(
-            'assets/images/logo.svg',
+          child: Image.asset(
+            'assets/images/light_logo.jpg',
             height: 100,
           ),
         ).animate()

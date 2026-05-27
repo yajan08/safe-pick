@@ -2,9 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:safe_pick/main.dart';
 import 'package:safe_pick/core/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('SafePick App Logged Out routes to LoginScreen', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({'onboarding_complete': true});
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -16,6 +19,7 @@ void main() {
     );
 
     // Pump the stream values and wait for animations
+    await tester.pump(const Duration(milliseconds: 2500));
     await tester.pumpAndSettle();
 
     // Verify that the login screen elements are rendered.

@@ -6,7 +6,6 @@ import '../../../core/theme/app_theme.dart';
 import '../../students/data/student_model.dart';
 import '../data/trip_model.dart';
 import '../data/trip_manifest_model.dart';
-import '../../../core/utils/snackbar_utils.dart';
 
 class CreateTripScreen extends ConsumerStatefulWidget {
   const CreateTripScreen({super.key});
@@ -18,88 +17,96 @@ class CreateTripScreen extends ConsumerStatefulWidget {
 class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _vehicleController = TextEditingController();
-  final _studentIdAddController = TextEditingController();
+  final _durationController = TextEditingController();
+  final _searchController = TextEditingController();
   
   String _tripType = 'pickup';
+  TimeOfDay? _selectedTime;
   bool _isSubmitting = false;
-  bool _isAddingStudent = false;
+  bool _isSearching = false;
 
   final List<StudentModel> _roster = [];
-  bool _isLoadingProfile = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadDriverProfile();
-  }
-
-  Future<void> _loadDriverProfile() async {
-    try {
-      final user = ref.read(firebaseAuthProvider).currentUser;
-      if (user != null) {
-        final doc = await ref.read(firestoreProvider).collection('users').doc(user.uid).get();
-        if (doc.exists) {
-          _vehicleController.text = doc.data()?['vehicle_number'] ?? '';
-        }
-      }
-    } catch (_) {}
-    if (mounted) {
-      setState(() {
-        _isLoadingProfile = false;
-      });
-    }
-  }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _vehicleController.dispose();
-    _studentIdAddController.dispose();
+    _durationController.dispose();
+    _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _linkStudentById() async {
-    final studentId = _studentIdAddController.text.trim();
-    if (studentId.isEmpty) {
-      SnackBarUtils.showError(context, 'Please enter a Student ID.');
-      return;
+  Future<void> _pickTime() async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: AppTheme.primaryGold,
+              onPrimary: AppTheme.background,
+              onSurface: AppTheme.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (time != null) {
+      setState(() {
+        _selectedTime = time;
+      });
     }
+  }
 
-    if (_roster.any((s) => s.studentId.toLowerCase() == studentId.toLowerCase())) {
-      SnackBarUtils.showError(context, 'Student is already added to this trip.');
+  Future<void> _searchStudent() async {
+    final query = _searchController.text.trim().toUpperCase();
+    if (query.isEmpty) return;
+
+    if (_roster.any((s) => s.studentId == query)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Student is already in the roster.')),
+      );
       return;
     }
 
     setState(() {
-      _isAddingStudent = true;
+      _isSearching = true;
     });
 
     try {
-      final doc = await ref.read(firestoreProvider).collection('students').doc(studentId).get();
-      if (!doc.exists) {
-        if (mounted) {
-          SnackBarUtils.showError(context, 'Student ID "$studentId" not found.');
-        }
-        return;
-      }
-
-      final student = StudentModel.fromJson(doc.data()!, doc.id);
-      if (mounted) {
+      final firestore = ref.read(firestoreProvider);
+      final doc = await firestore.collection('students').doc(query).get();
+      
+      if (doc.exists && doc.data() != null) {
+        final student = StudentModel.fromJson(doc.data()!, doc.id);
         setState(() {
           _roster.add(student);
-          _studentIdAddController.clear();
+          _searchController.clear();
         });
-        SnackBarUtils.showSuccess(context, 'Linked ${student.name} successfully.');
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Student ID not found.'),
+              backgroundColor: AppTheme.errorRed,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, 'Failed to fetch student: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error searching student: $e'),
+            backgroundColor: AppTheme.errorRed,
+          ),
+        );
       }
     } finally {
       if (mounted) {
         setState(() {
-          _isAddingStudent = false;
+          _isSearching = false;
         });
       }
     }
@@ -107,6 +114,13 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
 
   Future<void> _submitTrip() async {
     if (!_formKey.currentState!.validate()) {
+      return;
+    }
+
+    if (_selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please pick an approximate start time.')),
+      );
       return;
     }
 
@@ -125,8 +139,8 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
 
       final docRef = firestore.collection('trips').doc();
       final tripId = docRef.id;
-      const durationMins = '30 mins';
-      const formattedTime = '08:00 AM';
+      final durationMins = int.parse(_durationController.text.trim());
+      final formattedTime = _selectedTime!.format(context);
 
       final newTrip = TripModel(
         tripId: tripId,
@@ -135,7 +149,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
         tripType: _tripType,
         schoolIds: const ['sch_default_01'],
         status: 'inactive',
-        estimatedDuration: durationMins,
+        estimatedDuration: '$durationMins mins',
         approxStartTime: formattedTime,
       );
 
@@ -149,7 +163,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
         final manifestModel = TripManifestModel(
           studentId: student.studentId,
           stopOrder: i + 1,
-          expectedTime: formattedTime,
+          expectedTime: formattedTime, // Simplified for now
           status: 'pending',
           schoolId: student.schoolId,
           schoolName: student.schoolName,
@@ -161,15 +175,24 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
       await batch.commit();
 
       if (mounted) {
-        SnackBarUtils.showSuccess(
-          context,
-          'Trip "${newTrip.tripName}" created with ${_roster.length} students!',
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Trip "${newTrip.tripName}" created with ${_roster.length} students!'),
+            backgroundColor: AppTheme.successGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
         );
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, 'Failed to create trip: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to create trip: $e'),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -193,9 +216,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
         ),
       ),
       body: SafeArea(
-        child: _isLoadingProfile
-            ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryGold))
-            : Form(
+        child: Form(
           key: _formKey,
           child: Column(
             children: [
@@ -265,72 +286,86 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                     ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
                     const SizedBox(height: 20),
 
-                    // Vehicle Number
-                    TextFormField(
-                      controller: _vehicleController,
-                      textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'Vehicle Number',
-                        prefixIcon: Icon(Icons.directions_car_rounded, color: AppTheme.textSecondary),
-                      ),
-                      validator: (value) {
-                        if (value == null || value.trim().isEmpty) {
-                          return 'Required';
-                        }
-                        return null;
-                      },
-                    ).animate().fade(delay: 350.ms).slideY(begin: 0.1),
-
-                    const SizedBox(height: 20),
+                    // Time Picker & Duration Row
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: _pickTime,
+                            borderRadius: BorderRadius.circular(16),
+                            child: InputDecorator(
+                              decoration: const InputDecoration(
+                                labelText: 'Start Time',
+                                prefixIcon: Icon(Icons.access_time_rounded, color: AppTheme.textSecondary),
+                              ),
+                              child: Text(
+                                _selectedTime?.format(context) ?? 'Select Time',
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: _selectedTime != null ? AppTheme.textPrimary : AppTheme.textMuted,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: TextFormField(
+                            controller: _durationController,
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Duration (Mins)',
+                              hintText: 'e.g. 45',
+                              prefixIcon: Icon(Icons.timer_outlined, color: AppTheme.textSecondary),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Required';
+                              }
+                              final intValue = int.tryParse(value);
+                              if (intValue == null || intValue <= 0) {
+                                return 'Invalid';
+                              }
+                              return null;
+                            },
+                          ),
+                        ),
+                      ],
+                    ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                    const SizedBox(height: 32),
 
                     const Divider(color: AppTheme.border),
                     const SizedBox(height: 16),
                     Text(
                       'Build Roster',
                       style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                    ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                    ).animate().fade(delay: 500.ms).slideY(begin: 0.1),
                     const SizedBox(height: 16),
 
-                    // Add Student by ID Section
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: TextFormField(
-                            controller: _studentIdAddController,
+                          child: TextField(
+                            controller: _searchController,
+                            textCapitalization: TextCapitalization.characters,
                             decoration: const InputDecoration(
-                              labelText: 'Link Student by ID',
-                              hintText: 'e.g. SP1001',
-                              prefixIcon: Icon(Icons.person_add_alt_1_rounded, color: AppTheme.textSecondary),
+                              labelText: 'Search by Student ID',
+                              hintText: 'e.g. SP1005',
+                              prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textSecondary),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
-                        SizedBox(
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: _isAddingStudent ? null : _linkStudentById,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.primaryGold,
-                              foregroundColor: AppTheme.background,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: _isAddingStudent
-                                ? const SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(AppTheme.background),
-                                    ),
-                                  )
-                                : const Text('Link'),
+                        ElevatedButton(
+                          onPressed: _isSearching ? null : _searchStudent,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                           ),
+                          child: _isSearching 
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Text('Add'),
                         ),
                       ],
-                    ).animate().fade(delay: 450.ms).slideY(begin: 0.1),
+                    ).animate().fade(delay: 600.ms).slideY(begin: 0.1),
                     const SizedBox(height: 24),
 
                     if (_roster.isEmpty)

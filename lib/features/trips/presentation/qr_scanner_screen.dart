@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/sync_queue_service.dart';
-import '../../../core/utils/snackbar_utils.dart';
 
 class QRScannerScreen extends ConsumerStatefulWidget {
   final String sessionId;
@@ -41,7 +40,13 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
     // Check if it's a valid SafePick ID format (e.g. SP1001)
     if (!rawValue.startsWith('SP') || rawValue.length < 6) {
       if (mounted) {
-        SnackBarUtils.showError(context, 'Invalid QR Code. Please scan a valid student ID.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Invalid QR Code. Please scan a valid student ID.'),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
       return;
     }
@@ -58,10 +63,8 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
     double lng = 0.0;
     try {
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.low,
-        ),
-      ).timeout(const Duration(seconds: 2));
+        timeLimit: const Duration(seconds: 2),
+      );
       lat = position.latitude;
       lng = position.longitude;
     } catch (_) {
@@ -83,11 +86,24 @@ class _QRScannerScreenState extends ConsumerState<QRScannerScreen> {
       
       if (mounted) {
         // Quick visual alert
-        SnackBarUtils.showInfo(context, 'Scanned $rawValue - Queued');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Scanned $rawValue - Queued', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
+            backgroundColor: AppTheme.primaryGold,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(milliseconds: 1500),
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
-        SnackBarUtils.showError(context, 'Error queuing scan: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error queuing scan: $e'),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
     } finally {
       // 4. Immediately reset for next scan (e.g. within 1 second)
