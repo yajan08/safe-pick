@@ -141,53 +141,209 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   Future<void> _handleEditTrip(TripModel trip) async {
-    final controller = TextEditingController(text: trip.tripName);
-    final newName = await showDialog<String>(
+    final nameController = TextEditingController(text: trip.tripName);
+    final searchController = TextEditingController();
+    
+    // Retrieve students initially attached to this trip manifest
+    final manifestAsync = ref.read(tripManifestProvider(trip.tripId));
+    final List<Map<String, String>> currentRoster = [];
+    
+    if (manifestAsync.hasValue) {
+      for (var student in manifestAsync.value!) {
+        currentRoster.add({
+          'id': student.studentId,
+          'name': student.name,
+          'school_name': student.schoolName,
+        });
+      }
+    }
+
+    final result = await showGeneralDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        title: const Text('Edit Trip Name', style: TextStyle(color: AppTheme.textPrimary)),
-        content: TextField(
-          controller: controller,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            labelText: 'Trip Name',
-            hintText: 'e.g. Route A Morning',
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      barrierDismissible: false,
+      barrierLabel: 'Edit Trip',
+      pageBuilder: (context, anim1, anim2) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            bool isSearching = false;
+
+            Future<void> addStudent() async {
+              final query = searchController.text.trim().toUpperCase();
+              if (query.isEmpty) return;
+              if (currentRoster.any((s) => s['id'] == query)) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Student already in roster.')),
+                );
+                return;
+              }
+
+              setDialogState(() => isSearching = true);
+              try {
+                final firestore = ref.read(firestoreProvider);
+                final doc = await firestore.collection('students').doc(query).get();
+                if (doc.exists && doc.data() != null) {
+                  final data = doc.data()!;
+                  setDialogState(() {
+                    currentRoster.add({
+                      'id': query,
+                      'name': data['name'] ?? '',
+                      'school_name': data['school_name'] ?? '',
+                    });
+                    searchController.clear();
+                  });
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Student ID not found.')),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error searching student: $e')),
+                  );
+                }
+              } finally {
+                setDialogState(() => isSearching = false);
+              }
+            }
+
+            return Scaffold(
+              backgroundColor: AppTheme.background,
+              appBar: AppBar(
+                title: const Text('Edit Trip Details'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Cancel', style: TextStyle(color: Colors.white)),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      if (nameController.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please enter a trip name.')),
+                        );
+                        return;
+                      }
+                      if (currentRoster.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Please add at least one student.')),
+                        );
+                        return;
+                      }
+                      Navigator.of(context).pop(true);
+                    },
+                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold),
+                    child: const Text('Save'),
+                  ),
+                  const SizedBox(width: 8),
+                ],
+              ),
+              body: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'Trip Name',
+                        prefixIcon: Icon(Icons.directions_bus_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: searchController,
+                            textCapitalization: TextCapitalization.characters,
+                            decoration: const InputDecoration(
+                              labelText: 'Add Student by ID',
+                              prefixIcon: Icon(Icons.person_add_outlined),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: isSearching ? null : addStudent,
+                            child: isSearching
+                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                : const Text('Add'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      'ROSTER (${currentRoster.length} Students)',
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textMuted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 10),
+                    Expanded(
+                      child: currentRoster.isEmpty
+                          ? const Center(child: Text('No students linked.', style: TextStyle(color: AppTheme.textSecondary)))
+                          : ListView.builder(
+                              itemCount: currentRoster.length,
+                              itemBuilder: (context, index) {
+                                final s = currentRoster[index];
+                                return Card(
+                                  color: AppTheme.surface,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    side: const BorderSide(color: AppTheme.border),
+                                  ),
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  child: ListTile(
+                                    title: Text(s['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                    subtitle: Text('ID: ${s['id']} • ${s['school_name'] ?? ''}'),
+                                    trailing: IconButton(
+                                      icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorRed),
+                                      onPressed: () {
+                                        setDialogState(() {
+                                          currentRoster.removeAt(index);
+                                        });
+                                      },
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
     );
 
-    if (newName == null || newName.isEmpty || newName == trip.tripName) return;
-
-    setState(() => _isLoading = true);
-    try {
-      await ref.read(tripServiceProvider).updateTripDetails(trip.tripId, newName);
-      ref.invalidate(tripDetailsProvider(widget.tripId));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Trip details updated successfully.'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+    if (result == true) {
+      setState(() => _isLoading = true);
+      try {
+        final newStudentIds = currentRoster.map((s) => s['id']!).toList();
+        await ref.read(tripServiceProvider).updateTrip(trip.tripId, nameController.text.trim(), newStudentIds);
+        ref.invalidate(tripDetailsProvider(widget.tripId));
+        ref.invalidate(tripManifestProvider(widget.tripId));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Trip details updated successfully.'),
+              backgroundColor: AppTheme.successGreen,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      } catch (e) {
+        if (mounted) _showError(e.toString());
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
-    } catch (e) {
-      if (mounted) _showError(e.toString());
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -233,6 +389,18 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   onPressed: () => Navigator.of(context).pop(),
                 ),
           automaticallyImplyLeading: !isTripActive,
+        ),
+        bottomNavigationBar: sessionAsync.when(
+          data: (session) {
+            return SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                child: _buildActionButtons(session),
+              ),
+            );
+          },
+          loading: () => const SizedBox.shrink(),
+          error: (err, _) => const SizedBox.shrink(),
         ),
         body: tripAsync.when(
           data: (trip) {
@@ -381,19 +549,14 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           const SizedBox(height: 12),
           _buildInfoRow(
             theme,
-            trip.tripType.toLowerCase() == 'pickup' ? Icons.login_rounded : Icons.logout_rounded,
+            trip.tripType.toLowerCase() == 'pickup' || trip.tripType.toLowerCase() == 'morning'
+                ? Icons.login_rounded
+                : Icons.logout_rounded,
             'Type',
-            trip.tripType.toLowerCase() == 'pickup' ? 'Morning Pick-Up' : 'Afternoon Drop-Off',
+            trip.tripType.toLowerCase() == 'pickup' || trip.tripType.toLowerCase() == 'morning'
+                ? 'Morning Pick-Up'
+                : 'Afternoon Drop-Off',
           ),
-          const SizedBox(height: 10),
-          _buildInfoRow(
-            theme,
-            Icons.timer_outlined,
-            'Duration',
-            trip.estimatedDuration,
-          ),
-          const SizedBox(height: 24),
-          _buildActionButtons(session),
         ],
       ),
     ).animate().fade(delay: 100.ms).slideY(begin: 0.03);
@@ -656,55 +819,66 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              SizedBox(
-                width: 24,
-                child: Text(
-                  '${student.stopOrder}',
+          SizedBox(
+            width: 24,
+            child: Text(
+              '${student.stopOrder}',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textMuted,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student.name,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.textMuted,
+                    fontSize: 15,
                   ),
-                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      student.name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
+                if (student.schoolName.isNotEmpty)
+                  Text(
+                    student.schoolName,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
                     ),
-                    if (student.schoolName.isNotEmpty)
-                      Text(
-                        student.schoolName,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              _buildStatusChip(theme, status),
-            ],
+                  ),
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
+          _buildStatusChip(theme, status),
           if (session != null && session.status == 'in_progress') ...[
-            const SizedBox(height: 12),
-            const Divider(color: AppTheme.border, height: 1),
-            const SizedBox(height: 12),
-            Center(
-              child: _buildStudentActionButtons(context, session.sessionId, student.studentId, status),
+            const SizedBox(width: 4),
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert_rounded, color: AppTheme.textSecondary),
+              color: AppTheme.surface,
+              onSelected: (newStatus) {
+                _handleManualOverride(session.sessionId, student.studentId, newStatus);
+              },
+              itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'At Home',
+                  child: Text('At Home', style: TextStyle(color: AppTheme.textPrimary)),
+                ),
+                const PopupMenuItem(
+                  value: 'In Van',
+                  child: Text('In Van', style: TextStyle(color: AppTheme.textPrimary)),
+                ),
+                const PopupMenuItem(
+                  value: 'At School',
+                  child: Text('At School', style: TextStyle(color: AppTheme.textPrimary)),
+                ),
+              ],
             ),
           ],
         ],
@@ -712,82 +886,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     );
   }
 
-  Widget _buildStudentActionButtons(BuildContext context, String sessionId, String studentId, String currentStatus) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        // Boarded Button
-        _buildToggleItem(
-          icon: Icons.directions_bus_rounded,
-          label: 'Boarded',
-          isActive: currentStatus == 'onboarded',
-          activeColor: AppTheme.primaryGold,
-          onTap: () => _handleManualOverride(sessionId, studentId, 'onboarded'),
-        ),
-        const SizedBox(width: 8),
-        // Offboarded Button
-        _buildToggleItem(
-          icon: Icons.home_rounded,
-          label: 'Offboarded',
-          isActive: currentStatus == 'dropped',
-          activeColor: AppTheme.successGreen,
-          onTap: () => _handleManualOverride(sessionId, studentId, 'dropped'),
-        ),
-        const SizedBox(width: 8),
-        // Absent Button
-        _buildToggleItem(
-          icon: Icons.cancel_rounded,
-          label: 'Absent',
-          isActive: currentStatus == 'absent',
-          activeColor: AppTheme.errorRed,
-          onTap: () => _handleManualOverride(sessionId, studentId, 'absent'),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildToggleItem({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-    required Color activeColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: isActive ? activeColor.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isActive ? activeColor : AppTheme.border,
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 16,
-              color: isActive ? activeColor : AppTheme.textSecondary,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: isActive ? activeColor : AppTheme.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildStatusChip(ThemeData theme, String status) {
     Color chipColor;
@@ -795,26 +894,25 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     String label;
 
     switch (status.toLowerCase()) {
-      case 'onboarded':
+      case 'in van':
         chipColor = AppTheme.primaryGold.withValues(alpha: 0.15);
         textColor = AppTheme.primaryGold;
-        label = 'Boarded';
+        label = 'In Van';
         break;
-      case 'dropped':
+      case 'at school':
         chipColor = AppTheme.successGreen.withValues(alpha: 0.15);
         textColor = AppTheme.successGreen;
-        label = 'Offboarded';
+        label = 'At School';
         break;
-      case 'absent':
-        chipColor = AppTheme.errorRed.withValues(alpha: 0.15);
-        textColor = AppTheme.errorRed;
-        label = 'Absent';
+      case 'at home':
+        chipColor = Colors.blue.withValues(alpha: 0.15);
+        textColor = Colors.blue;
+        label = 'At Home';
         break;
-      case 'pending':
       default:
-        chipColor = const Color(0xFFE0E0E0);
-        textColor = AppTheme.textPrimary;
-        label = 'Pending';
+        chipColor = AppTheme.border;
+        textColor = AppTheme.textSecondary;
+        label = status;
         break;
     }
 

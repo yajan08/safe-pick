@@ -17,7 +17,6 @@ class CreateTripScreen extends ConsumerStatefulWidget {
 class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _durationController = TextEditingController();
   final _searchController = TextEditingController();
   
   String _tripType = 'pickup';
@@ -29,7 +28,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _durationController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -114,16 +112,17 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
 
       final docRef = firestore.collection('trips').doc();
       final tripId = docRef.id;
-      final durationMins = int.parse(_durationController.text.trim());
+
+      final schoolIds = _roster.map((s) => s.schoolId).where((id) => id.isNotEmpty).toSet().toList();
 
       final newTrip = TripModel(
         tripId: tripId,
         driverUid: currentUser.uid,
         tripName: _nameController.text.trim(),
         tripType: _tripType,
-        schoolIds: const ['sch_default_01'],
+        studentIds: _roster.map((s) => s.studentId).toList(),
+        schoolIds: schoolIds,
         status: 'inactive',
-        estimatedDuration: '$durationMins mins',
       );
 
       final batch = firestore.batch();
@@ -139,8 +138,7 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
           name: student.name,
           schoolName: student.schoolName,
           stopOrder: i + 1,
-          status: 'pending',
-          expectedTime: '',
+          status: _tripType.toLowerCase() == 'pickup' || _tripType.toLowerCase() == 'morning' ? 'At Home' : 'At School',
         );
         batch.set(manifestRef, manifestModel.toJson());
       }
@@ -258,28 +256,6 @@ class _CreateTripScreenState extends ConsumerState<CreateTripScreen> {
                           }
                         },
                       ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
-                      const SizedBox(height: 20),
-
-                      // Duration Field
-                      TextFormField(
-                        controller: _durationController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Duration (Mins)',
-                          hintText: 'e.g. 45',
-                          prefixIcon: Icon(Icons.timer_outlined, color: AppTheme.textSecondary),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Required';
-                          }
-                          final intValue = int.tryParse(value);
-                          if (intValue == null || intValue <= 0) {
-                            return 'Invalid';
-                          }
-                          return null;
-                        },
-                      ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
                       const SizedBox(height: 32),
 
                       const Divider(color: AppTheme.border),

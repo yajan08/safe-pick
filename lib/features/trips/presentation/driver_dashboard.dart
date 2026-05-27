@@ -6,7 +6,6 @@ import '../../../core/theme/app_theme.dart';
 import '../data/trip_model.dart';
 import 'trip_detail_screen.dart';
 import 'create_trip_screen.dart';
-import 'trip_history_screen.dart';
 import '../../profile/presentation/driver_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 
@@ -125,10 +124,6 @@ class DriverDashboard extends ConsumerWidget {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => const DriverProfileScreen()),
                 );
-              } else if (value == 'history') {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const TripHistoryScreen()),
-                );
               } else if (value == 'settings') {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Settings (Coming Soon)'), behavior: SnackBarBehavior.floating),
@@ -145,16 +140,6 @@ class DriverDashboard extends ConsumerWidget {
                     Icon(Icons.person_rounded, color: AppTheme.textSecondary),
                     SizedBox(width: 12),
                     Text('Profile'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'history',
-                child: Row(
-                  children: [
-                    Icon(Icons.history_rounded, color: AppTheme.textSecondary),
-                    SizedBox(width: 12),
-                    Text('Trip History'),
                   ],
                 ),
               ),

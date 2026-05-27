@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 @immutable
 class AttendanceModel {
   final String studentId;
-  final String status; // 'pending' | 'onboarded' | 'dropped' | 'absent'
+  final String status; // 'At Home' | 'In Van' | 'At School'
   final DateTime? boardedAt;
   final DateTime? alightedAt;
 
@@ -29,7 +29,7 @@ class AttendanceModel {
 
     return AttendanceModel(
       studentId: id,
-      status: json['status'] as String? ?? 'pending',
+      status: json['status'] as String? ?? 'At Home',
       boardedAt: parseOptionalDate(json['boarded_at']),
       alightedAt: parseOptionalDate(json['alighted_at']),
     );

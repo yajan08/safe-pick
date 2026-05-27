@@ -89,6 +89,15 @@ class TripService {
         throw 'User must be authenticated to start a session.';
       }
 
+      // Fetch trip details to determine trip type
+      final tripSnap = await _firestore.collection('trips').doc(tripId).get();
+      if (!tripSnap.exists) {
+        throw 'Trip template not found.';
+      }
+      final tripType = tripSnap.data()?['trip_type'] as String? ?? 'pickup';
+      final isMorning = tripType.toLowerCase() == 'pickup' || tripType.toLowerCase() == 'morning';
+      final initialStatus = isMorning ? 'At Home' : 'At School';
+
       // Generate a unique session ID using Firestore doc ID generator
       final docRef = _firestore.collection('daily_sessions').doc();
       final sessionId = docRef.id;
@@ -119,7 +128,12 @@ class TripService {
         final studentId = manifestDoc.id;
         final attendanceRef = docRef.collection('attendance').doc(studentId);
         batch.set(attendanceRef, {
-          'status': 'pending',
+          'status': initialStatus,
+        });
+
+        // Set global student status as well
+        batch.update(_firestore.collection('students').doc(studentId), {
+          'last_attendance_status': initialStatus,
         });
       }
 
@@ -172,6 +186,7 @@ class TripService {
     // Fetch trip details
     final tripSnap = await _firestore.collection('trips').doc(tripId).get();
     final tripName = tripSnap.data()?['trip_name'] as String? ?? 'Unknown Trip';
+    final tripType = tripSnap.data()?['trip_type'] as String? ?? 'pickup';
 
     // Fetch driver details
     final driverSnap = await _firestore.collection('users').doc(driverUid).get();
@@ -184,61 +199,67 @@ class TripService {
       throw 'Student $studentId is not on this trip\'s manifest.';
     }
 
-    final currentStatus = attendanceSnap.data()?['status'] as String? ?? 'pending';
+    final currentStatus = attendanceSnap.data()?['status'] as String? ?? 'At Home';
     final rideHistoryRef = _firestore.collection('students').doc(studentId).collection('ride_history').doc(sessionId);
 
     final batch = _firestore.batch();
     final now = Timestamp.fromDate(overrideTimestamp ?? DateTime.now());
 
-    if (currentStatus == 'pending') {
-      // Boarding
-      batch.update(attendanceRef, {
-        'status': 'onboarded',
-        'boarded_at': now,
-      });
+    final isMorning = tripType.toLowerCase() == 'pickup' || tripType.toLowerCase() == 'morning';
+    String nextStatus;
 
-      // Create ride history entry
-      final rideLog = StudentRideLogModel(
-        logId: sessionId,
-        sessionId: sessionId,
-        tripName: tripName,
-        driverName: driverName,
-        vehicleNumber: vehicleNumber,
-        date: dateString,
-        boardedAt: now.toDate(),
-        status: 'onboarded',
-      );
-      batch.set(rideHistoryRef, rideLog.toJson());
-      
-      // Sync to global student record
-      batch.update(_firestore.collection('students').doc(studentId), {
-        'last_attendance_status': 'In Van',
-      });
-    } else if (currentStatus == 'onboarded') {
-      // Alighting
-      batch.update(attendanceRef, {
-        'status': 'dropped',
-        'alighted_at': now,
-      });
-
-      // Update ride history entry
-      batch.update(rideHistoryRef, {
-        'status': 'dropped',
-        'alighted_at': now,
-      });
-
-      // Sync to global student record
-      batch.update(_firestore.collection('students').doc(studentId), {
-        'last_attendance_status': 'At Home',
-      });
+    if (isMorning) {
+      if (currentStatus == 'At Home') {
+        nextStatus = 'In Van';
+      } else if (currentStatus == 'In Van') {
+        nextStatus = 'At School';
+      } else {
+        throw 'Student already at school.';
+      }
     } else {
-      throw 'Student has already been dropped off or is marked absent.';
+      if (currentStatus == 'At School') {
+        nextStatus = 'In Van';
+      } else if (currentStatus == 'In Van') {
+        nextStatus = 'At Home';
+      } else {
+        throw 'Student already at home.';
+      }
     }
+
+    final updateData = <String, dynamic>{
+      'status': nextStatus,
+    };
+    if (nextStatus == 'In Van') {
+      updateData['boarded_at'] = now;
+    } else {
+      updateData['alighted_at'] = now;
+    }
+
+    batch.update(attendanceRef, updateData);
+
+    // Create / update ride history entry
+    final rideLog = StudentRideLogModel(
+      logId: sessionId,
+      sessionId: sessionId,
+      tripName: tripName,
+      driverName: driverName,
+      vehicleNumber: vehicleNumber,
+      date: dateString,
+      boardedAt: nextStatus == 'In Van' ? now.toDate() : null,
+      alightedAt: (nextStatus == 'At School' || nextStatus == 'At Home') ? now.toDate() : null,
+      status: nextStatus,
+    );
+    batch.set(rideHistoryRef, rideLog.toJson(), SetOptions(merge: true));
+    
+    // Sync to global student record
+    batch.update(_firestore.collection('students').doc(studentId), {
+      'last_attendance_status': nextStatus,
+    });
 
     await batch.commit();
   }
 
-  /// Manually override attendance status (e.g. Absent, Manual Onboard)
+  /// Manually override attendance status (At Home, In Van, At School)
   Future<void> manualAttendanceOverride(String sessionId, String studentId, String status) async {
     final sessionRef = _firestore.collection('daily_sessions').doc(sessionId);
     final attendanceRef = sessionRef.collection('attendance').doc(studentId);
@@ -264,9 +285,9 @@ class TripService {
     final updateData = <String, dynamic>{
       'status': status,
     };
-    if (status == 'onboarded') {
+    if (status == 'In Van') {
       updateData['boarded_at'] = now;
-    } else if (status == 'dropped') {
+    } else if (status == 'At Home' || status == 'At School') {
       updateData['alighted_at'] = now;
     }
 
@@ -282,30 +303,69 @@ class TripService {
       driverName: driverName,
       vehicleNumber: vehicleNumber,
       date: dateString,
-      boardedAt: status == 'onboarded' ? now.toDate() : null,
+      boardedAt: status == 'In Van' ? now.toDate() : null,
+      alightedAt: (status == 'At Home' || status == 'At School') ? now.toDate() : null,
       status: status,
     );
     
     batch.set(rideHistoryRef, rideLog.toJson(), SetOptions(merge: true));
 
     // Sync to global student record
-    String globalStatus = 'Unknown';
-    if (status == 'onboarded') globalStatus = 'In Van';
-    if (status == 'dropped') globalStatus = 'At Home';
-    if (status == 'absent') globalStatus = 'Absent';
-    if (status == 'pending') globalStatus = 'Pending';
-    
     batch.update(_firestore.collection('students').doc(studentId), {
-      'last_attendance_status': globalStatus,
+      'last_attendance_status': status,
     });
 
     await batch.commit();
   }
 
-  /// Update basic trip details (like trip name)
-  Future<void> updateTripDetails(String tripId, String tripName) async {
-    await _firestore.collection('trips').doc(tripId).update({
-      'trip_name': tripName,
+  /// Update full trip details (name, roster) and rebuild manifest & dynamically derived destinations (schools)
+  Future<void> updateTrip(String tripId, String name, List<String> studentIds) async {
+    final List<String> schoolIds = [];
+    final List<Map<String, dynamic>> studentsData = [];
+
+    for (var studentId in studentIds) {
+      final doc = await _firestore.collection('students').doc(studentId).get();
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        studentsData.add({
+          'id': studentId,
+          'name': data['name'] ?? '',
+          'school_id': data['school_id'] ?? '',
+          'school_name': data['school_name'] ?? '',
+        });
+        final sId = data['school_id'] as String?;
+        if (sId != null && sId.isNotEmpty && !schoolIds.contains(sId)) {
+          schoolIds.add(sId);
+        }
+      }
+    }
+
+    final batch = _firestore.batch();
+    
+    batch.update(_firestore.collection('trips').doc(tripId), {
+      'trip_name': name,
+      'student_ids': studentIds,
+      'school_ids': schoolIds,
     });
+
+    // Rebuild manifest
+    final manifestSnap = await _firestore.collection('trips').doc(tripId).collection('trip_manifest').get();
+    for (var doc in manifestSnap.docs) {
+      batch.delete(doc.reference);
+    }
+
+    for (var i = 0; i < studentsData.length; i++) {
+      final sd = studentsData[i];
+      final docRef = _firestore.collection('trips').doc(tripId).collection('trip_manifest').doc(sd['id']);
+      batch.set(docRef, {
+        'name': sd['name'],
+        'school_id': sd['school_id'],
+        'school_name': sd['school_name'],
+        'stop_order': i + 1,
+        'status': 'At Home',
+      });
+    }
+
+    await batch.commit();
   }
 }

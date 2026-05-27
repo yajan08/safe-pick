@@ -7,8 +7,7 @@ class TripManifestModel {
   final String name;
   final String schoolName;
   final int stopOrder;
-  final String status; // 'pending' | 'onboarded' | 'dropped' | 'absent'
-  final String expectedTime; // e.g. "07:30 AM"
+  final String status; // 'At Home' | 'In Van' | 'At School'
 
   const TripManifestModel({
     required this.studentId,
@@ -17,7 +16,6 @@ class TripManifestModel {
     this.schoolName = '',
     required this.stopOrder,
     required this.status,
-    required this.expectedTime,
   });
 
   /// Factory constructor to create a TripManifestModel from a Map
@@ -28,8 +26,7 @@ class TripManifestModel {
       name: json['name'] as String? ?? '',
       schoolName: json['school_name'] as String? ?? '',
       stopOrder: json['stop_order'] as int? ?? 0,
-      status: json['status'] as String? ?? 'pending',
-      expectedTime: json['expected_time'] as String? ?? '07:30 AM',
+      status: json['status'] as String? ?? 'At Home',
     );
   }
 
@@ -41,7 +38,6 @@ class TripManifestModel {
       'school_name': schoolName,
       'stop_order': stopOrder,
       'status': status,
-      'expected_time': expectedTime,
     };
   }
 
@@ -53,7 +49,6 @@ class TripManifestModel {
     String? schoolName,
     int? stopOrder,
     String? status,
-    String? expectedTime,
   }) {
     return TripManifestModel(
       studentId: studentId ?? this.studentId,
@@ -62,7 +57,6 @@ class TripManifestModel {
       schoolName: schoolName ?? this.schoolName,
       stopOrder: stopOrder ?? this.stopOrder,
       status: status ?? this.status,
-      expectedTime: expectedTime ?? this.expectedTime,
     );
   }
 
