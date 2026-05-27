@@ -8,13 +8,12 @@ This living document keeps track of the project's current state, codebase archit
 **SafePick** is a production-ready mobile application designed to track school vans and manage student check-in/check-out events. It facilitates real-time communication and location updates to build trust between parents, transport drivers, and school administrations.
 
 ---
-
 ## 🛠️ Tech Stack
 - **Framework:** Flutter (Dart)
 - **State Management:** Flutter Riverpod (`flutter_riverpod` - Upgraded to v3)
 - **Backend:** Firebase (Authentication & Cloud Firestore)
-- **Real-Time Communication:** EMQX / MQTT (Client integrated)
-- **Mapping & Location:** Google Maps API & Geolocator (integrated)
+- **Offline Sync:** SQLite (`sqflite` for offline QR sync queue)
+- **Branding:** Static images (light_logo.jpg/dark_logo.jpg)
 
 ---
 
@@ -86,7 +85,6 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
   - `driver_uid`: String (References `/users/{uid}`)
   - `date`: String (Format: `YYYY-MM-DD`)
   - `status`: String (`scheduled` | `ongoing` | `completed` | `cancelled`)
-  - `mqtt_topic_id`: String (MQTT topic for real-time tracking streams)
 
 #### `daily_sessions/{session_id}/attendance`
 - **Path:** `/daily_sessions/{session_id}/attendance/{student_id}`
@@ -97,7 +95,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 
 ---
 
-## 📈 Current Status: **Phase 14 Complete - SVG Branding, Profile CRUD, Infinite Trips**
+## 📈 Current Status: **Phase 14 Complete - SVG Branding, Profile CRUD, Infinite Trips (MQTT Reverted)**
 
 ### Completed Milestones:
 1. **Workspace Cleanup (Phase 1):** Purged Next.js legacy templates.
@@ -120,7 +118,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
    - Modified [auth_gate.dart](file:///c:/Users/ASUS/Desktop/safe-pick/lib/features/auth/presentation/auth_gate.dart) to route users directly to their corresponding dashboards depending on their Firestore user profile role.
 9. **Trip Service & Manifest (Phase 4):**
    - Created `TripManifestModel` schema mirroring the `trip_manifest` subcollection under `trips/{trip_id}/trip_manifest`.
-   - Extended `TripService` with methods to stream manifest data sorted by stop order, and `startDailySession(tripId)` which instantiates a daily session document with `in_progress` status and a unique `mqtt_topic_id`.
+   - Extended `TripService` with methods to stream manifest data sorted by stop order, and `startDailySession(tripId)` which instantiates a daily session document with `in_progress` status.
    - Built `TripDetailScreen` displaying metadata, a state-driven "Start Trip" button, and list cards for students on the manifest.
    - Connected `DriverDashboard` to `TripDetailScreen` for both card-tap and action button actions.
 10. **Data CRUD & Roster Allocation (Phase 5):**
@@ -185,7 +183,7 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
     - Verified large touch targets and confirmation prompts for driver manual roster overrides.
 20. **Testing & Checks:** Zero issues/warnings on `flutter analyze`.
 21. **SVG Branding, Driver Profile, & Infinite Trips (Phase 14):**
-    - Transitioned branding to SVG (`flutter_svg`) using `assets/images/logo.svg` across Auth, Dashboards, and a new dedicated `SplashScreen` with Hero/FadeIn animations.
+    - Reverted SVG branding back to the stable PNG configuration (`light_logo.jpg`) to avoid typography issues on dark theme backgrounds.
     - Added `DriverProfileScreen` for full CRUD capabilities over Name, Phone, Gender, and Vehicle Number, integrated to Firestore.
     - Upgraded `TripService` and `TripDetailScreen` to support "Infinite Trips" (allowing drivers to click "REDO / REOPEN TRIP" on completed sessions to convert them back to `in_progress`).
     - Finalized End-to-End QR Sync fan-out: Scans/manual overrides now instantly update the global student record (`last_attendance_status`) so parents see real-time updates (e.g. "In Van", "At Home").
@@ -194,5 +192,4 @@ The database uses a flattened Firestore NoSQL hierarchy for performance, offline
 ---
 
 ## 🎯 Next Tasks
-- **MQTT Real-Time Location Stream:** Wire the driver location publishing streams and MQTT map listeners.
 - **Admin Dashboard:** Build school admin role with dashboard filtered by `managed_school_id`.
