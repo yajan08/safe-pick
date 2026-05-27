@@ -101,7 +101,7 @@ class ParentDashboard extends ConsumerWidget {
                 children: [
                   // Child Selector Header
                   _buildHeader(context, ref, theme, students, selectedStudent),
-                  const SizedBox(height: 24),
+                  SizedBox(height: students.length == 1 ? 8 : 12),
                   
                   // Dashboard Content for Selected Student
                   Expanded(
@@ -115,9 +115,7 @@ class ParentDashboard extends ConsumerWidget {
                           children: [
                             _buildProfileCard(context, theme, selectedStudent),
                             const SizedBox(height: 16),
-                            _buildStatusCard(theme, selectedStudent),
-                            const SizedBox(height: 16),
-                            _buildEtaCard(theme, selectedStudent),
+                            _buildSquareStatusAndEtaCards(theme, selectedStudent),
                             const SizedBox(height: 16),
                             _buildMapCard(context, theme, selectedStudent),
                             const SizedBox(height: 32),
@@ -259,7 +257,7 @@ class ParentDashboard extends ConsumerWidget {
     ).animate().fade(delay: 100.ms).slideY(begin: 0.1);
   }
 
-  Widget _buildStatusCard(ThemeData theme, StudentModel student) {
+  Widget _buildSquareStatusAndEtaCards(ThemeData theme, StudentModel student) {
     Color statusColor;
     IconData statusIcon;
 
@@ -272,6 +270,10 @@ class ParentDashboard extends ConsumerWidget {
         statusColor = AppTheme.primaryGold;
         statusIcon = Icons.school_rounded;
         break;
+      case 'Absent':
+        statusColor = AppTheme.errorRed;
+        statusIcon = Icons.cancel_rounded;
+        break;
       case 'At Home':
       default:
         statusColor = AppTheme.successGreen;
@@ -279,82 +281,127 @@ class ParentDashboard extends ConsumerWidget {
         break;
     }
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: statusColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: statusColor.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(statusIcon, color: statusColor, size: 36),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Current Status',
-                  style: theme.textTheme.labelMedium?.copyWith(color: AppTheme.textSecondary),
-                ),
-                Text(
-                  student.lastAttendanceStatus,
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ).animate().fade(delay: 200.ms).slideY(begin: 0.1);
-  }
-
-  Widget _buildEtaCard(ThemeData theme, StudentModel student) {
-    String etaText;
-    switch (student.lastAttendanceStatus) {
-      case 'In Van':
-        etaText = 'ETA: 15 mins';
-        break;
-      case 'At Home':
-        etaText = 'Already at Home';
-        break;
-      case 'At School':
-      default:
-        etaText = 'Trip not started yet';
-        break;
+    // Est Time displays either the student.estimatedArrival value or status-based fallback
+    String etaText = student.estimatedArrival ?? '';
+    if (etaText.isEmpty) {
+      switch (student.lastAttendanceStatus) {
+        case 'In Van':
+          etaText = '15 mins';
+          break;
+        case 'At Home':
+          etaText = 'Arrived';
+          break;
+        case 'Absent':
+          etaText = 'N/A';
+          break;
+        case 'At School':
+        default:
+          etaText = 'Not Started';
+          break;
+      }
     }
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.textPrimary.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
+    return Row(
+      children: [
+        // Card 1: Current Status
+        Expanded(
+          child: AspectRatio(
+            aspectRatio: 1.0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppTheme.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(statusIcon, color: statusColor, size: 36),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Status',
+                    style: TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      student.lastAttendanceStatus,
+                      style: TextStyle(
+                        color: statusColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: const Icon(Icons.access_time_rounded, color: AppTheme.textPrimary),
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              etaText,
-              style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(width: 16),
+        // Card 2: Est. Time
+        Expanded(
+          child: AspectRatio(
+            aspectRatio: 1.0,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppTheme.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.access_time_rounded, color: AppTheme.primaryGold, size: 36),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Est. Arrival',
+                    style: TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      etaText,
+                      style: const TextStyle(
+                        color: AppTheme.textPrimary,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-        ],
-      ),
-    ).animate().fade(delay: 300.ms).slideY(begin: 0.1);
+        ),
+      ],
+    ).animate().fade(delay: 200.ms).slideY(begin: 0.1);
   }
 
   Widget _buildMapCard(BuildContext context, ThemeData theme, StudentModel student) {

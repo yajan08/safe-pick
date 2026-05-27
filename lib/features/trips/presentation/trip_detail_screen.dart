@@ -514,7 +514,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
   // ─── 1. Trip Details Card ────────────────────────────
   Widget _buildTripDetailsCard(ThemeData theme, TripModel trip, DailySessionModel? session) {
-    final showEdit = session == null || session.status != 'completed';
+    final showEdit = session == null;
 
     return Container(
       padding: const EdgeInsets.all(20),

@@ -96,7 +96,6 @@ class TripService {
       }
       final tripType = tripSnap.data()?['trip_type'] as String? ?? 'pickup';
       final isMorning = tripType.toLowerCase() == 'pickup' || tripType.toLowerCase() == 'morning';
-      final initialStatus = isMorning ? 'At Home' : 'At School';
 
       // Generate a unique session ID using Firestore doc ID generator
       final docRef = _firestore.collection('daily_sessions').doc();
@@ -126,14 +125,31 @@ class TripService {
       final manifestDocs = await _firestore.collection('trips').doc(tripId).collection('trip_manifest').get();
       for (var manifestDoc in manifestDocs.docs) {
         final studentId = manifestDoc.id;
+
+        // Fetch student's current Firebase status
+        final studentDoc = await _firestore.collection('students').doc(studentId).get();
+        final studentStatus = studentDoc.data()?['last_attendance_status'] as String? ?? 'At Home';
+
+        String studentInitialStatus;
+        if (isMorning) {
+          studentInitialStatus = 'At Home';
+        } else {
+          // Evening Trip: if student is already 'At Home', they are default 'Absent'
+          if (studentStatus == 'At Home') {
+            studentInitialStatus = 'Absent';
+          } else {
+            studentInitialStatus = 'At School';
+          }
+        }
+
         final attendanceRef = docRef.collection('attendance').doc(studentId);
         batch.set(attendanceRef, {
-          'status': initialStatus,
+          'status': studentInitialStatus,
         });
 
         // Set global student status as well
         batch.update(_firestore.collection('students').doc(studentId), {
-          'last_attendance_status': initialStatus,
+          'last_attendance_status': studentInitialStatus,
         });
       }
 
@@ -217,7 +233,7 @@ class TripService {
         throw 'Student already at school.';
       }
     } else {
-      if (currentStatus == 'At School') {
+      if (currentStatus == 'At School' || currentStatus == 'Absent') {
         nextStatus = 'In Van';
       } else if (currentStatus == 'In Van') {
         nextStatus = 'At Home';

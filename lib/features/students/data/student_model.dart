@@ -12,8 +12,9 @@ class StudentModel {
   final String status; // 'active' | 'inactive'
   final String schoolName;
   final String note;
-  final String lastAttendanceStatus; // 'At Home' | 'In Van' | 'At School'
+  final String lastAttendanceStatus; // 'At Home' | 'In Van' | 'At School' | 'Absent'
   final Map<String, dynamic> stats; // e.g. {'total_trips': 0, 'attendance_rate': 1.0}
+  final String? estimatedArrival;
 
   const StudentModel({
     required this.studentId,
@@ -27,6 +28,7 @@ class StudentModel {
     this.note = '',
     this.lastAttendanceStatus = 'At Home',
     required this.stats,
+    this.estimatedArrival,
   });
 
   /// Factory constructor to create a StudentModel from a Map
@@ -43,6 +45,7 @@ class StudentModel {
       note: json['note'] as String? ?? '',
       lastAttendanceStatus: json['last_attendance_status'] as String? ?? 'At Home',
       stats: json['stats'] as Map<String, dynamic>? ?? const {},
+      estimatedArrival: json['estimated_arrival'] as String?,
     );
   }
 
@@ -59,6 +62,7 @@ class StudentModel {
       'note': note,
       'last_attendance_status': lastAttendanceStatus,
       'stats': stats,
+      'estimated_arrival': estimatedArrival,
     };
   }
 
@@ -75,6 +79,7 @@ class StudentModel {
     String? note,
     String? lastAttendanceStatus,
     Map<String, dynamic>? stats,
+    String? estimatedArrival,
   }) {
     return StudentModel(
       studentId: studentId ?? this.studentId,
@@ -88,11 +93,12 @@ class StudentModel {
       note: note ?? this.note,
       lastAttendanceStatus: lastAttendanceStatus ?? this.lastAttendanceStatus,
       stats: stats ?? this.stats,
+      estimatedArrival: estimatedArrival ?? this.estimatedArrival,
     );
   }
 
   @override
   String toString() {
-    return 'StudentModel(studentId: $studentId, name: $name, schoolName: $schoolName, status: $status, lastAttendanceStatus: $lastAttendanceStatus)';
+    return 'StudentModel(studentId: $studentId, name: $name, schoolName: $schoolName, status: $status, lastAttendanceStatus: $lastAttendanceStatus, estimatedArrival: $estimatedArrival)';
   }
 }
