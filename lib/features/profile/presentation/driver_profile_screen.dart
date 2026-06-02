@@ -16,7 +16,8 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _vehicleController = TextEditingController();
+  final _vehicleInputController = TextEditingController();
+  final List<String> _vehicleNumbers = [];
   String _selectedGender = 'Male';
   String _email = '';
   
@@ -38,11 +39,13 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
         final doc = await ref.read(firestoreProvider).collection('users').doc(user.uid).get();
         if (doc.exists) {
           final data = doc.data()!;
-          _nameController.text = data['name'] ?? '';
-          _phoneController.text = data['phone'] ?? '';
-          _vehicleController.text = data['vehicle_number'] ?? '';
+          _nameController.text = (data['name'] ?? '').toString();
+          _phoneController.text = (data['phone'] ?? '').toString();
+          _vehicleNumbers
+            ..clear()
+            ..addAll(_extractVehicleNumbers(data));
           
-          final gender = data['gender'] ?? 'Male';
+          final gender = (data['gender'] ?? 'Male').toString();
           if (['Male', 'Female', 'Other'].contains(gender)) {
             _selectedGender = gender;
           }
@@ -62,11 +65,16 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     try {
       final user = ref.read(firebaseAuthProvider).currentUser;
       if (user != null) {
+        if (_vehicleNumbers.isEmpty) {
+          throw 'Add at least one vehicle number.';
+        }
+
         await ref.read(firestoreProvider).collection('users').doc(user.uid).update({
           'name': _nameController.text.trim(),
           'phone': _phoneController.text.trim(),
           'gender': _selectedGender,
-          'vehicle_number': _vehicleController.text.trim(),
+          'vehicle_numbers': _vehicleNumbers,
+          'vehicle_number': _vehicleNumbers.first,
         });
         if (mounted) {
           SnackBarUtils.showSuccess(context, 'Profile updated successfully!');
@@ -78,6 +86,60 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  List<String> _extractVehicleNumbers(Map<String, dynamic> data) {
+    final rawVehicleNumbers = data['vehicle_numbers'];
+    if (rawVehicleNumbers is List) {
+      final parsed = rawVehicleNumbers
+          .map((value) => value.toString().trim())
+          .where((value) => value.isNotEmpty)
+          .toList();
+      if (parsed.isNotEmpty) {
+        return parsed;
+      }
+    }
+
+    final legacyVehicleNumber = (data['vehicle_number'] ?? '').toString().trim();
+    if (legacyVehicleNumber.isNotEmpty) {
+      return [legacyVehicleNumber];
+    }
+
+    return [];
+  }
+
+  void _addVehicleNumber() {
+    final value = _vehicleInputController.text.trim();
+    if (value.isEmpty) return;
+
+    if (_vehicleNumbers.any((vehicle) => vehicle.toLowerCase() == value.toLowerCase())) {
+      _vehicleInputController.clear();
+      return;
+    }
+
+    setState(() {
+      _vehicleNumbers.add(value);
+      _vehicleInputController.clear();
+    });
+  }
+
+  void _startEditing() {
+    _vehicleInputController.text = _vehicleNumbers.isNotEmpty ? _vehicleNumbers.first : '';
+    setState(() => _isEditing = true);
+  }
+
+  Future<void> _cancelEditing() async {
+    await _loadProfile();
+    if (!mounted) return;
+
+    _vehicleInputController.clear();
+    setState(() => _isEditing = false);
+  }
+
+  void _removeVehicleNumber(int index) {
+    setState(() {
+      _vehicleNumbers.removeAt(index);
+    });
   }
 
   Future<void> _handleSignOut() async {
@@ -95,7 +157,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _vehicleController.dispose();
+    _vehicleInputController.dispose();
     super.dispose();
   }
 
@@ -150,7 +212,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                               const Divider(color: AppTheme.border, height: 24),
                               _buildDetailRow('Gender', _selectedGender, Icons.wc_rounded),
                               const Divider(color: AppTheme.border, height: 24),
-                              _buildDetailRow('Vehicle Number', _vehicleController.text, Icons.directions_car_outlined),
+                              _buildVehicleSummary(),
                             ],
                           ),
                         ).animate().fade(duration: 300.ms),
@@ -160,7 +222,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                         SizedBox(
                           height: 56,
                           child: ElevatedButton.icon(
-                            onPressed: () => setState(() => _isEditing = true),
+                            onPressed: _startEditing,
                             icon: const Icon(Icons.edit_rounded, color: AppTheme.background),
                             label: const Text('Edit Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                           ),
@@ -222,14 +284,57 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                         ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
                         const SizedBox(height: 20),
 
-                        TextFormField(
-                          controller: _vehicleController,
-                          textCapitalization: TextCapitalization.characters,
-                          decoration: const InputDecoration(
-                            labelText: 'Vehicle Number',
-                            prefixIcon: Icon(Icons.directions_car_rounded),
-                          ),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Vehicle Numbers',
+                              style: TextStyle(
+                                color: AppTheme.textMuted,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            TextFormField(
+                              controller: _vehicleInputController,
+                              textCapitalization: TextCapitalization.characters,
+                              decoration: const InputDecoration(
+                                labelText: 'Add Vehicle Number',
+                                prefixIcon: Icon(Icons.directions_car_rounded),
+                              ),
+                              onFieldSubmitted: (_) => _addVehicleNumber(),
+                            ),
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              height: 56,
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: _addVehicleNumber,
+                                child: const Text('Add'),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              _vehicleNumbers.isEmpty
+                                  ? 'No vehicles added yet.'
+                                  : 'Current vehicles are shown below. The first one is saved as the primary vehicle.',
+                              style: const TextStyle(color: AppTheme.textMuted),
+                            ),
+                            const SizedBox(height: 8),
+                            if (_vehicleNumbers.isNotEmpty)
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  for (var index = 0; index < _vehicleNumbers.length; index++)
+                                    InputChip(
+                                      label: Text(_vehicleNumbers[index]),
+                                      onDeleted: () => _removeVehicleNumber(index),
+                                    ),
+                                ],
+                              ),
+                          ],
                         ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
                         const SizedBox(height: 32),
 
@@ -239,10 +344,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                               child: SizedBox(
                                 height: 56,
                                 child: OutlinedButton(
-                                  onPressed: () {
-                                    _loadProfile(); // Revert edits
-                                    setState(() => _isEditing = false);
-                                  },
+                                  onPressed: _cancelEditing,
                                   child: const Text('Cancel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                 ),
                               ),
@@ -303,6 +405,59 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
             ],
           ),
         ),
+      ],
+    );
+  }
+
+  Widget _buildVehicleSummary() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Icon(Icons.directions_car_outlined, color: AppTheme.primaryGold, size: 24),
+            SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                'Vehicle Numbers',
+                style: TextStyle(
+                  color: AppTheme.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (_vehicleNumbers.isEmpty)
+          const Padding(
+            padding: EdgeInsets.only(left: 40),
+            child: Text(
+              'Not Provided',
+              style: TextStyle(
+                color: AppTheme.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          )
+        else
+          Padding(
+            padding: const EdgeInsets.only(left: 40),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (var index = 0; index < _vehicleNumbers.length; index++)
+                  Chip(
+                    label: Text(_vehicleNumbers[index]),
+                    backgroundColor: AppTheme.background,
+                  ),
+              ],
+            ),
+          ),
       ],
     );
   }

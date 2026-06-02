@@ -62,6 +62,11 @@ class AuthService {
     String? vehicleNumber,
   }) async {
     try {
+      final normalizedVehicleNumber = vehicleNumber?.trim();
+      final vehicleNumbers = normalizedVehicleNumber == null || normalizedVehicleNumber.isEmpty
+          ? const <String>[]
+          : [normalizedVehicleNumber];
+
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
         password: password,
@@ -76,6 +81,7 @@ class AuthService {
         createdAt: DateTime.now(),
         gender: gender,
         vehicleNumber: vehicleNumber,
+        vehicleNumbers: vehicleNumbers,
       );
 
       await _firestore.collection('users').doc(credential.user!.uid).set(user.toJson());

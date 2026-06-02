@@ -12,6 +12,7 @@ class UserModel {
   final String? managedSchoolId;
   final String gender;
   final String? vehicleNumber; // Only for drivers
+  final List<String> vehicleNumbers;
 
   const UserModel({
     required this.uid,
@@ -23,6 +24,7 @@ class UserModel {
     this.managedSchoolId,
     this.gender = '',
     this.vehicleNumber,
+    this.vehicleNumbers = const [],
   });
 
   /// Factory constructor to create a UserModel from a Map (e.g. Firestore document snapshot)
@@ -54,12 +56,48 @@ class UserModel {
       createdAt: parsedDate,
       managedSchoolId: json['managed_school_id'] as String?,
       gender: json['gender'] as String? ?? '',
-      vehicleNumber: json['vehicle_number'] as String?,
+      vehicleNumber: _parsePrimaryVehicleNumber(json),
+      vehicleNumbers: _parseVehicleNumbers(json),
     );
+  }
+
+  static List<String> _parseVehicleNumbers(Map<String, dynamic> json) {
+    final rawVehicleNumbers = json['vehicle_numbers'];
+    if (rawVehicleNumbers is List) {
+      return rawVehicleNumbers
+          .map((value) => value.toString().trim())
+          .where((value) => value.isNotEmpty)
+          .toList();
+    }
+
+    final legacyVehicleNumber = json['vehicle_number'] as String?;
+    if (legacyVehicleNumber != null && legacyVehicleNumber.trim().isNotEmpty) {
+      return [legacyVehicleNumber.trim()];
+    }
+
+    return const [];
+  }
+
+  static String? _parsePrimaryVehicleNumber(Map<String, dynamic> json) {
+    final legacyVehicleNumber = json['vehicle_number'] as String?;
+    if (legacyVehicleNumber != null && legacyVehicleNumber.trim().isNotEmpty) {
+      return legacyVehicleNumber.trim();
+    }
+
+    final vehicleNumbers = _parseVehicleNumbers(json);
+    if (vehicleNumbers.isNotEmpty) {
+      return vehicleNumbers.first;
+    }
+
+    return null;
   }
 
   /// Converts the UserModel instance into a Map suitable for Firestore
   Map<String, dynamic> toJson() {
+    final primaryVehicleNumber = vehicleNumbers.isNotEmpty
+        ? vehicleNumbers.first
+        : vehicleNumber?.trim();
+
     return {
       'uid': uid,
       'role': role,
@@ -69,7 +107,8 @@ class UserModel {
       'created_at': Timestamp.fromDate(createdAt),
       'gender': gender,
       if (managedSchoolId != null) 'managed_school_id': managedSchoolId,
-      if (vehicleNumber != null) 'vehicle_number': vehicleNumber,
+      if (vehicleNumbers.isNotEmpty) 'vehicle_numbers': vehicleNumbers,
+      if (primaryVehicleNumber != null && primaryVehicleNumber.isNotEmpty) 'vehicle_number': primaryVehicleNumber,
     };
   }
 
@@ -84,6 +123,7 @@ class UserModel {
     String? managedSchoolId,
     String? gender,
     String? vehicleNumber,
+    List<String>? vehicleNumbers,
   }) {
     return UserModel(
       uid: uid ?? this.uid,
@@ -95,6 +135,7 @@ class UserModel {
       managedSchoolId: managedSchoolId ?? this.managedSchoolId,
       gender: gender ?? this.gender,
       vehicleNumber: vehicleNumber ?? this.vehicleNumber,
+      vehicleNumbers: vehicleNumbers ?? this.vehicleNumbers,
     );
   }
 
@@ -110,16 +151,17 @@ class UserModel {
         other.createdAt == createdAt &&
         other.managedSchoolId == managedSchoolId &&
         other.gender == gender &&
-        other.vehicleNumber == vehicleNumber;
+        other.vehicleNumber == vehicleNumber &&
+        listEquals(other.vehicleNumbers, vehicleNumbers);
   }
 
   @override
   int get hashCode {
-    return Object.hash(uid, role, name, phone, status, createdAt, managedSchoolId, gender, vehicleNumber);
+    return Object.hash(uid, role, name, phone, status, createdAt, managedSchoolId, gender, vehicleNumber, Object.hashAll(vehicleNumbers));
   }
 
   @override
   String toString() {
-    return 'UserModel(uid: $uid, role: $role, name: $name, phone: $phone, status: $status, createdAt: $createdAt, managedSchoolId: $managedSchoolId, gender: $gender, vehicleNumber: $vehicleNumber)';
+    return 'UserModel(uid: $uid, role: $role, name: $name, phone: $phone, status: $status, createdAt: $createdAt, managedSchoolId: $managedSchoolId, gender: $gender, vehicleNumber: $vehicleNumber, vehicleNumbers: $vehicleNumbers)';
   }
 }

@@ -10,7 +10,6 @@ import '../data/trip_service.dart';
 import '../data/trip_manifest_model.dart';
 import '../data/daily_session_model.dart';
 import 'qr_scanner_screen.dart';
-import '../../../core/widgets/shimmer_loading.dart';
 import '../../../core/services/auth_service.dart';
 import 'package:geolocator/geolocator.dart';
 

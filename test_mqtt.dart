@@ -18,16 +18,16 @@ void main() async {
   client.connectionMessage = connMess;
 
   try {
-    print('Connecting...');
+    stdout.writeln('Connecting...');
     await client.connect();
   } catch (e) {
-    print('Exception: $e');
+    stdout.writeln('Exception: $e');
     client.disconnect();
     return;
   }
 
   if (client.connectionStatus!.state == MqttConnectionState.connected) {
-    print('Connected! Publishing message...');
+    stdout.writeln('Connected! Publishing message...');
     
     final topic = 'safepick/trips/test/telemetry';
     final builder = MqttClientPayloadBuilder();
@@ -39,15 +39,15 @@ void main() async {
     client.updates!.listen((List<MqttReceivedMessage<MqttMessage>> c) {
       final MqttPublishMessage recMess = c[0].payload as MqttPublishMessage;
       final String pt = MqttPublishPayload.bytesToStringAsString(recMess.payload.message);
-      print('Received: $pt from topic: ${c[0].topic}');
+      stdout.writeln('Received: $pt from topic: ${c[0].topic}');
     });
 
     client.publishMessage(topic, MqttQos.atMostOnce, builder.payload!);
     
     await Future.delayed(Duration(seconds: 5));
     client.disconnect();
-    print('Disconnected.');
+    stdout.writeln('Disconnected.');
   } else {
-    print('Failed to connect, status: ${client.connectionStatus}');
+    stdout.writeln('Failed to connect, status: ${client.connectionStatus}');
   }
 }

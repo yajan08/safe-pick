@@ -234,7 +234,7 @@ class TripService {
     // Fetch driver details
     final driverSnap = await _firestore.collection('users').doc(driverUid).get();
     final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
-    final vehicleNumber = driverSnap.data()?['vehicle_number'] as String? ?? '';
+    final vehicleNumber = _resolveDriverVehicleNumber(driverSnap.data());
 
     // Fetch current attendance
     final attendanceSnap = await attendanceRef.get();
@@ -320,7 +320,7 @@ class TripService {
 
     final driverSnap = await _firestore.collection('users').doc(driverUid).get();
     final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
-    final vehicleNumber = driverSnap.data()?['vehicle_number'] as String? ?? '';
+    final vehicleNumber = _resolveDriverVehicleNumber(driverSnap.data());
 
     final batch = _firestore.batch();
     final now = Timestamp.fromDate(DateTime.now());
@@ -359,6 +359,27 @@ class TripService {
     });
 
     await batch.commit();
+  }
+
+  String _resolveDriverVehicleNumber(Map<String, dynamic>? data) {
+    if (data == null) return '';
+
+    final primaryVehicleNumber = data['vehicle_number'] as String?;
+    if (primaryVehicleNumber != null && primaryVehicleNumber.trim().isNotEmpty) {
+      return primaryVehicleNumber.trim();
+    }
+
+    final rawVehicleNumbers = data['vehicle_numbers'];
+    if (rawVehicleNumbers is List) {
+      for (final value in rawVehicleNumbers) {
+        final vehicleNumber = value.toString().trim();
+        if (vehicleNumber.isNotEmpty) {
+          return vehicleNumber;
+        }
+      }
+    }
+
+    return '';
   }
 
   /// Update full trip details (name, roster) and rebuild manifest & dynamically derived destinations (schools)

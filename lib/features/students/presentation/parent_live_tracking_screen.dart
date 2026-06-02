@@ -22,6 +22,7 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
   // I grabbed this from your driver terminal logs.
   final String _testSessionId = '+';
 
+  @override
   void initState() {
     super.initState();
     _connectAndListen();

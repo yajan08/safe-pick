@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'features/onboarding/presentation/splash_screen.dart';
 
@@ -9,15 +10,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
 
-  // Initialize Firebase connection (Firebase Auth)
-  // In Phase 3, you will configure your specific firebase_options.dart using FlutterFire CLI.
-  try {
-    await Firebase.initializeApp();
-  } catch (e) {
-    // We log the initialization error. In case the config files (e.g. google-services.json)
-    // are missing, the AuthGate will handle the error gracefully via StreamProvider catch states.
-    debugPrint("Firebase initialization warning/error: $e");
-  }
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(
     ProviderScope(
