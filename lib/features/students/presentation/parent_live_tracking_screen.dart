@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:safe_pick/features/students/data/student_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/mqtt_service.dart';
+import '../../map/presentation/parent_map_screen.dart';
 
 class ParentLiveTrackingScreen extends ConsumerStatefulWidget {
   final StudentModel student;
@@ -46,6 +48,33 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
     super.dispose();
   }
 
+  Future<void> _openMapForStudent() async {
+    try {
+      final db = FirebaseFirestore.instance;
+      final q = await db.collection('daily_sessions').where('status', isEqualTo: 'in_progress').get();
+      String? foundDriverUid;
+      for (var doc in q.docs) {
+        final attendanceRef = doc.reference.collection('attendance').doc(widget.student.studentId);
+        final attendanceSnap = await attendanceRef.get();
+        if (attendanceSnap.exists) {
+          foundDriverUid = doc.data()['driver_uid'] as String?;
+          break;
+        }
+      }
+
+      if (foundDriverUid != null && foundDriverUid.isNotEmpty) {
+        final driverUid = foundDriverUid;
+        if (!mounted) return;
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => ParentMapScreen(driverUid: driverUid)));
+      } else {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Active driver not found for this student.')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to open map: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,6 +82,13 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
       appBar: AppBar(
         title: Text('${widget.student.name}\'s Live Location'),
         centerTitle: true,
+        actions: [
+          IconButton(
+            tooltip: 'Open Map',
+            onPressed: _openMapForStudent,
+            icon: const Icon(Icons.map_rounded),
+          ),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
