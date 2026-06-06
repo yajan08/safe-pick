@@ -8,7 +8,6 @@ import 'trip_detail_screen.dart';
 import 'create_trip_screen.dart';
 import '../../profile/presentation/driver_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
-import '../../../core/services/test_mqtt_service.dart';
 
 /// Real-time stream provider that fetches all trips assigned to the logged-in driver.
 final driverTripsProvider = StreamProvider<List<TripModel>>((ref) {
@@ -57,10 +56,6 @@ class DriverDashboard extends ConsumerWidget {
           height: 32,
         ),
         actions: [
-          TextButton(
-            onPressed: () => TestMqttService().testConnection(),
-            child: const Text('TEST MQTT', style: TextStyle(color: AppTheme.primaryGold, fontWeight: FontWeight.bold)),
-          ),
           IconButton(
             icon: const Icon(Icons.person_outline_rounded, color: AppTheme.primaryGold),
             onPressed: () {
@@ -84,12 +79,12 @@ class DriverDashboard extends ConsumerWidget {
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
-              ).animate().fade().slideY(begin: -0.1),
+              ).animate().fade().slideY(begin: -0.05),
               const SizedBox(height: 8),
               Text(
                 'Assigned transport routes and manifests.',
                 style: theme.textTheme.bodyMedium,
-              ).animate().fade(delay: 100.ms).slideY(begin: -0.1),
+              ).animate().fade(delay: 50.ms).slideY(begin: -0.05),
               const SizedBox(height: 24),
 
               // Summary & List
@@ -136,8 +131,8 @@ class DriverDashboard extends ConsumerWidget {
                               final trip = sortedTrips[index];
                               return _buildTripCard(context, theme, trip)
                                   .animate()
-                                  .fade(delay: Duration(milliseconds: 300 + (index * 100)))
-                                  .slideY(begin: 0.1);
+                                  .fade(delay: Duration(milliseconds: 150 + (index * 50)))
+                                  .slideY(begin: 0.05);
                             },
                           ),
                         ),
@@ -194,7 +189,7 @@ class DriverDashboard extends ConsumerWidget {
           child: _buildSingleSummaryCard(theme, 'Pending Today', pending.toString()),
         ),
       ],
-    ).animate().fade(delay: 200.ms).scale(begin: const Offset(0.9, 0.9));
+    ).animate().fade(delay: 100.ms).scale(begin: const Offset(0.95, 0.95));
   }
 
   Widget _buildSingleSummaryCard(ThemeData theme, String label, String value) {
@@ -369,7 +364,7 @@ class DriverDashboard extends ConsumerWidget {
             textAlign: TextAlign.center,
           ),
         ],
-      ).animate().fade().scale(begin: const Offset(0.9, 0.9)),
+      ).animate().fade().scale(begin: const Offset(0.95, 0.95)),
     );
   }
 

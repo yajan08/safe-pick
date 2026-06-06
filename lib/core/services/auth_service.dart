@@ -135,6 +135,72 @@ class AuthService {
     }
   }
 
+  /// Queries the users collection and returns a map of profile data including role and status.
+  Future<Map<String, String>> getUserProfileData(String uid) async {
+    try {
+      final doc = await _firestore.collection('users').doc(uid).get(const GetOptions(source: Source.serverAndCache));
+      if (doc.exists) {
+        final data = doc.data();
+        final role = data?['role'] as String? ?? 'parent';
+        final status = data?['status'] as String? ?? 'active';
+        return {'role': role, 'status': status};
+      }
+      return {'role': 'parent', 'status': 'active'};
+    } catch (e) {
+      return {'role': 'parent', 'status': 'active'};
+    }
+  }
+
+  /// Deletes a driver account and their user document. Past daily_sessions remain intact.
+  Future<void> deleteDriverAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) throw 'Not logged in';
+    try {
+      final batch = _firestore.batch();
+      batch.delete(_firestore.collection('users').doc(user.uid));
+      // Delete user from auth
+      await user.delete();
+      await batch.commit();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        throw 'Security restriction: Please log out and log back in before deleting your account.';
+      }
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Failed to delete account. Please try again.';
+    }
+  }
+
+  /// Deletes a parent account and cascading active students. Past ride_history remains intact.
+  Future<void> deleteParentAccount() async {
+    final user = _auth.currentUser;
+    if (user == null) throw 'Not logged in';
+    try {
+      final batch = _firestore.batch();
+      
+      // Delete all students tied to this parent
+      final studentsSnap = await _firestore.collection('students').where('parent_uid', isEqualTo: user.uid).get();
+      for (var doc in studentsSnap.docs) {
+        batch.delete(doc.reference);
+      }
+      
+      // Delete parent user doc
+      batch.delete(_firestore.collection('users').doc(user.uid));
+      
+      // Delete auth
+      await user.delete();
+      
+      await batch.commit();
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'requires-recent-login') {
+        throw 'Security restriction: Please log out and log back in before deleting your account.';
+      }
+      throw _handleAuthException(e);
+    } catch (e) {
+      throw 'Failed to delete account. Please try again.';
+    }
+  }
+
   /// Generates a sequential student ID (e.g., SP1001) using a Firestore transaction
   Future<String> generateSequentialStudentId() async {
     try {

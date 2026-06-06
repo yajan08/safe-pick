@@ -21,7 +21,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _navigateToNext() async {
     // Wait for the animation to play
-    await Future.delayed(const Duration(milliseconds: 2500));
+    await Future.delayed(const Duration(milliseconds: 1500));
     
     if (!mounted) return;
 
@@ -36,7 +36,7 @@ class _SplashScreenState extends State<SplashScreen> {
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },
-        transitionDuration: const Duration(milliseconds: 800),
+        transitionDuration: const Duration(milliseconds: 400),
       ),
     );
   }
@@ -53,9 +53,9 @@ class _SplashScreenState extends State<SplashScreen> {
             height: 100,
           ),
         ).animate()
-         .fadeIn(duration: 800.ms)
-         .scale(begin: const Offset(0.8, 0.8), end: const Offset(1.0, 1.0), duration: 800.ms, curve: Curves.easeOutBack)
-         .shimmer(delay: 1000.ms, duration: 1200.ms, color: Colors.white24),
+         .fadeIn(duration: 400.ms)
+         .scale(begin: const Offset(0.9, 0.9), end: const Offset(1.0, 1.0), duration: 500.ms, curve: Curves.easeOut)
+         .shimmer(delay: 500.ms, duration: 800.ms, color: Colors.white24),
       ),
     );
   }

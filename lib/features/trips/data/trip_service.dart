@@ -432,4 +432,26 @@ class TripService {
 
     await batch.commit();
   }
+
+  /// Permanently removes a student and clears their references from active trip manifests,
+  /// maintaining their historical records in daily_sessions and ride_history.
+  Future<void> removeStudentPermanently({required String studentId, required List<String> activeTripIds}) async {
+    final batch = _firestore.batch();
+
+    // 1. Delete from primary students collection
+    batch.delete(_firestore.collection('students').doc(studentId));
+
+    // 2. Clear out completely from active trip manifests so drivers see immediate updates
+    for (String tripId in activeTripIds) {
+      final manifestRef = _firestore.collection('trips').doc(tripId).collection('trip_manifest').doc(studentId);
+      batch.delete(manifestRef);
+
+      // Remove from flat tracking array inside the core trip document
+      batch.update(_firestore.collection('trips').doc(tripId), {
+        'student_ids': FieldValue.arrayRemove([studentId])
+      });
+    }
+
+    await batch.commit();
+  }
 }

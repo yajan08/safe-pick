@@ -109,7 +109,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     'assets/images/light_logo.jpg',
                     height: 100,
                   ),
-                ).animate().fade().slideY(begin: -0.1),
+                ).animate().fade().slideY(begin: -0.05),
                 const SizedBox(height: 16),
 
                 // Welcome Text
@@ -120,13 +120,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     letterSpacing: -0.5,
                   ),
                   textAlign: TextAlign.center,
-                ).animate().fade().slideY(begin: -0.1),
+                ).animate().fade().slideY(begin: -0.05),
                 const SizedBox(height: 8),
                 Text(
                   'Register to track rides and manage check-ins',
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
-                ).animate().fade(delay: 100.ms).slideY(begin: -0.1),
+                ).animate().fade(delay: 50.ms).slideY(begin: -0.05),
                 const SizedBox(height: 36),
 
                 // Registration Form Card
@@ -164,7 +164,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                 });
                               }
                             },
-                          ).animate().fade(delay: 150.ms),
+                          ).animate().fade(delay: 70.ms),
                           const SizedBox(height: 18),
 
                           // Full Name Input
@@ -186,7 +186,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               }
                               return null;
                             },
-                          ).animate().fade(delay: 200.ms),
+                          ).animate().fade(delay: 90.ms),
                           const SizedBox(height: 18),
                           
                           // Gender Dropdown
@@ -210,12 +210,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                 });
                               }
                             },
-                          ).animate().fade(delay: 250.ms),
+                          ).animate().fade(delay: 110.ms),
                           const SizedBox(height: 18),
 
                           // Dynamic Vehicle Number for Driver
                           AnimatedSize(
-                            duration: 300.ms,
+                            duration: 200.ms,
                             curve: Curves.easeInOut,
                             child: isDriver
                                 ? Padding(
@@ -261,7 +261,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               }
                               return null;
                             },
-                          ).animate().fade(delay: 300.ms),
+                          ).animate().fade(delay: 130.ms),
                           const SizedBox(height: 18),
 
                           // Email Input
@@ -286,7 +286,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               }
                               return null;
                             },
-                          ).animate().fade(delay: 350.ms),
+                          ).animate().fade(delay: 150.ms),
                           const SizedBox(height: 18),
 
                           // Password Input
@@ -321,7 +321,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                               }
                               return null;
                             },
-                          ).animate().fade(delay: 400.ms),
+                          ).animate().fade(delay: 170.ms),
                           const SizedBox(height: 28),
 
                           // Submit Sign Up Button
@@ -342,12 +342,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                                     )
                                   : const Text('Sign Up', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                             ),
-                          ).animate().fade(delay: 450.ms).scale(begin: const Offset(0.95, 0.95)),
+                          ).animate().fade(delay: 190.ms).scale(begin: const Offset(0.98, 0.98)),
                         ],
                       ),
                     ),
                   ),
-                ).animate().fade(delay: 150.ms).slideY(begin: 0.1),
+                ).animate().fade(delay: 70.ms).slideY(begin: 0.05),
                 const SizedBox(height: 24),
 
                 // Log In Navigation Link
@@ -369,7 +369,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                       ),
                     ),
                   ],
-                ).animate().fade(delay: 500.ms),
+                ).animate().fade(delay: 210.ms),
               ],
             ),
           ),

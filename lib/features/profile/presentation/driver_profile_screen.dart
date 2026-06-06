@@ -144,12 +144,58 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
 
   Future<void> _handleSignOut() async {
     try {
-      await ref.read(authServiceProvider).signOut();
+      await ref.read(firebaseAuthProvider).signOut();
+    } catch (e) {
+      if (mounted) SnackBarUtils.showError(context, 'Error signing out: $e');
+    }
+  }
+
+  Future<void> _handleDeleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppTheme.errorRed, width: 2),
+        ),
+        title: const Text(
+          'Delete Account',
+          style: TextStyle(
+            color: AppTheme.errorRed,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Are you absolutely sure you want to permanently delete your account and all associated active vehicle profiles? This action cannot be undone.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textPrimary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorRed,
+              foregroundColor: AppTheme.background,
+            ),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ref.read(authServiceProvider).deleteDriverAccount();
       if (mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      if (mounted) SnackBarUtils.showError(context, 'Error signing out: $e');
+      if (mounted) SnackBarUtils.showError(context, 'Error deleting account: $e');
     }
   }
 
@@ -228,19 +274,38 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                           ),
                         ),
                         const SizedBox(height: 16),
-                        
-                        // Sign Out Button
-                        SizedBox(
-                          height: 56,
-                          child: OutlinedButton.icon(
-                            onPressed: _handleSignOut,
-                            icon: const Icon(Icons.logout_rounded, color: AppTheme.errorRed),
-                            label: const Text('Sign Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.errorRed)),
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(color: AppTheme.errorRed, width: 1.5),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        // Sign Out & Delete Buttons
+                        Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 56,
+                                child: OutlinedButton.icon(
+                                  onPressed: _handleSignOut,
+                                  icon: const Icon(Icons.logout_rounded, color: AppTheme.textPrimary),
+                                  label: const Text('Sign Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
+                                  style: OutlinedButton.styleFrom(
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  ),
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: SizedBox(
+                                height: 56,
+                                child: OutlinedButton.icon(
+                                  onPressed: _handleDeleteAccount,
+                                  icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed),
+                                  label: const Text('Delete', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.errorRed)),
+                                  style: OutlinedButton.styleFrom(
+                                    side: const BorderSide(color: AppTheme.errorRed, width: 1.5),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ] else ...[
                         // Editable Input Fields

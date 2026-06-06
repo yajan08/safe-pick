@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:safe_pick/features/students/presentation/parent_live_tracking_screen.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -107,7 +108,7 @@ class ParentDashboard extends ConsumerWidget {
                   // Dashboard Content for Selected Student
                   Expanded(
                     child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 300),
+                      duration: const Duration(milliseconds: 200),
                       child: SingleChildScrollView(
                         key: ValueKey<String>(selectedStudent.studentId),
                         physics: const BouncingScrollPhysics(),
@@ -165,7 +166,7 @@ class ParentDashboard extends ConsumerWidget {
             style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
         ],
-      ).animate().fade().slideY(begin: -0.1);
+      ).animate().fade().slideY(begin: -0.05);
     }
 
     return Column(
@@ -255,7 +256,7 @@ class ParentDashboard extends ConsumerWidget {
 
         ],
       ),
-    ).animate().fade(delay: 100.ms).slideY(begin: 0.1);
+    ).animate().fade(delay: 50.ms).slideY(begin: 0.05);
   }
 
   Widget _buildSquareStatusAndEtaCards(ThemeData theme, StudentModel student) {
@@ -402,21 +403,61 @@ class ParentDashboard extends ConsumerWidget {
           ),
         ),
       ],
-    ).animate().fade(delay: 200.ms).slideY(begin: 0.1);
+    ).animate().fade(delay: 100.ms).slideY(begin: 0.05);
   }
 
   Widget _buildMapCard(BuildContext context, ThemeData theme, StudentModel student) {
     final isInVan = student.currentStatus == 'In Van';
 
     return GestureDetector(
-      onTap: () {
+      onTap: () async {
         if (isInVan) {
-          // Navigate to the new tracking screen!
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ParentLiveTrackingScreen(student: student),
-            ),
+          // Show loading
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGold)),
           );
+
+          try {
+            // Find the active session for this student
+            final db = FirebaseFirestore.instance;
+            final q = await db.collection('daily_sessions').where('status', isEqualTo: 'in_progress').get();
+            String? sessionId;
+            for (var doc in q.docs) {
+              final attendanceRef = doc.reference.collection('attendance').doc(student.studentId);
+              final attendanceSnap = await attendanceRef.get();
+              if (attendanceSnap.exists) {
+                sessionId = doc.id;
+                break;
+              }
+            }
+
+            if (context.mounted) {
+              Navigator.of(context).pop(); // Dismiss loading
+              if (sessionId != null) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => ParentLiveTrackingScreen(
+                      student: student,
+                      sessionId: sessionId!,
+                    ),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Active trip not found for this student.')),
+                );
+              }
+            }
+          } catch (e) {
+            if (context.mounted) {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error finding trip: $e')),
+              );
+            }
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -459,7 +500,7 @@ class ParentDashboard extends ConsumerWidget {
             ],
           ),
         ),
-      ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+      ).animate().fade(delay: 150.ms).slideY(begin: 0.05),
     );
   }
 
@@ -511,7 +552,7 @@ class ParentDashboard extends ConsumerWidget {
               ),
             ),
           ],
-        ).animate().fade(duration: 500.ms).scale(begin: const Offset(0.9, 0.9)),
+        ).animate().fade(duration: 300.ms).scale(begin: const Offset(0.95, 0.95)),
       ),
     );
   }

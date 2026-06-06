@@ -12,6 +12,8 @@ import '../data/daily_session_model.dart';
 import 'qr_scanner_screen.dart';
 import '../../../core/services/auth_service.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'utils/marker_generator.dart';
 
 /// Future provider to fetch details of a specific trip.
 final tripDetailsProvider = FutureProvider.family<TripModel, String>((ref, tripId) async {
@@ -44,6 +46,74 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
   Timer? _publishTimer;
   Position? _currentPosition;
+
+  // ─── MAP STATE & MARKER CACHE ────────────────────────
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+  BitmapDescriptor? _driverVanMarker;
+  final Map<String, BitmapDescriptor> _studentMarkerCache = {};
+  final Map<String, String> _studentStatusCache = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _initDriverMarker();
+  }
+
+  Future<void> _initDriverMarker() async {
+    _driverVanMarker = await MarkerGenerator.createDriverVanMarker();
+  }
+
+  Future<void> _updateStudentMarkers(List<TripManifestModel> manifest, Map<String, String> attendanceMap, String tripType) async {
+    bool changed = false;
+    
+    for (var student in manifest) {
+      if (student.homeLocation == null) continue;
+      final currentStatus = attendanceMap[student.studentId] ?? student.status;
+      
+      if (_studentStatusCache[student.studentId] != currentStatus || !_studentMarkerCache.containsKey(student.studentId)) {
+        final color = MarkerGenerator.getStatusColor(currentStatus, tripType);
+        final markerIcon = await MarkerGenerator.createStudentMarker(student.name, color);
+        _studentMarkerCache[student.studentId] = markerIcon;
+        _studentStatusCache[student.studentId] = currentStatus;
+        changed = true;
+      }
+    }
+    
+    if (changed || _currentPosition != null) {
+      _buildMarkers(manifest);
+    }
+  }
+
+  void _buildMarkers(List<TripManifestModel> manifest) {
+    final Set<Marker> newMarkers = {};
+    if (_currentPosition != null && _driverVanMarker != null) {
+      newMarkers.add(Marker(
+        markerId: const MarkerId('driver_van'),
+        position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+        icon: _driverVanMarker!,
+        zIndexInt: 100,
+        anchor: const Offset(0.5, 0.5),
+      ));
+    }
+    
+    for (var student in manifest) {
+      if (student.homeLocation == null) continue;
+      if (_studentMarkerCache.containsKey(student.studentId)) {
+        newMarkers.add(Marker(
+          markerId: MarkerId('student_${student.studentId}'),
+          position: LatLng(student.homeLocation!.latitude, student.homeLocation!.longitude),
+          icon: _studentMarkerCache[student.studentId]!,
+        ));
+      }
+    }
+    
+    if (mounted) {
+      setState(() {
+        _markers = newMarkers;
+      });
+    }
+  }
 
   // ─── LIVE TRACKING ENGINE ────────────────────────────
   
@@ -79,6 +149,13 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       ),
     ).listen((Position position) {
       _currentPosition = position; 
+      if (_isLiveTracking && _mapController != null) {
+         _mapController!.animateCamera(CameraUpdate.newLatLng(LatLng(position.latitude, position.longitude)));
+      }
+      final manifestAsync = ref.read(tripManifestProvider(widget.tripId));
+      if (manifestAsync.hasValue) {
+        _buildMarkers(manifestAsync.value!);
+      }
     });
 
     // 4. The Heartbeat Timer forces a publish exactly every 3 seconds
@@ -675,68 +752,140 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           data: (trip) {
             return sessionAsync.when(
               data: (session) {
-                return Column(
+                // Reactive listeners for marker repainting
+                ref.listen(tripManifestProvider(widget.tripId), (prev, next) {
+                  final manifest = next.value ?? [];
+                  final attendanceMap = session != null ? ref.read(sessionAttendanceProvider(session.sessionId)).value ?? {} : <String, String>{};
+                  _updateStudentMarkers(manifest, attendanceMap, trip.tripType);
+                });
+
+                if (session != null) {
+                  ref.listen(sessionAttendanceProvider(session.sessionId), (prev, next) {
+                    final attendanceMap = next.value ?? {};
+                    final manifest = ref.read(tripManifestProvider(widget.tripId)).value ?? [];
+                    _updateStudentMarkers(manifest, attendanceMap, trip.tripType);
+                  });
+                }
+
+                return Stack(
                   children: [
-                    Expanded(
-                      child: SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  const SizedBox(height: 20),
-
-                                  // 1. Trip Details & Action Buttons
-                                  _buildTripDetailsCard(theme, trip, session),
-                                  const SizedBox(height: 16),
-
-                                  // 2. Map Placeholder
-                                  _buildMapPlaceholder(theme),
-                                  const SizedBox(height: 24),
-
-                                  // 3. Target Schools Summary
-                                  ref.watch(tripManifestProvider(widget.tripId)).when(
-                                        data: (manifest) => _buildSchoolsSummary(theme, manifest),
-                                        loading: () => const SizedBox.shrink(),
-                                        error: (err, stack) => const SizedBox.shrink(),
-                                      ),
-                                  const SizedBox(height: 24),
-
-                                  // 4. Roster Header
-                                  _buildRosterHeader(theme, ref.watch(tripManifestProvider(widget.tripId))),
-                                  const SizedBox(height: 16),
-
-                                  // 5. Roster list
-                                  ref.watch(tripManifestProvider(widget.tripId)).when(
-                                        data: (manifest) {
-                                          if (manifest.isEmpty) {
-                                            return _buildEmptyRosterCard(theme);
-                                          }
-
-                                          final attendanceMap = session != null
-                                              ? ref.watch(sessionAttendanceProvider(session.sessionId)).asData?.value ?? const {}
-                                              : const <String, String>{};
-
-                                          return Column(
-                                            children: manifest.asMap().entries.map((entry) {
-                                              return _buildStudentRow(theme, entry.value, entry.key, session, attendanceMap);
-                                            }).toList(),
-                                          );
-                                        },
-                                        loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppTheme.primaryGold))),
-                                        error: (err, _) => _buildErrorState(theme, err.toString()),
-                                      ),
-                                  const SizedBox(height: 100),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                    // 1. Fullscreen Google Map
+                    GoogleMap(
+                      initialCameraPosition: CameraPosition(
+                        target: _currentPosition != null 
+                            ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude) 
+                            : const LatLng(0, 0),
+                        zoom: 15,
                       ),
+                      markers: _markers,
+                      onMapCreated: (controller) {
+                        _mapController = controller;
+                        if (_currentPosition != null) {
+                          _mapController!.moveCamera(CameraUpdate.newLatLng(LatLng(_currentPosition!.latitude, _currentPosition!.longitude)));
+                        }
+                      },
+                      myLocationEnabled: false,
+                      myLocationButtonEnabled: false,
+                      zoomControlsEnabled: false,
+                      compassEnabled: false,
+                    ),
+
+                    // 2. Re-center FAB
+                    Positioned(
+                      top: 16,
+                      right: 16,
+                      child: FloatingActionButton.small(
+                        heroTag: 'recenter_fab',
+                        backgroundColor: AppTheme.surface,
+                        foregroundColor: AppTheme.primaryGold,
+                        onPressed: () {
+                          if (_currentPosition != null && _mapController != null) {
+                            _mapController!.animateCamera(CameraUpdate.newLatLng(LatLng(_currentPosition!.latitude, _currentPosition!.longitude)));
+                          }
+                        },
+                        child: const Icon(Icons.my_location_rounded),
+                      ),
+                    ),
+
+                    // 3. Draggable Roster Bottom Sheet
+                    DraggableScrollableSheet(
+                      initialChildSize: 0.4,
+                      minChildSize: 0.15,
+                      maxChildSize: 0.85,
+                      builder: (context, scrollController) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            color: AppTheme.background,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, -5),
+                              )
+                            ],
+                          ),
+                          child: CustomScrollView(
+                            controller: scrollController,
+                            physics: const BouncingScrollPhysics(),
+                            slivers: [
+                              SliverToBoxAdapter(
+                                child: Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.only(top: 12, bottom: 16),
+                                    width: 40,
+                                    height: 4,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.border,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SliverPadding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                sliver: SliverList(
+                                  delegate: SliverChildListDelegate([
+                                    _buildTripDetailsCard(theme, trip, session),
+                                    const SizedBox(height: 16),
+
+                                    ref.watch(tripManifestProvider(widget.tripId)).when(
+                                          data: (manifest) => _buildSchoolsSummary(theme, manifest),
+                                          loading: () => const SizedBox.shrink(),
+                                          error: (err, stack) => const SizedBox.shrink(),
+                                        ),
+                                    const SizedBox(height: 24),
+
+                                    _buildRosterHeader(theme, ref.watch(tripManifestProvider(widget.tripId))),
+                                    const SizedBox(height: 16),
+
+                                    ref.watch(tripManifestProvider(widget.tripId)).when(
+                                          data: (manifest) {
+                                            if (manifest.isEmpty) {
+                                              return _buildEmptyRosterCard(theme);
+                                            }
+
+                                            final attendanceMap = session != null
+                                                ? ref.watch(sessionAttendanceProvider(session.sessionId)).asData?.value ?? const {}
+                                                : const <String, String>{};
+
+                                            return Column(
+                                              children: manifest.asMap().entries.map((entry) {
+                                                return _buildStudentRow(theme, entry.value, entry.key, session, attendanceMap);
+                                              }).toList(),
+                                            );
+                                          },
+                                          loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppTheme.primaryGold))),
+                                          error: (err, _) => _buildErrorState(theme, err.toString()),
+                                        ),
+                                    const SizedBox(height: 100), // Padding for scrolling past FABs
+                                  ]),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ],
                 );
@@ -904,59 +1053,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     );
   }
 
-  // ─── 2. Map Placeholder ────────────────────────────────
-  Widget _buildMapPlaceholder(ThemeData theme) {
-    return GestureDetector(
-      onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Map View loading... (Coming Soon)'),
-            backgroundColor: AppTheme.primaryGold,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      },
-      child: Container(
-        height: 160,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF0F0F0),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border),
-        ),
-        child: Stack(
-          children: [
-            CustomPaint(
-              size: const Size(double.infinity, 160),
-              painter: _MapGridPainter(),
-            ),
-            Center(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.map_rounded, color: AppTheme.primaryGold, size: 24),
-                    const SizedBox(width: 8),
-                    Text(
-                      'View Live Map',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    ).animate().fade(delay: 200.ms).slideY(begin: 0.03);
-  }
+
 
   // ─── 3. Target Schools Summary ─────────────────────────
   Widget _buildSchoolsSummary(ThemeData theme, List<TripManifestModel> manifest) {
@@ -1257,22 +1354,4 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 }
 
-class _MapGridPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFE0E0E0)
-      ..strokeWidth = 0.5;
 
-    const spacing = 20.0;
-    for (double x = 0; x < size.width; x += spacing) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
-    }
-    for (double y = 0; y < size.height; y += spacing) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}

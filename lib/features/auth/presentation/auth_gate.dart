@@ -7,11 +7,11 @@ import '../../students/presentation/parent_dashboard.dart';
 import '../../trips/presentation/driver_dashboard.dart';
 import 'login_screen.dart';
 
-/// Future provider that fetches the user's role from Firestore using their UID.
-/// Caches the role for the user session.
-final userRoleProvider = FutureProvider.family<String, String>((ref, uid) async {
+/// Future provider that fetches the user's profile data from Firestore using their UID.
+/// Caches the profile data for the user session.
+final userProfileProvider = FutureProvider.family<Map<String, String>, String>((ref, uid) async {
   final authService = ref.watch(authServiceProvider);
-  return authService.getUserRole(uid);
+  return authService.getUserProfileData(uid);
 });
 
 /// A gatekeeper widget that routes the user based on their authentication state.
@@ -32,11 +32,86 @@ class AuthGate extends ConsumerWidget {
         }
         
         // User is logged in, now fetch their role from Firestore
-        final roleAsync = ref.watch(userRoleProvider(user.uid));
+        final profileAsync = ref.watch(userProfileProvider(user.uid));
 
-        return roleAsync.when(
-          data: (role) {
-            final normalizedRole = role.toLowerCase().trim();
+        return profileAsync.when(
+          data: (profile) {
+            final normalizedRole = profile['role']?.toLowerCase().trim() ?? 'parent';
+            final status = profile['status']?.toLowerCase().trim() ?? 'active';
+
+            if (status == 'suspended' || status == 'inactive') {
+              return Scaffold(
+                backgroundColor: AppTheme.background,
+                body: SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.all(28.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const Spacer(),
+                        Center(
+                          child: Column(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.errorRed.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.block_rounded,
+                                  color: AppTheme.errorRed,
+                                  size: 56,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Text(
+                                'Account Suspended',
+                                style: theme.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.errorRed,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Text(
+                                'Your account is deactivated or suspended. Please contact the administration.',
+                                style: theme.textTheme.bodyMedium,
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Spacer(),
+                        OutlinedButton.icon(
+                          onPressed: () async {
+                            try {
+                              ref.invalidate(userProfileProvider(user.uid));
+                              await ref.read(authServiceProvider).signOut();
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(e.toString()),
+                                    backgroundColor: AppTheme.errorRed,
+                                    behavior: SnackBarBehavior.floating,
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          icon: const Icon(Icons.logout_rounded, color: AppTheme.errorRed),
+                          label: const Text('Sign Out', style: TextStyle(color: AppTheme.errorRed)),
+                          style: OutlinedButton.styleFrom(
+                            side: const BorderSide(color: AppTheme.errorRed, width: 1.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
             
             // Route user depending on Firestore role
             if (normalizedRole == 'driver') {
@@ -72,7 +147,7 @@ class AuthGate extends ConsumerWidget {
                             ),
                             const SizedBox(height: 24),
                             Text(
-                              'Welcome ${role.toUpperCase()}',
+                              'Welcome ${profile['role']?.toUpperCase() ?? 'ADMIN'}',
                               style: theme.textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
@@ -90,7 +165,7 @@ class AuthGate extends ConsumerWidget {
                       OutlinedButton.icon(
                         onPressed: () async {
                           try {
-                            ref.invalidate(userRoleProvider(user.uid));
+                            ref.invalidate(userProfileProvider(user.uid));
                             await ref.read(authServiceProvider).signOut();
                           } catch (e) {
                             if (context.mounted) {
@@ -140,7 +215,7 @@ class AuthGate extends ConsumerWidget {
               
               if (!isOffline) {
                 try {
-                  ref.invalidate(userRoleProvider(user.uid));
+                  ref.invalidate(userProfileProvider(user.uid));
                   await ref.read(authServiceProvider).signOut();
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -176,7 +251,7 @@ class AuthGate extends ConsumerWidget {
                     const Text('Please check your connection to sync your profile.', style: TextStyle(color: AppTheme.textMuted)),
                     const SizedBox(height: 24),
                     OutlinedButton(
-                      onPressed: () => ref.invalidate(userRoleProvider(user.uid)),
+                      onPressed: () => ref.invalidate(userProfileProvider(user.uid)),
                       child: const Text('Retry'),
                     ),
                   ],

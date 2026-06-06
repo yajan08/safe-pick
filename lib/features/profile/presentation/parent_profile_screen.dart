@@ -97,6 +97,63 @@ class ParentProfileScreen extends ConsumerWidget {
     }
   }
 
+  Future<void> _handleDeleteAccount(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: const BorderSide(color: AppTheme.errorRed, width: 2),
+        ),
+        title: const Text(
+          'Delete Account',
+          style: TextStyle(
+            color: AppTheme.errorRed,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Are you absolutely sure you want to permanently delete your account and all associated active student profiles? This action cannot be undone.',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textPrimary)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorRed,
+              foregroundColor: AppTheme.background,
+            ),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ref.read(authServiceProvider).deleteParentAccount();
+      if (context.mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.toString()),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -234,16 +291,29 @@ class ParentProfileScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
-          // Sign Out
+          // Sign Out & Delete
           const Divider(color: AppTheme.border),
           const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: () => _handleSignOut(context, ref),
-            icon: const Icon(Icons.logout_rounded, color: AppTheme.errorRed, size: 20),
-            label: const Text(
-              'Sign Out',
-              style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              TextButton.icon(
+                onPressed: () => _handleSignOut(context, ref),
+                icon: const Icon(Icons.logout_rounded, color: AppTheme.textPrimary, size: 20),
+                label: const Text(
+                  'Sign Out',
+                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _handleDeleteAccount(context, ref),
+                icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed, size: 20),
+                label: const Text(
+                  'Delete Account',
+                  style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -6,14 +6,22 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../students/data/student_model.dart';
 import '../../students/presentation/add_student_screen.dart';
+import '../../trips/data/trip_service.dart';
 
 /// Screen showing full student details with QR code for the parent.
-class StudentDetailScreen extends ConsumerWidget {
+class StudentDetailScreen extends ConsumerStatefulWidget {
   final StudentModel student;
 
   const StudentDetailScreen({super.key, required this.student});
 
-  Future<void> _handleRemove(BuildContext context, WidgetRef ref) async {
+  @override
+  ConsumerState<StudentDetailScreen> createState() => _StudentDetailScreenState();
+}
+
+class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
+  bool _isLoading = false;
+
+  Future<void> _handleRemove() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -27,7 +35,7 @@ class StudentDetailScreen extends ConsumerWidget {
           style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold),
         ),
         content: Text(
-          'Are you sure you want to remove ${student.name}? This will mark their profile as inactive.',
+          'Are you sure you want to remove ${widget.student.name}? This will permanently delete their active profile.',
           style: const TextStyle(color: AppTheme.textSecondary),
         ),
         actions: [
@@ -48,13 +56,25 @@ class StudentDetailScreen extends ConsumerWidget {
     );
 
     if (confirm == true) {
+      setState(() => _isLoading = true);
       try {
-        await ref
-            .read(firestoreProvider)
-            .collection('students')
-            .doc(student.studentId)
-            .update({'status': 'inactive'});
-        if (context.mounted) {
+        final firestore = ref.read(firestoreProvider);
+        
+        // Find all trips where this student is assigned
+        final tripsSnap = await firestore
+            .collection('trips')
+            .where('student_ids', arrayContains: widget.student.studentId)
+            .get();
+            
+        final activeTripIds = tripsSnap.docs.map((doc) => doc.id).toList();
+
+        // Call the deep clean method
+        await ref.read(tripServiceProvider).removeStudentPermanently(
+          studentId: widget.student.studentId,
+          activeTripIds: activeTripIds,
+        );
+
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Student removed successfully'),
@@ -65,7 +85,7 @@ class StudentDetailScreen extends ConsumerWidget {
           Navigator.pop(context); // Go back to profile
         }
       } catch (e) {
-        if (context.mounted) {
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to remove: $e'),
@@ -74,18 +94,20 @@ class StudentDetailScreen extends ConsumerWidget {
             ),
           );
         }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
       }
     }
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Text(student.name),
+        title: Text(widget.student.name),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.pop(context),
@@ -97,7 +119,7 @@ class StudentDetailScreen extends ConsumerWidget {
             onPressed: () {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => AddStudentScreen(student: student),
+                  builder: (_) => AddStudentScreen(student: widget.student),
                 ),
               );
             },
@@ -105,7 +127,9 @@ class StudentDetailScreen extends ConsumerWidget {
         ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
+        child: _isLoading 
+          ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryGold))
+          : SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           child: Column(
@@ -124,13 +148,13 @@ class StudentDetailScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // Note Card (if note exists)
-              if (student.note.isNotEmpty) ...[
+              if (widget.student.note.isNotEmpty) ...[
                 _buildNoteCard(theme),
                 const SizedBox(height: 24),
               ],
 
               // Action Buttons
-              _buildActionButtons(context, ref, theme),
+              _buildActionButtons(theme),
               const SizedBox(height: 32),
             ],
           ),
@@ -163,7 +187,7 @@ class StudentDetailScreen extends ConsumerWidget {
               border: Border.all(color: AppTheme.border),
             ),
             child: QrImageView(
-              data: student.studentId,
+              data: widget.student.studentId,
               version: QrVersions.auto,
               size: 180,
               backgroundColor: Colors.white,
@@ -187,7 +211,7 @@ class StudentDetailScreen extends ConsumerWidget {
               border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
             ),
             child: Text(
-              student.studentId,
+              widget.student.studentId,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: AppTheme.primaryGold,
@@ -225,25 +249,25 @@ class StudentDetailScreen extends ConsumerWidget {
             style: theme.textTheme.labelLarge?.copyWith(color: AppTheme.textSecondary),
           ),
           const SizedBox(height: 16),
-          _buildDetailRow(theme, Icons.person_rounded, 'Name', student.name),
+          _buildDetailRow(theme, Icons.person_rounded, 'Name', widget.student.name),
           const Divider(color: AppTheme.border, height: 24),
-          _buildDetailRow(theme, Icons.school_rounded, 'Grade', student.grade),
+          _buildDetailRow(theme, Icons.school_rounded, 'Grade', widget.student.grade),
           const Divider(color: AppTheme.border, height: 24),
           _buildDetailRow(
             theme,
             Icons.account_balance_rounded,
             'School',
-            student.schoolName.isNotEmpty ? student.schoolName : 'Not set',
+            widget.student.schoolName.isNotEmpty ? widget.student.schoolName : 'Not set',
           ),
           const Divider(color: AppTheme.border, height: 24),
           _buildDetailRow(
             theme,
             Icons.circle,
             'Status',
-            student.currentStatus,
-            valueColor: student.currentStatus == 'At Home'
+            widget.student.currentStatus,
+            valueColor: widget.student.currentStatus == 'At Home'
                 ? AppTheme.successGreen
-                : student.currentStatus == 'In Van'
+                : widget.student.currentStatus == 'In Van'
                     ? AppTheme.warningOrange
                     : AppTheme.primaryGold,
           ),
@@ -284,7 +308,7 @@ class StudentDetailScreen extends ConsumerWidget {
   }
 
   Widget _buildLocationCard(ThemeData theme) {
-    final hasLocation = student.homeLocation != null;
+    final hasLocation = widget.student.homeLocation != null;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -312,7 +336,7 @@ class StudentDetailScreen extends ConsumerWidget {
                 const SizedBox(height: 2),
                 Text(
                   hasLocation
-                      ? 'Lat: ${student.homeLocation!.latitude.toStringAsFixed(4)}, Lng: ${student.homeLocation!.longitude.toStringAsFixed(4)}'
+                      ? 'Lat: ${widget.student.homeLocation!.latitude.toStringAsFixed(4)}, Lng: ${widget.student.homeLocation!.longitude.toStringAsFixed(4)}'
                       : 'Not set',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
@@ -355,7 +379,7 @@ class StudentDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  student.note,
+                  widget.student.note,
                   style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
                 ),
               ],
@@ -366,16 +390,16 @@ class StudentDetailScreen extends ConsumerWidget {
     ).animate().fade(delay: 300.ms).slideY(begin: 0.05);
   }
 
-  Widget _buildActionButtons(BuildContext context, WidgetRef ref, ThemeData theme) {
+  Widget _buildActionButtons(ThemeData theme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Edit Button
         ElevatedButton.icon(
-          onPressed: () {
+          onPressed: _isLoading ? null : () {
             Navigator.of(context).push(
               MaterialPageRoute(
-                builder: (_) => AddStudentScreen(student: student),
+                builder: (_) => AddStudentScreen(student: widget.student),
               ),
             );
           },
@@ -385,7 +409,7 @@ class StudentDetailScreen extends ConsumerWidget {
         const SizedBox(height: 12),
         // Remove Button
         OutlinedButton.icon(
-          onPressed: () => _handleRemove(context, ref),
+          onPressed: _isLoading ? null : () => _handleRemove(),
           icon: const Icon(Icons.person_remove_rounded, color: AppTheme.errorRed),
           label: const Text('Remove Student'),
           style: OutlinedButton.styleFrom(

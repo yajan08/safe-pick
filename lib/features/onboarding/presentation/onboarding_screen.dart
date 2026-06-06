@@ -114,8 +114,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         : ElevatedButton(
                             onPressed: () {
                               _pageController.nextPage(
-                                duration: const Duration(milliseconds: 500),
-                                curve: Curves.easeInOut,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeOut,
                               );
                             },
                             child: const Text('Next'),

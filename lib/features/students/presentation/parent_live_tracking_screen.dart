@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:safe_pick/features/students/data/student_model.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/mqtt_service.dart';
-import '../../map/presentation/parent_map_screen.dart';
+import '../../trips/presentation/utils/marker_generator.dart';
 
 class ParentLiveTrackingScreen extends ConsumerStatefulWidget {
   final StudentModel student;
+  final String sessionId;
 
-  const ParentLiveTrackingScreen({super.key, required this.student});
+  const ParentLiveTrackingScreen({
+    super.key, 
+    required this.student,
+    required this.sessionId,
+  });
 
   @override
   ConsumerState<ParentLiveTrackingScreen> createState() => _ParentLiveTrackingScreenState();
@@ -18,61 +24,72 @@ class ParentLiveTrackingScreen extends ConsumerStatefulWidget {
 class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScreen> {
   final MqttService _mqttService = MqttService();
   bool _isConnected = false;
-
-  // 🛑 HARDCODED FOR TESTING: 
-  // Replace this with the active session ID from your database later!
-  // I grabbed this from your driver terminal logs.
-  final String _testSessionId = '+';
+  
+  GoogleMapController? _mapController;
+  Set<Marker> _markers = {};
+  BitmapDescriptor? _vanMarker;
+  BitmapDescriptor? _homeMarkerCache;
+  
+  double? _distanceInMeters;
+  double _currentSpeedKmh = 0.0;
+  LatLng? _currentVanPosition;
 
   @override
   void initState() {
     super.initState();
+    _initMarkers();
     _connectAndListen();
+  }
+  
+  Future<void> _initMarkers() async {
+    _vanMarker = await MarkerGenerator.createDriverVanMarker();
+    if (widget.student.homeLocation != null) {
+      _homeMarkerCache = await MarkerGenerator.createStudentMarker(widget.student.name, Colors.blue);
+    }
+    _updateMapMarkers();
   }
 
   Future<void> _connectAndListen() async {
-    // 1. Connect to EMQX as the parent
     final success = await _mqttService.connect('parent_${widget.student.studentId}');
-    
     if (success && mounted) {
       setState(() => _isConnected = true);
-      // 2. Tune into the driver's specific radio channel
-      _mqttService.subscribeToTrip(_testSessionId);
+      _mqttService.subscribeToTrip(widget.sessionId);
     }
   }
 
   @override
   void dispose() {
-    // Cleanly hang up when the parent closes the map
     _mqttService.disconnect();
+    _mapController?.dispose();
     super.dispose();
   }
-
-  Future<void> _openMapForStudent() async {
-    try {
-      final db = FirebaseFirestore.instance;
-      final q = await db.collection('daily_sessions').where('status', isEqualTo: 'in_progress').get();
-      String? foundDriverUid;
-      for (var doc in q.docs) {
-        final attendanceRef = doc.reference.collection('attendance').doc(widget.student.studentId);
-        final attendanceSnap = await attendanceRef.get();
-        if (attendanceSnap.exists) {
-          foundDriverUid = doc.data()['driver_uid'] as String?;
-          break;
-        }
-      }
-
-      if (foundDriverUid != null && foundDriverUid.isNotEmpty) {
-        final driverUid = foundDriverUid;
-        if (!mounted) return;
-        Navigator.of(context).push(MaterialPageRoute(builder: (_) => ParentMapScreen(driverUid: driverUid)));
-      } else {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Active driver not found for this student.')));
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to open map: $e')));
+  
+  void _updateMapMarkers() {
+    final Set<Marker> newMarkers = {};
+    
+    // 1. Draw Home Marker
+    if (widget.student.homeLocation != null && _homeMarkerCache != null) {
+      newMarkers.add(Marker(
+        markerId: const MarkerId('home_marker'),
+        position: LatLng(widget.student.homeLocation!.latitude, widget.student.homeLocation!.longitude),
+        icon: _homeMarkerCache!,
+      ));
     }
+    
+    // 2. Draw Van Marker
+    if (_currentVanPosition != null && _vanMarker != null) {
+      newMarkers.add(Marker(
+        markerId: const MarkerId('van_marker'),
+        position: _currentVanPosition!,
+        icon: _vanMarker!,
+        zIndexInt: 100,
+        anchor: const Offset(0.5, 0.5),
+      ));
+    }
+    
+    setState(() {
+      _markers = newMarkers;
+    });
   }
 
   @override
@@ -82,117 +99,145 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
       appBar: AppBar(
         title: Text('${widget.student.name}\'s Live Location'),
         centerTitle: true,
-        actions: [
-          IconButton(
-            tooltip: 'Open Map',
-            onPressed: _openMapForStudent,
-            icon: const Icon(Icons.map_rounded),
-          ),
-        ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Connection Status Indicator
-            Container(
-              padding: const EdgeInsets.all(12),
+      body: Stack(
+        children: [
+          // 1. Google Map Layer
+          StreamBuilder<Map<String, dynamic>>(
+            stream: _mqttService.telemetryStream,
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                final data = snapshot.data!;
+                final lat = data['latitude'] as double;
+                final lng = data['longitude'] as double;
+                final speed = data['speed'] as double;
+
+                _currentVanPosition = LatLng(lat, lng);
+                _currentSpeedKmh = speed * 3.6;
+
+                // Native Distance Calculation
+                if (widget.student.homeLocation != null) {
+                  _distanceInMeters = Geolocator.distanceBetween(
+                    lat, lng, 
+                    widget.student.homeLocation!.latitude, 
+                    widget.student.homeLocation!.longitude
+                  );
+                }
+
+                // Smoothly animate camera
+                if (_mapController != null) {
+                  _mapController!.animateCamera(CameraUpdate.newLatLng(_currentVanPosition!));
+                }
+
+                // Ensure markers are repainted asynchronously
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _updateMapMarkers();
+                });
+              }
+
+              return GoogleMap(
+                initialCameraPosition: CameraPosition(
+                  target: widget.student.homeLocation != null 
+                      ? LatLng(widget.student.homeLocation!.latitude, widget.student.homeLocation!.longitude)
+                      : const LatLng(0, 0),
+                  zoom: 15,
+                ),
+                markers: _markers,
+                onMapCreated: (controller) {
+                  _mapController = controller;
+                  if (_currentVanPosition != null) {
+                    _mapController!.moveCamera(CameraUpdate.newLatLng(_currentVanPosition!));
+                  }
+                },
+                myLocationEnabled: false,
+                myLocationButtonEnabled: false,
+                zoomControlsEnabled: false,
+                compassEnabled: false,
+              );
+            },
+          ),
+          
+          // 2. Glassmorphism Info Overlay
+          Positioned(
+            bottom: 32,
+            left: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: _isConnected ? AppTheme.successGreen.withValues(alpha: 0.1) : AppTheme.warningOrange.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _isConnected ? AppTheme.successGreen : AppTheme.warningOrange),
+                color: Colors.white.withValues(alpha: 0.9),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.1),
+                    blurRadius: 15,
+                    offset: const Offset(0, 5),
+                  )
+                ],
+                border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
               ),
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
-                    _isConnected ? Icons.wifi_tethering_rounded : Icons.wifi_off_rounded,
-                    color: _isConnected ? AppTheme.successGreen : AppTheme.warningOrange,
+                  Row(
+                    children: [
+                      Icon(
+                        _isConnected ? Icons.wifi_tethering_rounded : Icons.wifi_off_rounded,
+                        color: _isConnected ? AppTheme.successGreen : AppTheme.warningOrange,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        _isConnected ? 'Live Telemetry Active' : 'Connecting...',
+                        style: TextStyle(
+                          color: _isConnected ? AppTheme.successGreen : AppTheme.warningOrange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Text(
-                    _isConnected ? 'Connected to Live Server' : 'Connecting to Server...',
-                    style: TextStyle(
-                      color: _isConnected ? AppTheme.successGreen : AppTheme.warningOrange,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildMetric(
+                        Icons.speed_rounded, 
+                        'Speed', 
+                        '${_currentSpeedKmh.toStringAsFixed(1)} km/h'
+                      ),
+                      Container(width: 1, height: 40, color: AppTheme.border),
+                      _buildMetric(
+                        Icons.route_rounded, 
+                        'Distance', 
+                        _distanceInMeters != null 
+                            ? (_distanceInMeters! > 1000 
+                                ? '${(_distanceInMeters! / 1000).toStringAsFixed(1)} km' 
+                                : '${_distanceInMeters!.toStringAsFixed(0)} m')
+                            : 'N/A'
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-            
-            const SizedBox(height: 32),
-
-            // Live Data Listener
-            Expanded(
-              child: StreamBuilder<Map<String, dynamic>>(
-                stream: _mqttService.telemetryStream,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          CircularProgressIndicator(color: AppTheme.primaryGold),
-                          SizedBox(height: 16),
-                          Text('Waiting for van to send GPS data...', style: TextStyle(color: AppTheme.textSecondary)),
-                        ],
-                      ),
-                    );
-                  }
-
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: AppTheme.errorRed)));
-                  }
-
-                  if (snapshot.hasData) {
-                    final data = snapshot.data!;
-                    final lat = data['latitude'] as double;
-                    final lng = data['longitude'] as double;
-                    final speed = data['speed'] as double;
-
-                    // Convert m/s to km/h for readability
-                    final speedKmh = (speed * 3.6).toStringAsFixed(1);
-
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.location_on_rounded, size: 64, color: AppTheme.primaryGold),
-                        const SizedBox(height: 24),
-                        _buildDataRow('Latitude', lat.toStringAsFixed(5)),
-                        const SizedBox(height: 16),
-                        _buildDataRow('Longitude', lng.toStringAsFixed(5)),
-                        const SizedBox(height: 16),
-                        _buildDataRow('Speed', '$speedKmh km/h'),
-                      ],
-                    );
-                  }
-
-                  return const Center(child: Text('No data available yet.'));
-                },
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildDataRow(String label, String value) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 16)),
-          Text(value, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold)),
-        ],
-      ),
+  Widget _buildMetric(IconData icon, String label, String value) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 16, color: AppTheme.textMuted),
+            const SizedBox(width: 4),
+            Text(label, style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(value, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 }
