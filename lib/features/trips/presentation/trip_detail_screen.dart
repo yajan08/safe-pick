@@ -75,7 +75,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         permission = await Geolocator.requestPermission();
       }
       if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
-        final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        final position = await Geolocator.getCurrentPosition(locationSettings: const LocationSettings(accuracy: LocationAccuracy.high));
         if (mounted) {
           setState(() {
             _currentPosition = position;
@@ -827,7 +827,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   onPressed: () => _handleEditTrip(trip),
                 ),
                 loading: () => const SizedBox.shrink(),
-                error: (_, __) => const SizedBox.shrink(),
+                error: (e, st) => const SizedBox.shrink(),
               ),
           ],
         ),
@@ -973,12 +973,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                               filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                               child: Container(
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.85),
+                                  color: Colors.white.withValues(alpha: 0.85),
                                   borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppTheme.border.withOpacity(0.5)),
+                                  border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
                                   boxShadow: [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.04),
+                                      color: Colors.black.withValues(alpha: 0.04),
                                       blurRadius: 16,
                                       offset: const Offset(0, 4),
                                     )
@@ -1012,7 +1012,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                       top: _approachingStudentId != null ? 16 : -200,
                       left: 16,
                       right: 72, // Room for the re-center FAB
-                      child: _approachingStudentId != null && session != null
+                      child: _approachingStudentId != null
                           ? ClipRRect(
                               borderRadius: BorderRadius.circular(16),
                               child: BackdropFilter(
@@ -1020,16 +1020,16 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                 child: Container(
                                   padding: const EdgeInsets.all(16),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.85),
+                                    color: Colors.white.withValues(alpha: 0.85),
                                     borderRadius: BorderRadius.circular(16),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: Colors.black.withOpacity(0.04),
+                                        color: Colors.black.withValues(alpha: 0.04),
                                         blurRadius: 24,
                                         offset: const Offset(0, 8),
                                       ),
                                     ],
-                                    border: Border.all(color: AppTheme.primaryGold.withOpacity(0.3), width: 1),
+                                    border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3), width: 1),
                                   ),
                                   child: Column(
                                     mainAxisSize: MainAxisSize.min,
@@ -1148,9 +1148,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                               return _buildEmptyRosterCard(theme);
                                             }
 
-                                            final attendanceMap = session != null
-                                                ? ref.watch(sessionAttendanceProvider(session.sessionId)).asData?.value ?? const {}
-                                                : const <String, String>{};
+                                            final attendanceMap = ref.watch(sessionAttendanceProvider(session.sessionId)).asData?.value ?? const {};
 
                                             return Column(
                                               children: manifest.asMap().entries.map((entry) {
@@ -1220,8 +1218,8 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 8))],
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

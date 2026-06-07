@@ -1,9 +1,7 @@
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:safe_pick/features/students/presentation/parent_live_tracking_screen.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -101,7 +99,7 @@ class ParentDashboard extends ConsumerWidget {
             );
 
             return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
@@ -135,7 +133,7 @@ class ParentDashboard extends ConsumerWidget {
             );
           },
           loading: () => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -157,17 +155,32 @@ class ParentDashboard extends ConsumerWidget {
 
   Widget _buildHeader(BuildContext context, WidgetRef ref, ThemeData theme, List<StudentModel> students, StudentModel selected) {
     if (students.length == 1) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            'Your Child',
-            style: theme.textTheme.labelLarge?.copyWith(color: AppTheme.textSecondary),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryGold.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.child_care_rounded, color: AppTheme.primaryGold, size: 24),
           ),
-          const SizedBox(height: 4),
-          Text(
-            selected.name,
-            style: theme.textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.bold),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Tracking',
+                  style: theme.textTheme.labelMedium?.copyWith(color: AppTheme.textSecondary),
+                ),
+                Text(
+                  selected.name,
+                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, height: 1.1),
+                ),
+              ],
+            ),
           ),
         ],
       ).animate().fade().slideY(begin: -0.05);
@@ -216,14 +229,14 @@ class ParentDashboard extends ConsumerWidget {
 
   Widget _buildProfileCard(BuildContext context, ThemeData theme, StudentModel student) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -240,7 +253,7 @@ class ParentDashboard extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryGold.withOpacity(0.08),
+                    color: AppTheme.primaryGold.withValues(alpha: 0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -321,10 +334,10 @@ class ParentDashboard extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
+                border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -369,10 +382,10 @@ class ParentDashboard extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
+                border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
+                    color: Colors.black.withValues(alpha: 0.04),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -459,10 +472,10 @@ class ParentDashboard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: AppTheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
+          border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),

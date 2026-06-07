@@ -31,20 +31,20 @@ class _NoStudentsPainter extends CustomPainter {
 
     // Soft background circle
     final bgPaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.06)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.06)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(cx, cy), r, bgPaint);
 
     // Dashed orbit ring
     final orbitPaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.15)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     _drawDashedCircle(canvas, Offset(cx, cy), r * 0.85, orbitPaint);
 
     // Central figure (parent silhouette)
     final figurePaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.5)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.5)
       ..style = PaintingStyle.fill;
 
     // Head
@@ -58,7 +58,7 @@ class _NoStudentsPainter extends CustomPainter {
 
     // Small "+" indicators floating around
     final plusPaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.35)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.35)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round;
@@ -117,13 +117,13 @@ class _NoTripsPainter extends CustomPainter {
 
     // Soft background
     final bgPaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.06)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.06)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(cx, cy), r, bgPaint);
 
     // Road path
     final roadPaint = Paint()
-      ..color = AppTheme.textMuted.withOpacity(0.15)
+      ..color = AppTheme.textMuted.withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = r * 0.18
       ..strokeCap = StrokeCap.round;
@@ -136,7 +136,7 @@ class _NoTripsPainter extends CustomPainter {
 
     // Dashed center line
     final dashPaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.25)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
       ..strokeCap = StrokeCap.round;
@@ -150,7 +150,7 @@ class _NoTripsPainter extends CustomPainter {
 
     // Van silhouette
     final vanPaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.4)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.4)
       ..style = PaintingStyle.fill;
 
     final vanX = cx - r * 0.05;
@@ -175,7 +175,7 @@ class _NoTripsPainter extends CustomPainter {
 
     // Wheels
     final wheelPaint = Paint()
-      ..color = AppTheme.textSecondary.withOpacity(0.3)
+      ..color = AppTheme.textSecondary.withValues(alpha: 0.3)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(vanX - vanW * 0.25, vanY + vanH * 0.5), r * 0.04, wheelPaint);
     canvas.drawCircle(Offset(vanX + vanW * 0.25, vanY + vanH * 0.5), r * 0.04, wheelPaint);
@@ -225,7 +225,7 @@ class _LiveTrackingPainter extends CustomPainter {
     // Pulse rings
     for (var i = 3; i >= 1; i--) {
       final ringPaint = Paint()
-        ..color = AppTheme.primaryGold.withOpacity(0.06 * i)
+        ..color = AppTheme.primaryGold.withValues(alpha: 0.06 * i)
         ..style = PaintingStyle.fill;
       canvas.drawCircle(Offset(cx, cy), r * (0.5 + i * 0.2), ringPaint);
     }
@@ -284,20 +284,20 @@ class _StudentProfilePainter extends CustomPainter {
 
     // Outer ring
     final ringPaint = Paint()
-      ..color = accent.withOpacity(0.12)
+      ..color = accent.withValues(alpha: 0.12)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(cx, cy), r, ringPaint);
 
     // Inner highlight ring
     final innerRing = Paint()
-      ..color = accent.withOpacity(0.08)
+      ..color = accent.withValues(alpha: 0.08)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     canvas.drawCircle(Offset(cx, cy), r * 0.75, innerRing);
 
     // Backpack shape
     final bpPaint = Paint()
-      ..color = accent.withOpacity(0.45)
+      ..color = accent.withValues(alpha: 0.45)
       ..style = PaintingStyle.fill;
 
     final bp = RRect.fromRectAndRadius(
@@ -316,7 +316,7 @@ class _StudentProfilePainter extends CustomPainter {
 
     // Straps
     final strapPaint = Paint()
-      ..color = accent.withOpacity(0.25)
+      ..color = accent.withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5
       ..strokeCap = StrokeCap.round;
@@ -354,7 +354,7 @@ class _SafetyShieldPainter extends CustomPainter {
 
     // Shield shape
     final shieldPaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.12)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.12)
       ..style = PaintingStyle.fill;
 
     final shieldPath = Path()
@@ -368,14 +368,14 @@ class _SafetyShieldPainter extends CustomPainter {
 
     // Shield outline
     final outlinePaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.25)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.25)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.5;
     canvas.drawPath(shieldPath, outlinePaint);
 
     // Checkmark
     final checkPaint = Paint()
-      ..color = AppTheme.successGreen.withOpacity(0.6)
+      ..color = AppTheme.successGreen.withValues(alpha: 0.6)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round
@@ -419,13 +419,13 @@ class _ErrorStatePainter extends CustomPainter {
 
     // Soft background
     final bgPaint = Paint()
-      ..color = AppTheme.errorRed.withOpacity(0.06)
+      ..color = AppTheme.errorRed.withValues(alpha: 0.06)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(cx, cy), r, bgPaint);
 
     // Triangle warning
     final triPaint = Paint()
-      ..color = AppTheme.errorRed.withOpacity(0.15)
+      ..color = AppTheme.errorRed.withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.0
       ..strokeJoin = StrokeJoin.round;
@@ -439,14 +439,14 @@ class _ErrorStatePainter extends CustomPainter {
 
     // Exclamation mark
     final exPaint = Paint()
-      ..color = AppTheme.errorRed.withOpacity(0.4)
+      ..color = AppTheme.errorRed.withValues(alpha: 0.4)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2.5
       ..strokeCap = StrokeCap.round;
     canvas.drawLine(Offset(cx, cy - r * 0.2), Offset(cx, cy + r * 0.08), exPaint);
 
     final dotPaint = Paint()
-      ..color = AppTheme.errorRed.withOpacity(0.4)
+      ..color = AppTheme.errorRed.withValues(alpha: 0.4)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(cx, cy + r * 0.22), 2.5, dotPaint);
   }
@@ -481,14 +481,14 @@ class _LoginIllustrationPainter extends CustomPainter {
 
     // Soft breathable background circle
     final bgPaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.04)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.04)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(cx, cy), r, bgPaint);
 
     // Orbit rings for "calm connection"
     for (var i = 1; i <= 2; i++) {
       final ringPaint = Paint()
-        ..color = AppTheme.primaryGold.withOpacity(0.08)
+        ..color = AppTheme.primaryGold.withValues(alpha: 0.08)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.0;
       canvas.drawCircle(Offset(cx, cy), r * (0.6 + i * 0.2), ringPaint);
@@ -496,7 +496,7 @@ class _LoginIllustrationPainter extends CustomPainter {
 
     // Bus silhouette
     final busPaint = Paint()
-      ..color = AppTheme.primaryGold.withOpacity(0.6)
+      ..color = AppTheme.primaryGold.withValues(alpha: 0.6)
       ..style = PaintingStyle.fill;
     
     final busW = r * 0.6;
@@ -510,7 +510,7 @@ class _LoginIllustrationPainter extends CustomPainter {
 
     // Windshield
     final glassPaint = Paint()
-      ..color = Colors.white.withOpacity(0.9)
+      ..color = Colors.white.withValues(alpha: 0.9)
       ..style = PaintingStyle.fill;
     final glassRect = RRect.fromRectAndRadius(
       Rect.fromCenter(center: Offset(cx + busW * 0.2, cy - busH * 0.1), width: busW * 0.25, height: busH * 0.3),
@@ -520,7 +520,7 @@ class _LoginIllustrationPainter extends CustomPainter {
 
     // Wheels
     final wheelPaint = Paint()
-      ..color = AppTheme.textSecondary.withOpacity(0.4)
+      ..color = AppTheme.textSecondary.withValues(alpha: 0.4)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(cx - busW * 0.25, cy + busH * 0.5), r * 0.1, wheelPaint);
     canvas.drawCircle(Offset(cx + busW * 0.25, cy + busH * 0.5), r * 0.1, wheelPaint);

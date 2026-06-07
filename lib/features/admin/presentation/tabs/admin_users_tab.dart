@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../data/admin_service.dart';
+import '../../data/audit_service.dart';
 import '../../../auth/data/user_model.dart';
+import '../../../trips/data/daily_session_model.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../admin_dashboard_screen.dart';
 
 class AdminUsersTab extends ConsumerStatefulWidget {
   const AdminUsersTab({super.key});
@@ -13,221 +16,436 @@ class AdminUsersTab extends ConsumerStatefulWidget {
 }
 
 class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
-  final ScrollController _scrollController = ScrollController();
-  final List<UserModel> _users = [];
-  bool _isLoading = false;
-  bool _hasMore = true;
-  DocumentSnapshot? _lastDoc;
-  String _selectedRole = 'All';
+  String _filterRole = 'All';
+  String _searchQuery = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _fetchUsers();
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-        _fetchUsers();
-      }
-    });
+  List<UserModel> _applyFilters(List<UserModel> users) {
+    var filtered = users;
+    if (_filterRole == 'Drivers') {
+      filtered = filtered.where((u) => u.role == 'driver').toList();
+    } else if (_filterRole == 'Parents') {
+      filtered = filtered.where((u) => u.role == 'parent').toList();
+    } else if (_filterRole == 'Admins') {
+      filtered = filtered.where((u) => u.role == 'admin').toList();
+    }
+    if (_searchQuery.isNotEmpty) {
+      final q = _searchQuery.toLowerCase();
+      filtered = filtered.where((u) =>
+          u.name.toLowerCase().contains(q) ||
+          u.phone.toLowerCase().contains(q) ||
+          u.uid.toLowerCase().contains(q)).toList();
+    }
+    return filtered;
   }
 
-  Future<void> _fetchUsers({bool refresh = false}) async {
-    if (_isLoading || (!_hasMore && !refresh)) return;
-
-    if (refresh) {
-      setState(() {
-        _users.clear();
-        _lastDoc = null;
-        _hasMore = true;
-      });
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final service = ref.read(adminServiceProvider);
-      // We do a raw firestore query here to get the DocumentSnapshot for cursor pagination
-      final firestore = FirebaseFirestore.instance;
-      Query query = firestore.collection('users').orderBy('created_at', descending: true);
-      
-      if (_selectedRole != 'All') {
-        query = firestore.collection('users')
-            .where('role', isEqualTo: _selectedRole.toLowerCase())
-            .orderBy('created_at', descending: true);
-      }
-
-      if (_lastDoc != null) {
-        query = query.startAfterDocument(_lastDoc!);
-      }
-
-      final snap = await query.limit(20).get();
-      
-      if (snap.docs.isNotEmpty) {
-        _lastDoc = snap.docs.last;
-        final newUsers = snap.docs.map((d) => UserModel.fromJson(d.data() as Map<String, dynamic>)).toList();
-        setState(() {
-          _users.addAll(newUsers);
-          if (newUsers.length < 20) _hasMore = false;
-        });
-      } else {
-        setState(() => _hasMore = false);
-      }
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error fetching users: $e')));
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  void _showUserDetails(UserModel user) {
+  void _openUserDetail(UserModel user) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(24),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
-            ),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                CircleAvatar(radius: 24, backgroundColor: const Color(0xFF1A237E).withOpacity(0.1), child: Icon(Icons.person_rounded, color: const Color(0xFF1A237E))),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(user.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                      Text(user.role.toUpperCase(), style: TextStyle(color: Colors.grey[600], fontSize: 13, letterSpacing: 1)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            _DetailRow(icon: Icons.email_rounded, label: 'Email UID', value: user.uid), // In a real app we might fetch email from auth or store it in user doc
-            _DetailRow(icon: Icons.phone_rounded, label: 'Phone', value: user.phone),
-            _DetailRow(icon: Icons.calendar_today_rounded, label: 'Joined', value: user.createdAt.toString().split(' ')[0]),
-            if (user.role == 'driver' && user.vehicleNumber != null)
-              _DetailRow(icon: Icons.directions_car_rounded, label: 'Vehicle', value: user.vehicleNumber!),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context),
-                style: OutlinedButton.styleFrom(side: const BorderSide(color: Color(0xFF1A237E))),
-                child: const Text('Close', style: TextStyle(color: Color(0xFF1A237E))),
-              ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+      builder: (_) => _UserDetailSheet(user: user),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final usersAsync = ref.watch(adminUsersProvider);
+
     return Column(
       children: [
+        // ── Search ────────────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10)],
-                  ),
-                  child: TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Search users...',
-                      prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                      filled: true,
-                      fillColor: Colors.white,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: TextField(
+            onChanged: (v) => setState(() => _searchQuery = v),
+            decoration: InputDecoration(
+              hintText: 'Search by name or phone…',
+              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
+              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
+              filled: true, fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.4))),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.4))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kAdminNavy, width: 1.5)),
+            ),
           ),
         ),
+
+        // ── Filter chips ──────────────────────────────────────────────────
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           child: Row(
             children: ['All', 'Parents', 'Drivers', 'Admins'].map((role) {
-              final isSelected = _selectedRole == role;
+              final sel = _filterRole == role;
               return Padding(
-                padding: const EdgeInsets.only(right: 8.0),
-                child: FilterChip(
+                padding: const EdgeInsets.only(right: 8),
+                child: ChoiceChip(
                   label: Text(role),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    if (selected) {
-                      setState(() => _selectedRole = role);
-                      _fetchUsers(refresh: true);
-                    }
-                  },
+                  selected: sel,
+                  onSelected: (_) => setState(() => _filterRole = role),
                   backgroundColor: Colors.white,
-                  selectedColor: const Color(0xFF1A237E).withOpacity(0.1),
-                  checkmarkColor: const Color(0xFF1A237E),
-                  labelStyle: TextStyle(color: isSelected ? const Color(0xFF1A237E) : Colors.grey[700], fontWeight: isSelected ? FontWeight.bold : FontWeight.normal),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: isSelected ? const Color(0xFF1A237E) : AppTheme.border)),
+                  selectedColor: kAdminNavy.withValues(alpha: 0.08),
+                  checkmarkColor: kAdminNavy,
+                  labelStyle: TextStyle(
+                    color: sel ? kAdminNavy : Colors.grey[600],
+                    fontWeight: sel ? FontWeight.bold : FontWeight.normal, fontSize: 13,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                    side: BorderSide(color: sel ? kAdminNavy.withValues(alpha: 0.3) : AppTheme.border.withValues(alpha: 0.5)),
+                  ),
                 ),
               );
             }).toList(),
           ),
         ),
-        const SizedBox(height: 8),
+
+        // ── List ──────────────────────────────────────────────────────────
         Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => _fetchUsers(refresh: true),
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(20),
-              itemCount: _users.length + (_hasMore ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (index == _users.length) {
-                  return const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()));
-                }
-                final user = _users[index];
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: AppTheme.border.withOpacity(0.5))),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    leading: CircleAvatar(
-                      backgroundColor: user.role == 'driver' ? Colors.teal.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
-                      child: Icon(user.role == 'driver' ? Icons.directions_car_rounded : Icons.person_rounded, 
-                        color: user.role == 'driver' ? Colors.teal : Colors.blue),
-                    ),
-                    title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.bold)),
-                    subtitle: Text(user.phone.isEmpty ? 'No phone' : user.phone, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-                    trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-                    onTap: () => _showUserDetails(user),
-                  ),
+          child: usersAsync.when(
+            data: (allUsers) {
+              final users = _applyFilters(allUsers);
+              if (users.isEmpty) {
+                return Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.search_off_rounded, size: 48, color: Colors.grey[300]),
+                    const SizedBox(height: 12),
+                    Text(_searchQuery.isNotEmpty ? 'No users match your search.' : 'No users found.',
+                        style: TextStyle(color: Colors.grey[500])),
+                  ]),
                 );
-              },
-            ),
+              }
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                itemCount: users.length,
+                itemBuilder: (context, i) {
+                  final user = users[i];
+                  return _UserTile(user: user, onTap: () => _openUserDetail(user))
+                      .animate().fade(delay: Duration(milliseconds: 30 * i.clamp(0, 10))).slideX(begin: 0.02);
+                },
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator(color: kAdminNavy)),
+            error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(32), child: Text('Error: $e', style: const TextStyle(color: Colors.red)))),
           ),
         ),
       ],
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// User tile
+// ──────────────────────────────────────────────────────────────────────────────
+
+class _UserTile extends StatelessWidget {
+  final UserModel user;
+  final VoidCallback onTap;
+  const _UserTile({required this.user, required this.onTap});
+
+  Color get _roleColor => user.role == 'driver' ? Colors.teal : user.role == 'admin' ? kAdminNavy : Colors.blue;
+  IconData get _roleIcon => user.role == 'driver' ? Icons.directions_car_rounded : user.role == 'admin' ? Icons.admin_panel_settings_rounded : Icons.person_rounded;
+
+  @override
+  Widget build(BuildContext context) {
+    final isInactive = user.status == 'suspended' || user.status == 'inactive';
+    return Opacity(
+      opacity: isInactive ? 0.55 : 1.0,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 12, offset: const Offset(0, 4))],
+          border: Border.all(color: AppTheme.border.withValues(alpha: 0.35)),
+        ),
+        child: ListTile(
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          leading: CircleAvatar(radius: 20, backgroundColor: _roleColor.withValues(alpha: 0.08), child: Icon(_roleIcon, color: _roleColor, size: 20)),
+          title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+          subtitle: Row(
+            children: [
+              Text(user.phone.isNotEmpty ? user.phone : user.role.toUpperCase(), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+              if (isInactive) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                  decoration: BoxDecoration(color: AppTheme.errorRed.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
+                  child: const Text('SUSPENDED', style: TextStyle(color: AppTheme.errorRed, fontSize: 9, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            ],
+          ),
+          trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400], size: 20),
+          onTap: onTap,
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// User detail sheet with CRUD
+// ──────────────────────────────────────────────────────────────────────────────
+
+class _UserDetailSheet extends ConsumerStatefulWidget {
+  final UserModel user;
+  const _UserDetailSheet({required this.user});
+
+  @override
+  ConsumerState<_UserDetailSheet> createState() => _UserDetailSheetState();
+}
+
+class _UserDetailSheetState extends ConsumerState<_UserDetailSheet> {
+  late TextEditingController _nameCtrl;
+  late TextEditingController _phoneCtrl;
+  late TextEditingController _vehicleCtrl;
+  bool _isEditing = false;
+  bool _isSaving = false;
+  bool _isTogglingStatus = false;
+  List<DailySessionModel> _driverSessions = [];
+  bool _isLoadingSessions = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(text: widget.user.name);
+    _phoneCtrl = TextEditingController(text: widget.user.phone);
+    _vehicleCtrl = TextEditingController(text: widget.user.vehicleNumbers.join(', '));
+    if (widget.user.role == 'driver') _loadDriverSessions();
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _phoneCtrl.dispose();
+    _vehicleCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadDriverSessions() async {
+    setState(() => _isLoadingSessions = true);
+    try {
+      final audit = ref.read(auditServiceProvider);
+      _driverSessions = await audit.getDriverSessions(widget.user.uid);
+    } catch (_) {}
+    if (mounted) setState(() => _isLoadingSessions = false);
+  }
+
+  Future<void> _toggleStatus() async {
+    setState(() => _isTogglingStatus = true);
+    try {
+      final audit = ref.read(auditServiceProvider);
+      await audit.toggleUserStatus(widget.user.uid, widget.user.status);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Status updated.'), behavior: SnackBarBehavior.floating, backgroundColor: AppTheme.successGreen),
+        );
+        Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+    }
+    if (mounted) setState(() => _isTogglingStatus = false);
+  }
+
+  Future<void> _saveEdits() async {
+    setState(() => _isSaving = true);
+    try {
+      final updates = <String, dynamic>{};
+      if (_nameCtrl.text.trim() != widget.user.name) updates['name'] = _nameCtrl.text.trim();
+      if (_phoneCtrl.text.trim() != widget.user.phone) updates['phone'] = _phoneCtrl.text.trim();
+      if (widget.user.role == 'driver') {
+        final vehicles = _vehicleCtrl.text.split(',').map((v) => v.trim()).where((v) => v.isNotEmpty).toList();
+        updates['vehicle_numbers'] = vehicles;
+        if (vehicles.isNotEmpty) updates['vehicle_number'] = vehicles.first;
+      }
+      if (updates.isNotEmpty) {
+        final audit = ref.read(auditServiceProvider);
+        await audit.updateUserDetails(widget.user.uid, updates);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Details saved.'), behavior: SnackBarBehavior.floating, backgroundColor: AppTheme.successGreen),
+          );
+          Navigator.pop(context);
+        }
+      } else {
+        setState(() => _isEditing = false);
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+    }
+    if (mounted) setState(() => _isSaving = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isActive = widget.user.status == 'active';
+
+    return Container(
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle
+            Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 24),
+
+            // Avatar + role
+            Row(
+              children: [
+                CircleAvatar(radius: 26, backgroundColor: kAdminNavy.withValues(alpha: 0.08), child: const Icon(Icons.person_rounded, color: kAdminNavy, size: 26)),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(widget.user.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 2),
+                    Text(widget.user.role.toUpperCase(), style: TextStyle(color: Colors.grey[500], fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w500)),
+                  ]),
+                ),
+                if (!_isEditing)
+                  IconButton(icon: const Icon(Icons.edit_rounded, color: kAdminNavy, size: 20), onPressed: () => setState(() => _isEditing = true)),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // ── Status toggle ─────────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: isActive ? AppTheme.successGreen.withValues(alpha: 0.04) : AppTheme.errorRed.withValues(alpha: 0.04),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: isActive ? AppTheme.successGreen.withValues(alpha: 0.2) : AppTheme.errorRed.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(isActive ? Icons.check_circle_rounded : Icons.block_rounded, color: isActive ? AppTheme.successGreen : AppTheme.errorRed, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(isActive ? 'Active' : 'Suspended', style: TextStyle(fontWeight: FontWeight.w600, color: isActive ? AppTheme.successGreen : AppTheme.errorRed))),
+                  _isTogglingStatus
+                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                      : Switch(
+                          value: isActive,
+                          activeTrackColor: AppTheme.successGreen.withValues(alpha: 0.3),
+                          thumbColor: WidgetStateProperty.resolveWith((states) => 
+                            states.contains(WidgetState.selected) ? AppTheme.successGreen : Colors.grey),
+                          onChanged: (_) => _toggleStatus(),
+                        ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Editable / Read-only fields ───────────────────────────────
+            if (_isEditing) ...[
+              _EditField(label: 'Name', controller: _nameCtrl),
+              const SizedBox(height: 12),
+              _EditField(label: 'Phone', controller: _phoneCtrl, keyboardType: TextInputType.phone),
+              if (widget.user.role == 'driver') ...[
+                const SizedBox(height: 12),
+                _EditField(label: 'Vehicles (comma-separated)', controller: _vehicleCtrl),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => setState(() => _isEditing = false),
+                      style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isSaving ? null : _saveEdits,
+                      style: ElevatedButton.styleFrom(backgroundColor: kAdminNavy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                      child: _isSaving
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Text('Save', style: TextStyle(color: Colors.white)),
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              _DetailRow(icon: Icons.fingerprint_rounded, label: 'UID', value: widget.user.uid),
+              _DetailRow(icon: Icons.phone_rounded, label: 'Phone', value: widget.user.phone.isNotEmpty ? widget.user.phone : '—'),
+              _DetailRow(icon: Icons.calendar_today_rounded, label: 'Joined', value: widget.user.createdAt.toString().split(' ')[0]),
+              if (widget.user.role == 'driver' && widget.user.vehicleNumbers.isNotEmpty)
+                _DetailRow(icon: Icons.directions_car_rounded, label: 'Vehicles', value: widget.user.vehicleNumbers.join(', ')),
+            ],
+
+            // ── Driver metrics ────────────────────────────────────────────
+            if (widget.user.role == 'driver') ...[
+              const SizedBox(height: 24),
+              const Divider(),
+              const SizedBox(height: 12),
+              const Text('Trip History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              const SizedBox(height: 12),
+              if (_isLoadingSessions)
+                const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: kAdminNavy)))
+              else if (_driverSessions.isEmpty)
+                Text('No trip sessions recorded.', style: TextStyle(color: Colors.grey[500], fontSize: 13))
+              else ...[
+                _DriverMetricRow(label: 'Total Sessions', value: '${_driverSessions.length}'),
+                _DriverMetricRow(
+                  label: 'Completed',
+                  value: '${_driverSessions.where((s) => s.status == 'completed').length}',
+                ),
+                _DriverMetricRow(label: 'Active Vehicles', value: widget.user.vehicleNumbers.isNotEmpty ? widget.user.vehicleNumbers.join(', ') : '—'),
+              ],
+            ],
+
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity, height: 50,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: kAdminNavy.withValues(alpha: 0.3)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                ),
+                child: const Text('Close', style: TextStyle(color: kAdminNavy)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Shared private widgets
+// ──────────────────────────────────────────────────────────────────────────────
+
+class _EditField extends StatelessWidget {
+  final String label;
+  final TextEditingController controller;
+  final TextInputType keyboardType;
+  const _EditField({required this.label, required this.controller, this.keyboardType = TextInputType.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.4))),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.4))),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kAdminNavy, width: 1.5)),
+      ),
     );
   }
 }
@@ -236,22 +454,36 @@ class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-
   const _DetailRow({required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 16.0),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.grey[400], size: 20),
-          const SizedBox(width: 12),
-          Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 14)),
-          const Spacer(),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
-        ],
-      ),
+      padding: const EdgeInsets.only(bottom: 14),
+      child: Row(children: [
+        Icon(icon, color: Colors.grey[400], size: 18),
+        const SizedBox(width: 12),
+        Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+        const Spacer(),
+        Flexible(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13), overflow: TextOverflow.ellipsis, textAlign: TextAlign.end)),
+      ]),
+    );
+  }
+}
+
+class _DriverMetricRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _DriverMetricRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+      ]),
     );
   }
 }

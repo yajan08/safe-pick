@@ -108,7 +108,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   tag: 'app_logo',
                   child: SvgPicture.asset(
                     'assets/images/logo.svg',
-                    height: 100,
+                    height: 90,
                   ),
                 ).animate().fade().slideY(begin: -0.05),
                 const SizedBox(height: 16),
@@ -128,12 +128,12 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ).animate().fade(delay: 50.ms).slideY(begin: -0.05),
-                const SizedBox(height: 36),
+                const SizedBox(height: 24),
 
                 // Registration Form Card
                 Card(
                   child: Padding(
-                    padding: const EdgeInsets.all(24.0),
+                    padding: const EdgeInsets.all(20.0),
                     child: Form(
                       key: _formKey,
                       child: Column(
@@ -327,7 +327,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
                           // Submit Sign Up Button
                           SizedBox(
-                            height: 56,
+                            height: 52,
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _handleSignUp,
                               child: _isLoading

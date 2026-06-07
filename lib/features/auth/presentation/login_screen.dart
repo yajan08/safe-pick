@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/widgets/illustrations.dart';
+
 import 'sign_up_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -66,16 +66,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           builder: (context, constraints) {
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 48.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight - 96),
+                constraints: BoxConstraints(minHeight: constraints.maxHeight - 48),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Top Branding Section
-                    const LoginIllustration(size: 120),
-                    const SizedBox(height: 32),
+                    Hero(
+                      tag: 'app_logo',
+                      child: SvgPicture.asset(
+                        'assets/images/logo.svg',
+                        height: 90,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     Text(
                       'SafePick',
                       style: theme.textTheme.headlineMedium?.copyWith(
@@ -90,12 +96,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       style: theme.textTheme.bodyMedium,
                       textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 56),
+                    const SizedBox(height: 32),
 
                     // Form Container Card
                     Card(
                       child: Padding(
-                        padding: const EdgeInsets.all(32.0),
+                        padding: const EdgeInsets.all(24.0),
                         child: Form(
                           key: _formKey,
                           child: Column(
@@ -211,7 +217,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                               // Submit Button
                               SizedBox(
-                                height: 56,
+                                height: 52,
                                 child: ElevatedButton(
                                   onPressed: _isLoading ? null : _handleLogin,
                                   child: _isLoading
