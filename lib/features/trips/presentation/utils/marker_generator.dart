@@ -5,28 +5,40 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../../core/theme/app_theme.dart';
 
 class MarkerGenerator {
-  /// Generates a distinct van marker indicating the driver's live position.
+  /// Generates a distinct van marker (teardrop) indicating the driver's live position.
   static Future<BitmapDescriptor> createDriverVanMarker() async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
-    const double size = 120.0;
+    const double size = 56.0; 
 
-    // Draw circular backdrop
     final Paint paint = Paint()..color = AppTheme.primaryGold;
-    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2, paint);
+    final Path teardropPath = Path();
+    
+    final double radius = size / 2.8;
+    final Offset center = Offset(size / 2, radius + 2);
+    
+    // Draw top arc
+    teardropPath.addArc(Rect.fromCircle(center: center, radius: radius), 3.14159, 3.14159);
+    // Draw bezier curves to bottom point
+    teardropPath.moveTo(center.dx - radius, center.dy);
+    teardropPath.quadraticBezierTo(center.dx - radius, center.dy + radius * 1.2, center.dx, size - 2);
+    teardropPath.quadraticBezierTo(center.dx + radius, center.dy + radius * 1.2, center.dx + radius, center.dy);
+    teardropPath.close();
+
+    canvas.drawShadow(teardropPath, Colors.black, 4.0, true);
+    canvas.drawPath(teardropPath, paint);
 
     final Paint borderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 6.0;
-    canvas.drawCircle(const Offset(size / 2, size / 2), size / 2, borderPaint);
+      ..strokeWidth = 2.5;
+    canvas.drawPath(teardropPath, borderPaint);
 
-    // Draw the bus icon
     TextPainter textPainter = TextPainter(textDirection: TextDirection.ltr);
     textPainter.text = TextSpan(
       text: String.fromCharCode(Icons.directions_bus_rounded.codePoint),
       style: TextStyle(
-        fontSize: size * 0.6,
+        fontSize: radius * 1.1,
         fontFamily: Icons.directions_bus_rounded.fontFamily,
         package: Icons.directions_bus_rounded.fontPackage,
         color: Colors.white,
@@ -36,8 +48,8 @@ class MarkerGenerator {
     textPainter.paint(
       canvas,
       Offset(
-        (size - textPainter.width) / 2,
-        (size - textPainter.height) / 2,
+        center.dx - (textPainter.width / 2),
+        center.dy - (textPainter.height / 2),
       ),
     );
 
@@ -46,24 +58,26 @@ class MarkerGenerator {
     return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
   }
 
-  /// Generates a student marker with an icon and a text pill containing their name.
+  /// Generates a student marker with an icon and a text pill containing their short name.
   static Future<BitmapDescriptor> createStudentMarker(String name, Color statusColor) async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
 
-    const double iconSize = 90.0;
-    const double fontSize = 36.0;
-    const double paddingX = 24.0;
-    const double paddingY = 16.0;
+    const double iconSize = 40.0;
+    const double fontSize = 14.0;
+    const double paddingX = 12.0;
+    const double paddingY = 6.0;
 
-    // Text configuration
+    // Use short name (first name)
+    final shortName = name.split(' ').first;
+
     TextPainter textPainter = TextPainter(textDirection: TextDirection.ltr);
     textPainter.text = TextSpan(
-      text: name,
+      text: shortName,
       style: const TextStyle(
         fontSize: fontSize,
         fontWeight: FontWeight.bold,
-        color: Colors.white,
+        color: Colors.black87,
         fontFamily: 'Inter',
       ),
     );
@@ -72,15 +86,14 @@ class MarkerGenerator {
     final double textWidth = textPainter.width;
     final double textHeight = textPainter.height;
 
-    // Calculate overall canvas dimensions
     final double pillWidth = textWidth + (paddingX * 2);
     final double pillHeight = textHeight + (paddingY * 2);
 
     final double canvasWidth = pillWidth > iconSize ? pillWidth : iconSize;
-    final double canvasHeight = pillHeight + iconSize + 10.0; // 10px gap
+    final double canvasHeight = pillHeight + iconSize + 6.0;
 
-    // 1. Draw Text Pill
-    final Paint pillPaint = Paint()..color = statusColor;
+    // 1. Draw Text Pill (White background)
+    final Paint pillPaint = Paint()..color = Colors.white;
     final RRect pillRect = RRect.fromLTRBR(
       (canvasWidth - pillWidth) / 2,
       0,
@@ -89,11 +102,9 @@ class MarkerGenerator {
       Radius.circular(pillHeight / 2),
     );
 
-    // Drop shadow for text pill
-    canvas.drawShadow(Path()..addRRect(pillRect), Colors.black, 4.0, true);
+    canvas.drawShadow(Path()..addRRect(pillRect), Colors.black, 2.0, true);
     canvas.drawRRect(pillRect, pillPaint);
 
-    // Draw text inside pill
     textPainter.paint(
       canvas,
       Offset(
@@ -103,21 +114,19 @@ class MarkerGenerator {
     );
 
     // 2. Draw Marker Pin
-    final double iconTopY = pillHeight + 10.0;
+    final double iconTopY = pillHeight + 6.0;
     final Paint pinPaint = Paint()..color = Colors.white;
     final Offset pinCenter = Offset(canvasWidth / 2, iconTopY + (iconSize / 2));
     
-    // Draw pin drop shadow
     canvas.drawShadow(
       Path()..addOval(Rect.fromCircle(center: pinCenter, radius: iconSize / 2)),
-      Colors.black, 4.0, true,
+      Colors.black, 3.0, true,
     );
     canvas.drawCircle(pinCenter, iconSize / 2, pinPaint);
 
     final Paint innerPinPaint = Paint()..color = statusColor;
-    canvas.drawCircle(pinCenter, (iconSize / 2) - 8, innerPinPaint);
+    canvas.drawCircle(pinCenter, (iconSize / 2) - 4, innerPinPaint);
 
-    // Draw home icon
     TextPainter iconPainter = TextPainter(textDirection: TextDirection.ltr);
     iconPainter.text = TextSpan(
       text: String.fromCharCode(Icons.home_rounded.codePoint),

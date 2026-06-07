@@ -9,7 +9,6 @@ void main() async {
   // Ensure Flutter engine bindings are initialized prior to Firebase boots
   WidgetsFlutterBinding.ensureInitialized();
   
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );

@@ -6,6 +6,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../students/presentation/parent_dashboard.dart';
 import '../../trips/presentation/driver_dashboard.dart';
 import 'login_screen.dart';
+import '../../admin/presentation/admin_dashboard_screen.dart';
 
 /// Future provider that fetches the user's profile data from Firestore using their UID.
 /// Caches the profile data for the user session.
@@ -113,14 +114,15 @@ class AuthGate extends ConsumerWidget {
               );
             }
             
-            // Route user depending on Firestore role
-            if (normalizedRole == 'driver') {
+            if (normalizedRole == 'admin') {
+              return const AdminDashboardScreen();
+            } else if (normalizedRole == 'driver') {
               return const DriverDashboard();
             } else if (normalizedRole == 'parent') {
               return const ParentDashboard();
             }
             
-            // Fallback for Admin or unknown roles
+            // Fallback for unknown roles
             return Scaffold(
               body: SafeArea(
                 child: Padding(
@@ -140,21 +142,21 @@ class AuthGate extends ConsumerWidget {
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                Icons.admin_panel_settings_rounded,
+                                Icons.help_outline_rounded,
                                 color: theme.colorScheme.primary,
                                 size: 56,
                               ),
                             ),
                             const SizedBox(height: 24),
                             Text(
-                              'Welcome ${profile['role']?.toUpperCase() ?? 'ADMIN'}',
+                              'Unknown Role: ${profile['role']}',
                               style: theme.textTheme.headlineMedium?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
                             const SizedBox(height: 12),
                             Text(
-                              'SafePick dashboard is coming soon.',
+                              'Your account role is not recognized by the system.',
                               style: theme.textTheme.bodyMedium,
                               textAlign: TextAlign.center,
                             ),

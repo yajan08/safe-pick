@@ -1,4 +1,6 @@
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,6 +10,8 @@ import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
 import '../../profile/presentation/parent_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
+import '../../../core/widgets/illustrations.dart';
+import '../../trips/data/trip_service.dart';
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
 final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
@@ -53,8 +57,8 @@ class ParentDashboard extends ConsumerWidget {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: Image.asset(
-          'assets/images/light_logo.jpg',
+        title: SvgPicture.asset(
+          'assets/images/logo.svg',
           height: 32,
         ),
         actions: [
@@ -216,15 +220,18 @@ class ParentDashboard extends ConsumerWidget {
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 28,
-            backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.15),
-            child: const Icon(Icons.person_rounded, color: AppTheme.primaryGold, size: 32),
-          ),
+          const StudentProfileAccent(size: 56),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -233,12 +240,15 @@ class ParentDashboard extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: AppTheme.border,
+                    color: AppTheme.primaryGold.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'ID: ${student.studentId}',
-                    style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryGold,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -253,7 +263,6 @@ class ParentDashboard extends ConsumerWidget {
               ],
             ),
           ),
-
         ],
       ),
     ).animate().fade(delay: 50.ms).slideY(begin: 0.05);
@@ -283,7 +292,6 @@ class ParentDashboard extends ConsumerWidget {
         break;
     }
 
-    // Est Time displays either the student.estimatedArrival value or status-based fallback
     String etaText = student.estimatedArrival ?? '';
     if (etaText.isEmpty) {
       switch (student.currentStatus) {
@@ -305,7 +313,6 @@ class ParentDashboard extends ConsumerWidget {
 
     return Row(
       children: [
-        // Card 1: Current Status
         Expanded(
           child: AspectRatio(
             aspectRatio: 1.0,
@@ -314,12 +321,12 @@ class ParentDashboard extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.border),
+                border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -354,7 +361,6 @@ class ParentDashboard extends ConsumerWidget {
           ),
         ),
         const SizedBox(width: 16),
-        // Card 2: Est. Time
         Expanded(
           child: AspectRatio(
             aspectRatio: 1.0,
@@ -363,12 +369,12 @@ class ParentDashboard extends ConsumerWidget {
               decoration: BoxDecoration(
                 color: AppTheme.surface,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.border),
+                border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
+                    color: Colors.black.withOpacity(0.04),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -407,96 +413,79 @@ class ParentDashboard extends ConsumerWidget {
   }
 
   Widget _buildMapCard(BuildContext context, ThemeData theme, StudentModel student) {
-    final isInVan = student.currentStatus == 'In Van';
-
-    return GestureDetector(
+    return _TappableCard(
       onTap: () async {
-        if (isInVan) {
-          // Show loading
-          showDialog(
-            context: context,
-            barrierDismissible: false,
-            builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGold)),
-          );
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGold)),
+        );
 
-          try {
-            // Find the active session for this student
-            final db = FirebaseFirestore.instance;
-            final q = await db.collection('daily_sessions').where('status', isEqualTo: 'in_progress').get();
-            String? sessionId;
-            for (var doc in q.docs) {
-              final attendanceRef = doc.reference.collection('attendance').doc(student.studentId);
-              final attendanceSnap = await attendanceRef.get();
-              if (attendanceSnap.exists) {
-                sessionId = doc.id;
-                break;
-              }
-            }
+        try {
+          final tripService = ProviderScope.containerOf(context).read(tripServiceProvider);
+          final sessionId = await tripService.getActiveSessionIdForStudent(student.studentId);
 
-            if (context.mounted) {
-              Navigator.of(context).pop(); // Dismiss loading
-              if (sessionId != null) {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ParentLiveTrackingScreen(
-                      student: student,
-                      sessionId: sessionId!,
-                    ),
+          if (context.mounted) {
+            Navigator.of(context).pop();
+            if (sessionId != null) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => ParentLiveTrackingScreen(
+                    student: student,
+                    sessionId: sessionId,
                   ),
-                );
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Active trip not found for this student.')),
-                );
-              }
-            }
-          } catch (e) {
-            if (context.mounted) {
-              Navigator.of(context).pop();
+                ),
+              );
+            } else {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error finding trip: $e')),
+                const SnackBar(
+                  content: Text('No active trip in progress for this student.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
               );
             }
           }
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Trip not started yet or student not in van.'),
-              backgroundColor: AppTheme.textSecondary,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
+        } catch (e) {
+          if (context.mounted) {
+            Navigator.of(context).pop();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Error finding trip: $e')),
+            );
+          }
         }
       },
       child: Container(
         height: 180,
         decoration: BoxDecoration(
-          color: isInVan ? AppTheme.surface : AppTheme.border.withValues(alpha: 0.5),
+          color: AppTheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isInVan ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border),
+          border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.map_rounded,
-                size: 48,
-                color: isInVan ? AppTheme.primaryGold : AppTheme.textMuted,
-              ),
+              const LiveTrackingIllustration(size: 56),
               const SizedBox(height: 12),
               Text(
                 'Live Tracking Map',
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: isInVan ? AppTheme.textPrimary : AppTheme.textMuted,
+                  color: AppTheme.textPrimary,
                 ),
               ),
-              if (!isInVan)
-                Text(
-                  'Map available when trip starts',
-                  style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
-                ),
+              const SizedBox(height: 4),
+              Text(
+                'Tap to view van location',
+                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
+              ),
             ],
           ),
         ),
@@ -504,29 +493,17 @@ class ParentDashboard extends ConsumerWidget {
     );
   }
 
-
   Widget _buildEmptyState(BuildContext context, ThemeData theme) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.primaryGold.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.child_care_rounded,
-                color: AppTheme.primaryGold,
-                size: 48,
-              ),
-            ),
-            const SizedBox(height: 24),
+            const NoStudentsIllustration(size: 160),
+            const SizedBox(height: 32),
             Text(
-              'No students linked yet.',
+              'No students linked yet',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -537,7 +514,7 @@ class ParentDashboard extends ConsumerWidget {
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
             SizedBox(
               width: 200,
               child: ElevatedButton(
@@ -562,8 +539,8 @@ class ParentDashboard extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppTheme.errorRed, size: 48),
-          const SizedBox(height: 16),
+          const ErrorStateIllustration(size: 120),
+          const SizedBox(height: 24),
           Text(
             'Failed to load students',
             style: theme.textTheme.titleMedium?.copyWith(
@@ -578,6 +555,61 @@ class ParentDashboard extends ConsumerWidget {
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A wrapper widget that provides tactile scale-down feedback on tap.
+class _TappableCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _TappableCard({required this.child, required this.onTap});
+
+  @override
+  State<_TappableCard> createState() => _TappableCardState();
+}
+
+class _TappableCardState extends State<_TappableCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.97).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: child,
+          );
+        },
+        child: widget.child,
       ),
     );
   }

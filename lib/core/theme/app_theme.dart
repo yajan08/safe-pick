@@ -60,11 +60,11 @@ class AppTheme {
       ),
       cardTheme: CardThemeData(
         color: surfaceCard,
-        elevation: 2,
-        shadowColor: Colors.black.withValues(alpha: 0.05),
+        elevation: 0, // Removed hard elevation
+        shadowColor: Colors.black.withValues(alpha: 0.03),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: border, width: 1),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: border.withValues(alpha: 0.5), width: 0.5),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -78,7 +78,7 @@ class AppTheme {
           ),
           textStyle: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
             letterSpacing: 0.5,
           ),
         ),
@@ -86,14 +86,14 @@ class AppTheme {
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: textPrimary,
-          side: const BorderSide(color: border, width: 1.5),
+          side: BorderSide(color: border.withValues(alpha: 0.5), width: 1),
           minimumSize: const Size(double.infinity, 54),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
           textStyle: const TextStyle(
             fontSize: 16,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600,
           ),
         ),
       ),
@@ -103,15 +103,15 @@ class AppTheme {
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: border, width: 1),
+          borderSide: BorderSide(color: border.withValues(alpha: 0.5), width: 1),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: border, width: 1),
+          borderSide: BorderSide(color: border.withValues(alpha: 0.5), width: 1),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: primaryGold, width: 2),
+          borderSide: const BorderSide(color: primaryGold, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -126,7 +126,7 @@ class AppTheme {
         titleLarge: TextStyle(color: textPrimary, fontSize: 20, fontWeight: FontWeight.w600, letterSpacing: -0.5),
         titleMedium: TextStyle(color: textPrimary, fontSize: 16, fontWeight: FontWeight.w600),
         bodyLarge: TextStyle(color: textPrimary, fontSize: 16, height: 1.5),
-        bodyMedium: TextStyle(color: textSecondary, fontSize: 14, height: 1.4),
+        bodyMedium: TextStyle(color: textSecondary, fontSize: 14, height: 1.4, fontWeight: FontWeight.w400),
         labelLarge: TextStyle(color: textMuted, fontSize: 12, fontWeight: FontWeight.w500),
       ),
     );

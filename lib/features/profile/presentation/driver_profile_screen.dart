@@ -145,6 +145,9 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   Future<void> _handleSignOut() async {
     try {
       await ref.read(firebaseAuthProvider).signOut();
+      if (mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
     } catch (e) {
       if (mounted) SnackBarUtils.showError(context, 'Error signing out: $e');
     }
@@ -360,7 +363,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(height: 8),
+                            const SizedBox(height: 16), // Increased spacing
                             TextFormField(
                               controller: _vehicleInputController,
                               textCapitalization: TextCapitalization.characters,

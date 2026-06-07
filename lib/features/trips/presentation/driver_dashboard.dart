@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -8,6 +10,7 @@ import 'trip_detail_screen.dart';
 import 'create_trip_screen.dart';
 import '../../profile/presentation/driver_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
+import '../../../core/widgets/illustrations.dart';
 
 /// Real-time stream provider that fetches all trips assigned to the logged-in driver.
 final driverTripsProvider = StreamProvider<List<TripModel>>((ref) {
@@ -51,8 +54,8 @@ class DriverDashboard extends ConsumerWidget {
       appBar: AppBar(
         elevation: 0,
         centerTitle: true,
-        title: Image.asset(
-          'assets/images/light_logo.jpg',
+        title: SvgPicture.asset(
+          'assets/images/logo.svg',
           height: 32,
         ),
         actions: [
@@ -200,9 +203,9 @@ class DriverDashboard extends ConsumerWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -262,12 +265,12 @@ class DriverDashboard extends ConsumerWidget {
         decoration: BoxDecoration(
           color: AppTheme.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border, width: 2),
+          border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
@@ -338,18 +341,7 @@ class DriverDashboard extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryGold.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.directions_bus_rounded,
-              color: AppTheme.primaryGold,
-              size: 48,
-            ),
-          ),
+          const NoTripsIllustration(size: 160),
           const SizedBox(height: 24),
           Text(
             'No trips assigned for today.',

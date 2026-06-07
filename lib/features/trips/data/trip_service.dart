@@ -75,9 +75,27 @@ class TripService {
         .collection('trip_manifest')
         .orderBy('stop_order')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => TripManifestModel.fromJson(doc.data(), doc.id))
-            .toList());
+        .asyncMap((snapshot) async {
+      final List<TripManifestModel> manifest = [];
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        
+        try {
+          final studentDoc = await _firestore.collection('students').doc(doc.id).get();
+          if (studentDoc.exists && studentDoc.data() != null) {
+            final studentData = studentDoc.data()!;
+            if (studentData.containsKey('home_location')) {
+              data['home_location'] = studentData['home_location'];
+            }
+          }
+        } catch (e) {
+          // Fallback to existing data if fetch fails
+        }
+        
+        manifest.add(TripManifestModel.fromJson(data, doc.id));
+      }
+      return manifest;
+    });
   }
 
   /// Creates a new document in the daily_sessions collection, starting a trip.
@@ -294,10 +312,15 @@ class TripService {
     );
     batch.set(rideHistoryRef, rideLog.toJson(), SetOptions(merge: true));
     
-    // Sync to global student record
-    batch.update(_firestore.collection('students').doc(studentId), {
+    // Sync to global student record and increment stats if trip completed
+    final globalUpdate = <String, dynamic>{
       'current_status': nextStatus,
-    });
+    };
+    if (nextStatus == 'At School' || nextStatus == 'At Home') {
+      globalUpdate['stats.total_trips'] = FieldValue.increment(1);
+    }
+    
+    batch.update(_firestore.collection('students').doc(studentId), globalUpdate);
 
     await batch.commit();
   }
@@ -353,12 +376,37 @@ class TripService {
     
     batch.set(rideHistoryRef, rideLog.toJson(), SetOptions(merge: true));
 
-    // Sync to global student record
-    batch.update(_firestore.collection('students').doc(studentId), {
+    // Sync to global student record and increment stats
+    final globalUpdate = <String, dynamic>{
       'current_status': status,
-    });
+    };
+    if (status == 'At Home' || status == 'At School') {
+      globalUpdate['stats.total_trips'] = FieldValue.increment(1);
+    }
+    
+    batch.update(_firestore.collection('students').doc(studentId), globalUpdate);
 
     await batch.commit();
+  }
+
+  /// Returns the active session ID for a student, regardless of their attendance status.
+  /// The parent can track the van as long as the session is in_progress.
+  Future<String?> getActiveSessionIdForStudent(String studentId) async {
+    final activeSessions = await _firestore
+        .collection('daily_sessions')
+        .where('status', isEqualTo: 'in_progress')
+        .get();
+
+    for (var sessionDoc in activeSessions.docs) {
+      final attendanceSnap = await sessionDoc.reference
+          .collection('attendance')
+          .doc(studentId)
+          .get();
+      if (attendanceSnap.exists) {
+        return sessionDoc.id;
+      }
+    }
+    return null;
   }
 
   String _resolveDriverVehicleNumber(Map<String, dynamic>? data) {

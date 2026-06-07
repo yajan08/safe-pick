@@ -1,3 +1,4 @@
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_animate/flutter_animate.dart';
@@ -48,8 +49,8 @@ class _SplashScreenState extends State<SplashScreen> {
       body: Center(
         child: Hero(
           tag: 'app_logo',
-          child: Image.asset(
-            'assets/images/light_logo.jpg',
+          child: SvgPicture.asset(
+            'assets/images/logo.svg',
             height: 100,
           ),
         ).animate()

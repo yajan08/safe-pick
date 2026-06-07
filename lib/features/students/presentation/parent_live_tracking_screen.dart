@@ -34,6 +34,9 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
   double _currentSpeedKmh = 0.0;
   LatLng? _currentVanPosition;
 
+  bool _autoCenter = true;
+  bool _isAnimating = false;
+
   @override
   void initState() {
     super.initState();
@@ -125,8 +128,11 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
                 }
 
                 // Smoothly animate camera
-                if (_mapController != null) {
-                  _mapController!.animateCamera(CameraUpdate.newLatLng(_currentVanPosition!));
+                if (_mapController != null && _autoCenter) {
+                  _isAnimating = true;
+                  _mapController!.animateCamera(CameraUpdate.newLatLng(_currentVanPosition!)).then((_) {
+                    if (mounted) _isAnimating = false;
+                  });
                 }
 
                 // Ensure markers are repainted asynchronously
@@ -146,7 +152,15 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
                 onMapCreated: (controller) {
                   _mapController = controller;
                   if (_currentVanPosition != null) {
-                    _mapController!.moveCamera(CameraUpdate.newLatLng(_currentVanPosition!));
+                    _isAnimating = true;
+                    _mapController!.moveCamera(CameraUpdate.newLatLng(_currentVanPosition!)).then((_) {
+                      if (mounted) _isAnimating = false;
+                    });
+                  }
+                },
+                onCameraMoveStarted: () {
+                  if (!_isAnimating && _autoCenter) {
+                    if (mounted) setState(() => _autoCenter = false);
                   }
                 },
                 myLocationEnabled: false,
@@ -157,7 +171,28 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
             },
           ),
           
-          // 2. Glassmorphism Info Overlay
+          // 2. Auto-Center FAB
+          Positioned(
+            top: 16,
+            right: 16,
+            child: FloatingActionButton.small(
+              heroTag: 'auto_center_fab',
+              backgroundColor: _autoCenter ? AppTheme.primaryGold : AppTheme.surface,
+              foregroundColor: _autoCenter ? Colors.white : AppTheme.textSecondary,
+              onPressed: () {
+                setState(() => _autoCenter = !_autoCenter);
+                if (_autoCenter && _currentVanPosition != null && _mapController != null) {
+                  _isAnimating = true;
+                  _mapController!.animateCamera(CameraUpdate.newLatLng(_currentVanPosition!)).then((_) {
+                    if (mounted) _isAnimating = false;
+                  });
+                }
+              },
+              child: const Icon(Icons.my_location_rounded),
+            ),
+          ),
+
+          // 3. Glassmorphism Info Overlay
           Positioned(
             bottom: 32,
             left: 20,

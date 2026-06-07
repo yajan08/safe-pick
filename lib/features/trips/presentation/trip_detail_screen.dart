@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -47,6 +48,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   Timer? _publishTimer;
   Position? _currentPosition;
 
+  // ─── GEOFENCING STATE ──────────────────────────────
+  String? _approachingStudentId;
+  String? _approachingStudentName;
+  String? _approachingStatusAction;
+  String? _approachingNextStatus;
+
   // ─── MAP STATE & MARKER CACHE ────────────────────────
   GoogleMapController? _mapController;
   Set<Marker> _markers = {};
@@ -58,6 +65,31 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   void initState() {
     super.initState();
     _initDriverMarker();
+    _fetchInitialLocation();
+  }
+
+  Future<void> _fetchInitialLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+        final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+        if (mounted) {
+          setState(() {
+            _currentPosition = position;
+          });
+          // Update markers with the new initial position
+          final manifestAsync = ref.read(tripManifestProvider(widget.tripId));
+          if (manifestAsync.hasValue) {
+            _buildMarkers(manifestAsync.value!);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error fetching initial GPS location: $e");
+    }
   }
 
   Future<void> _initDriverMarker() async {
@@ -117,7 +149,53 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
   // ─── LIVE TRACKING ENGINE ────────────────────────────
   
-  // ─── LIVE TRACKING ENGINE ────────────────────────────
+  void _checkGeofences(Position currentPos, List<TripManifestModel> manifest, String sessionId, String tripType) {
+    if (_approachingStudentId != null) return; // Debounce if already showing a banner
+
+    for (var student in manifest) {
+      if (student.homeLocation == null) continue;
+      
+      final attendanceMap = ref.read(sessionAttendanceProvider(sessionId)).value ?? {};
+      final currentStatus = attendanceMap[student.studentId] ?? student.status;
+      
+      bool isActiveTarget = false;
+      String nextStatus = '';
+      String actionLabel = '';
+
+      if (tripType.toLowerCase() == 'morning') {
+        if (currentStatus.toLowerCase() == 'at home') {
+          isActiveTarget = true;
+          nextStatus = 'In Van';
+          actionLabel = 'Scan or Mark In Van';
+        }
+      } else {
+        if (currentStatus.toLowerCase() == 'in van') {
+          isActiveTarget = true;
+          nextStatus = 'At Home';
+          actionLabel = 'Mark Dropped at Home';
+        }
+      }
+      
+      if (!isActiveTarget) continue;
+
+      final distance = Geolocator.distanceBetween(
+        currentPos.latitude, currentPos.longitude,
+        student.homeLocation!.latitude, student.homeLocation!.longitude,
+      );
+
+      if (distance <= 50.0) {
+        if (mounted) {
+          setState(() {
+            _approachingStudentId = student.studentId;
+            _approachingStudentName = student.name.split(' ').first;
+            _approachingStatusAction = actionLabel;
+            _approachingNextStatus = nextStatus;
+          });
+        }
+        break; // Only trigger one banner at a time
+      }
+    }
+  }
   
   Future<void> _startLiveTracking(String sessionId) async {
     if (_isLiveTracking) return;
@@ -155,6 +233,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       final manifestAsync = ref.read(tripManifestProvider(widget.tripId));
       if (manifestAsync.hasValue) {
         _buildMarkers(manifestAsync.value!);
+        
+        final sessionAsync = ref.read(activeSessionProvider(widget.tripId));
+        final tripAsync = ref.read(tripDetailsProvider(widget.tripId));
+        if (sessionAsync.hasValue && tripAsync.hasValue && sessionAsync.value != null) {
+          _checkGeofences(position, manifestAsync.value!, sessionAsync.value!.sessionId, tripAsync.value!.tripType);
+        }
       }
     });
 
@@ -735,6 +819,17 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   onPressed: () => Navigator.of(context).pop(),
                 ),
           automaticallyImplyLeading: !isTripActive,
+          actions: [
+            if (!isTripActive)
+              tripAsync.when(
+                data: (trip) => IconButton(
+                  icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryGold),
+                  onPressed: () => _handleEditTrip(trip),
+                ),
+                loading: () => const SizedBox.shrink(),
+                error: (_, __) => const SizedBox.shrink(),
+              ),
+          ],
         ),
         bottomNavigationBar: sessionAsync.when(
           data: (session) {
@@ -767,51 +862,239 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   });
                 }
 
+                if (session == null || session.status != 'in_progress') {
+                  if (_isLiveTracking) _stopLiveTracking();
+                  
+                  return CustomScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    slivers: [
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                        sliver: SliverList(
+                          delegate: SliverChildListDelegate([
+                            _buildTripDetailsCard(theme, trip, session),
+                            const SizedBox(height: 16),
+                            ref.watch(tripManifestProvider(widget.tripId)).when(
+                                  data: (manifest) => _buildSchoolsSummary(theme, manifest),
+                                  loading: () => const SizedBox.shrink(),
+                                  error: (err, stack) => const SizedBox.shrink(),
+                                ),
+                            const SizedBox(height: 24),
+                            _buildRosterHeader(theme, ref.watch(tripManifestProvider(widget.tripId))),
+                            const SizedBox(height: 16),
+                            ref.watch(tripManifestProvider(widget.tripId)).when(
+                                  data: (manifest) {
+                                    if (manifest.isEmpty) return _buildEmptyRosterCard(theme);
+                                    final attendanceMap = session != null
+                                        ? ref.watch(sessionAttendanceProvider(session.sessionId)).asData?.value ?? const {}
+                                        : const <String, String>{};
+                                    return Column(
+                                      children: manifest.asMap().entries.map((entry) {
+                                        return _buildStudentRow(theme, entry.value, entry.key, session, attendanceMap, trip.tripType);
+                                      }).toList(),
+                                    );
+                                  },
+                                  loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppTheme.primaryGold))),
+                                  error: (err, _) => _buildErrorState(theme, err.toString()),
+                                ),
+                            const SizedBox(height: 100),
+                          ]),
+                        ),
+                      ),
+                    ],
+                  );
+                }
+
                 return Stack(
                   children: [
                     // 1. Fullscreen Google Map
-                    GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: _currentPosition != null 
-                            ? LatLng(_currentPosition!.latitude, _currentPosition!.longitude) 
-                            : const LatLng(0, 0),
-                        zoom: 15,
+                    if (_currentPosition == null)
+                      Container(
+                        color: AppTheme.background,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'Acquiring secure GPS lock...',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      GoogleMap(
+                        padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.18 + 20), // Lift logo above modal and FAB
+                        initialCameraPosition: CameraPosition(
+                          target: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+                          zoom: 16,
+                        ),
+                        markers: _markers,
+                        onMapCreated: (controller) {
+                          _mapController = controller;
+                        },
+                        myLocationEnabled: false,
+                        myLocationButtonEnabled: false,
+                        zoomControlsEnabled: false,
+                        compassEnabled: false,
                       ),
-                      markers: _markers,
-                      onMapCreated: (controller) {
-                        _mapController = controller;
-                        if (_currentPosition != null) {
-                          _mapController!.moveCamera(CameraUpdate.newLatLng(LatLng(_currentPosition!.latitude, _currentPosition!.longitude)));
-                        }
-                      },
-                      myLocationEnabled: false,
-                      myLocationButtonEnabled: false,
-                      zoomControlsEnabled: false,
-                      compassEnabled: false,
-                    ),
 
-                    // 2. Re-center FAB
+                    // 2. Map Controls (Zoom & Recenter)
                     Positioned(
                       top: 16,
                       right: 16,
-                      child: FloatingActionButton.small(
-                        heroTag: 'recenter_fab',
-                        backgroundColor: AppTheme.surface,
-                        foregroundColor: AppTheme.primaryGold,
-                        onPressed: () {
-                          if (_currentPosition != null && _mapController != null) {
-                            _mapController!.animateCamera(CameraUpdate.newLatLng(LatLng(_currentPosition!.latitude, _currentPosition!.longitude)));
-                          }
-                        },
-                        child: const Icon(Icons.my_location_rounded),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          FloatingActionButton.extended(
+                            heroTag: 'recenter_fab',
+                            backgroundColor: AppTheme.surface,
+                            foregroundColor: AppTheme.primaryGold,
+                            onPressed: () {
+                              if (_currentPosition != null && _mapController != null) {
+                                _mapController!.animateCamera(CameraUpdate.newLatLng(LatLng(_currentPosition!.latitude, _currentPosition!.longitude)));
+                              }
+                            },
+                            icon: const Icon(Icons.my_location_rounded, size: 20),
+                            label: const Text('Recenter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ),
+                          const SizedBox(height: 16),
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.85),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: AppTheme.border.withOpacity(0.5)),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.04),
+                                      blurRadius: 16,
+                                      offset: const Offset(0, 4),
+                                    )
+                                  ],
+                                ),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(Icons.add_rounded, color: AppTheme.textPrimary),
+                                      onPressed: () => _mapController?.animateCamera(CameraUpdate.zoomIn()),
+                                    ),
+                                    Container(height: 1, width: 30, color: AppTheme.border),
+                                    IconButton(
+                                      icon: const Icon(Icons.remove_rounded, color: AppTheme.textPrimary),
+                                      onPressed: () => _mapController?.animateCamera(CameraUpdate.zoomOut()),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
-                    // 3. Draggable Roster Bottom Sheet
+                    // 3. Proximity Action Banner
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeOutCubic,
+                      top: _approachingStudentId != null ? 16 : -200,
+                      left: 16,
+                      right: 72, // Room for the re-center FAB
+                      child: _approachingStudentId != null && session != null
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(16),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.85),
+                                    borderRadius: BorderRadius.circular(16),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.04),
+                                        blurRadius: 24,
+                                        offset: const Offset(0, 8),
+                                      ),
+                                    ],
+                                    border: Border.all(color: AppTheme.primaryGold.withOpacity(0.3), width: 1),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              'Approaching $_approachingStudentName',
+                                              style: theme.textTheme.titleMedium?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: AppTheme.textPrimary,
+                                              ),
+                                            ),
+                                          ),
+                                          IconButton(
+                                            padding: EdgeInsets.zero,
+                                            constraints: const BoxConstraints(),
+                                            icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
+                                            onPressed: () {
+                                              setState(() => _approachingStudentId = null);
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      ElevatedButton(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppTheme.primaryGold,
+                                          foregroundColor: Colors.white,
+                                          padding: const EdgeInsets.symmetric(vertical: 16),
+                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                        ),
+                                        onPressed: () async {
+                                          final studentId = _approachingStudentId!;
+                                          final nextStatus = _approachingNextStatus!;
+                                          setState(() => _approachingStudentId = null);
+                                          try {
+                                            await ref.read(tripServiceProvider).manualAttendanceOverride(session.sessionId, studentId, nextStatus);
+                                          } catch (e) {
+                                            if (mounted) _showError(e.toString());
+                                          }
+                                        },
+                                        child: Text(
+                                          _approachingStatusAction ?? '',
+                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+
+                    // 4. Draggable Roster Bottom Sheet
                     DraggableScrollableSheet(
                       initialChildSize: 0.4,
                       minChildSize: 0.15,
                       maxChildSize: 0.85,
+                      snap: true,
+                      snapSizes: const [0.15, 0.4, 0.85],
                       builder: (context, scrollController) {
                         return Container(
                           decoration: BoxDecoration(
@@ -827,7 +1110,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                           ),
                           child: CustomScrollView(
                             controller: scrollController,
-                            physics: const BouncingScrollPhysics(),
+                            physics: const ClampingScrollPhysics(),
                             slivers: [
                               SliverToBoxAdapter(
                                 child: Center(
@@ -871,7 +1154,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
                                             return Column(
                                               children: manifest.asMap().entries.map((entry) {
-                                                return _buildStudentRow(theme, entry.value, entry.key, session, attendanceMap);
+                                                return _buildStudentRow(theme, entry.value, entry.key, session, attendanceMap, trip.tripType);
                                               }).toList(),
                                             );
                                           },
@@ -932,14 +1215,13 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
   // ─── 1. Trip Details Card ────────────────────────────
   Widget _buildTripDetailsCard(ThemeData theme, TripModel trip, DailySessionModel? session) {
-    final showEdit = session == null;
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(color: AppTheme.border.withOpacity(0.5), width: 0.5),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -954,15 +1236,6 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   ),
                 ),
               ),
-              if (showEdit)
-                SizedBox(
-                  width: 48,
-                  height: 48,
-                  child: IconButton(
-                    icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryGold),
-                    onPressed: () => _handleEditTrip(trip),
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 12),
@@ -980,7 +1253,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           ),
         ],
       ),
-    ).animate().fade(delay: 100.ms).slideY(begin: 0.03);
+    ).animate().fade(duration: 250.ms).slideY(begin: 0.05, duration: 250.ms, curve: Curves.easeOutQuad);
   }
 
   Widget _buildActionButtons(DailySessionModel? session) {
@@ -1179,7 +1452,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   // ─── 5. Student Roster Row ────────────────────────────
-  Widget _buildStudentRow(ThemeData theme, TripManifestModel student, int index, DailySessionModel? session, Map<String, String> attendanceMap) {
+  Widget _buildStudentRow(ThemeData theme, TripManifestModel student, int index, DailySessionModel? session, Map<String, String> attendanceMap, String tripType) {
     final status = attendanceMap[student.studentId] ?? student.status;
 
     return Container(
@@ -1236,24 +1509,29 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
               onSelected: (newStatus) {
                 _handleManualOverride(session.sessionId, student.studentId, newStatus);
               },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'At Home',
-                  child: Text('At Home', style: TextStyle(color: AppTheme.textPrimary)),
-                ),
-                const PopupMenuItem(
-                  value: 'In Van',
-                  child: Text('In Van', style: TextStyle(color: AppTheme.textPrimary)),
-                ),
-                const PopupMenuItem(
-                  value: 'At School',
-                  child: Text('At School', style: TextStyle(color: AppTheme.textPrimary)),
-                ),
-                const PopupMenuItem(
-                  value: 'Absent',
-                  child: Text('Absent', style: TextStyle(color: AppTheme.textPrimary)),
-                ),
-              ],
+              itemBuilder: (context) {
+                final isMorning = tripType.toLowerCase() == 'morning';
+                return [
+                  const PopupMenuItem(
+                    value: 'In Van',
+                    child: Text('In Van', style: TextStyle(color: AppTheme.textPrimary)),
+                  ),
+                  if (isMorning)
+                    const PopupMenuItem(
+                      value: 'At School',
+                      child: Text('At School', style: TextStyle(color: AppTheme.textPrimary)),
+                    )
+                  else
+                    const PopupMenuItem(
+                      value: 'At Home',
+                      child: Text('At Home', style: TextStyle(color: AppTheme.textPrimary)),
+                    ),
+                  const PopupMenuItem(
+                    value: 'Absent',
+                    child: Text('Absent', style: TextStyle(color: AppTheme.textPrimary)),
+                  ),
+                ];
+              },
             ),
           ],
         ],
