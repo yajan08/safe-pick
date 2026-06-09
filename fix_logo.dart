@@ -16,7 +16,7 @@ void main() {
       content = content.replaceAll("Image.asset(", "SvgPicture.asset(");
       content = content.replaceAll("'assets/images/light_logo.jpg'", "'assets/images/logo.svg'");
       if (!content.contains("flutter_svg.dart")) {
-        content = "import 'package:flutter_svg/flutter_svg.dart';\n" + content;
+        content = "import 'package:flutter_svg/flutter_svg.dart';\n$content";
       }
       file.writeAsStringSync(content);
     }

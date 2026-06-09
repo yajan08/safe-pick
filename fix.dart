@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+
 void main() {
   final file = File('lib/features/trips/presentation/trip_detail_screen.dart');
   var content = file.readAsStringSync();
@@ -11,5 +13,7 @@ void main() {
   content = content.replaceAll('.withOpacity(', '.withValues(alpha: ');
   
   file.writeAsStringSync(content);
-  print('done');
+  if (kDebugMode) {
+    print('done');
+  }
 }

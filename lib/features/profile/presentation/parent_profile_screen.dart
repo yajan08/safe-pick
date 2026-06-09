@@ -35,42 +35,51 @@ class ParentProfileScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.background,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppTheme.border, width: 1),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: AppTheme.border.withValues(alpha: 0.5), width: 1),
         ),
         title: const Text(
           'Sign Out',
           style: TextStyle(
             color: AppTheme.textPrimary,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
           ),
         ),
         content: const Text(
           'Are you sure you want to sign out?',
           style: TextStyle(
             color: AppTheme.textSecondary,
+            height: 1.4,
           ),
         ),
+        actionsPadding: const EdgeInsets.only(right: 20, bottom: 20, left: 20),
+        actionsAlignment: MainAxisAlignment.end,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text(
-              'No',
-              style: TextStyle(color: AppTheme.textPrimary),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.textSecondary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
+            child: const Text('Cancel'),
           ),
+          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryGold,
               foregroundColor: AppTheme.background,
-              minimumSize: const Size(80, 40),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
-            child: const Text('Yes'),
+            child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -81,7 +90,6 @@ class ParentProfileScreen extends ConsumerWidget {
     try {
       await ref.read(authServiceProvider).signOut();
       if (context.mounted) {
-        // Pop back to root — AuthGate will handle navigation to login
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
@@ -91,6 +99,7 @@ class ParentProfileScreen extends ConsumerWidget {
             content: Text(e.toString()),
             backgroundColor: AppTheme.errorRed,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -102,33 +111,51 @@ class ParentProfileScreen extends ConsumerWidget {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.background,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppTheme.errorRed, width: 2),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1),
         ),
         title: const Text(
           'Delete Account',
           style: TextStyle(
             color: AppTheme.errorRed,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
           ),
         ),
         content: const Text(
           'Are you absolutely sure you want to permanently delete your account and all associated active student profiles? This action cannot be undone.',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            height: 1.5,
+          ),
         ),
+        actionsPadding: const EdgeInsets.only(right: 20, bottom: 20, left: 20),
+        actionsAlignment: MainAxisAlignment.end,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textPrimary)),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.textPrimary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            child: const Text('Cancel'),
           ),
+          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.errorRed,
-              foregroundColor: AppTheme.background,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            child: const Text('Delete Permanently'),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -148,6 +175,7 @@ class ParentProfileScreen extends ConsumerWidget {
             content: Text(e.toString()),
             backgroundColor: AppTheme.errorRed,
             behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -163,28 +191,47 @@ class ParentProfileScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('My Profile'),
+        backgroundColor: AppTheme.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        title: Text(
+          'Profile',
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.5,
+            color: AppTheme.textPrimary,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          color: AppTheme.textPrimary,
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               // ── User Info Card ──
               _buildUserInfoCard(context, ref, theme, currentUser),
-              const SizedBox(height: 24),
+              const SizedBox(height: 32),
 
               // ── Section Header: My Children ──
               Text(
                 'My Children',
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ).animate().fade(delay: 200.ms).slideX(begin: -0.05),
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                  color: AppTheme.textPrimary,
+                ),
+              )
+                  .animate()
+                  .fade(delay: 150.ms, duration: 400.ms, curve: Curves.easeOutCubic)
+                  .slideX(begin: -0.02, curve: Curves.easeOutCubic),
               const SizedBox(height: 16),
 
               // ── Children List ──
@@ -202,14 +249,21 @@ class ParentProfileScreen extends ConsumerWidget {
                   );
                 },
                 loading: () => const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-                  child: ShimmerList(itemCount: 3, itemHeight: 80),
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: ShimmerList(itemCount: 3, itemHeight: 88),
                 ),
-                error: (error, _) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
+                error: (error, _) => Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: AppTheme.errorRed.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: Text(
-                    'Failed to load children: $error',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.errorRed),
+                    'Failed to load children.\n$error',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppTheme.errorRed,
+                      height: 1.5,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -218,7 +272,7 @@ class ParentProfileScreen extends ConsumerWidget {
               const SizedBox(height: 24),
 
               // ── Add New Child Button ──
-              ElevatedButton.icon(
+              ElevatedButton(
                 onPressed: () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
@@ -226,11 +280,36 @@ class ParentProfileScreen extends ConsumerWidget {
                     ),
                   );
                 },
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Add New Child'),
-              ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGold,
+                  foregroundColor: AppTheme.background,
+                  elevation: 0,
+                  minimumSize: const Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.add_rounded, size: 22),
+                    SizedBox(width: 8),
+                    Text(
+                      'Add New Child',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ],
+                ),
+              )
+                  .animate()
+                  .fade(delay: 300.ms, duration: 400.ms, curve: Curves.easeOutCubic)
+                  .slideY(begin: 0.05, curve: Curves.easeOutCubic),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 48),
             ],
           ),
         ),
@@ -243,183 +322,248 @@ class ParentProfileScreen extends ConsumerWidget {
     final displayName = currentUser?.displayName ?? 'Parent';
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.4), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         children: [
           // Avatar
           CircleAvatar(
-            radius: 36,
-            backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.15),
+            radius: 40,
+            backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.1),
             child: const Icon(Icons.person_rounded, size: 40, color: AppTheme.primaryGold),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           // Name
           Text(
             displayName,
-            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.5,
+              color: AppTheme.textPrimary,
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
 
           // Email
           Text(
             email,
-            style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+              letterSpacing: 0.2,
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 12),
 
           // Role Badge
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
             decoration: BoxDecoration(
-              color: AppTheme.primaryGold.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              color: AppTheme.primaryGold.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(30),
             ),
             child: Text(
-              'PARENT',
-              style: theme.textTheme.labelLarge?.copyWith(
+              'Parent Account',
+              style: theme.textTheme.labelMedium?.copyWith(
                 color: AppTheme.primaryGold,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
+          
+          const Divider(height: 1, thickness: 1, color: AppTheme.border),
+          const SizedBox(height: 16),
 
-          // Sign Out & Delete
-          const Divider(color: AppTheme.border),
-          const SizedBox(height: 8),
+          // Actions
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              TextButton.icon(
-                onPressed: () => _handleSignOut(context, ref),
-                icon: const Icon(Icons.logout_rounded, color: AppTheme.textPrimary, size: 20),
-                label: const Text(
-                  'Sign Out',
-                  style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: () => _handleSignOut(context, ref),
+                  icon: const Icon(Icons.logout_rounded, size: 18),
+                  label: const Text('Sign Out'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.textPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
               ),
-              TextButton.icon(
-                onPressed: () => _handleDeleteAccount(context, ref),
-                icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed, size: 20),
-                label: const Text(
-                  'Delete Account',
-                  style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold),
+              Container(width: 1, height: 24, color: AppTheme.border),
+              Expanded(
+                child: TextButton.icon(
+                  onPressed: () => _handleDeleteAccount(context, ref),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: const Text('Delete'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.errorRed,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
                 ),
               ),
             ],
           ),
         ],
       ),
-    ).animate().fade(duration: 400.ms).slideY(begin: -0.05);
+    ).animate().fade(duration: 500.ms, curve: Curves.easeOutCubic).slideY(begin: -0.02);
   }
 
   Widget _buildChildTile(BuildContext context, ThemeData theme, StudentModel student, int index) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => StudentDetailScreen(student: student),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => StudentDetailScreen(student: student),
+            ),
+          );
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppTheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.border.withValues(alpha: 0.4), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.015),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        );
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.border),
-        ),
-        child: Row(
-          children: [
-            // Child Avatar
-            CircleAvatar(
-              radius: 24,
-              backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.12),
-              child: Text(
-                student.name.isNotEmpty ? student.name[0].toUpperCase() : '?',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  color: AppTheme.primaryGold,
-                  fontWeight: FontWeight.bold,
+          child: Row(
+            children: [
+              // Child Avatar
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.1),
+                child: Text(
+                  student.name.isNotEmpty ? student.name[0].toUpperCase() : '?',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: AppTheme.primaryGold,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 14),
+              const SizedBox(width: 16),
 
-            // Name & Grade
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    student.name,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Grade: ${student.grade}',
-                    style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-
-            // Student ID Chip
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppTheme.border,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                student.studentId,
-                style: theme.textTheme.labelLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
+              // Name & Grade
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      student.name,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.3,
+                        color: AppTheme.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Grade ${student.grade}',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.textSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted),
-          ],
+
+              // Student ID Chip
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.background,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+                ),
+                child: Text(
+                  student.studentId,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.textSecondary,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded, color: AppTheme.border, size: 24),
+            ],
+          ),
         ),
       ),
-    ).animate().fade(delay: Duration(milliseconds: 250 + (index * 80))).slideX(begin: 0.05);
+    ).animate().fade(
+          delay: Duration(milliseconds: 150 + (index * 80)),
+          duration: 400.ms,
+          curve: Curves.easeOutCubic,
+        ).slideX(begin: 0.02, curve: Curves.easeOutCubic);
   }
 
   Widget _buildEmptyChildState(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 40),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppTheme.border.withValues(alpha: 0.3),
+          style: BorderStyle.solid,
+        ),
+      ),
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppTheme.primaryGold.withValues(alpha: 0.1),
+              color: AppTheme.primaryGold.withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.child_care_rounded, color: AppTheme.primaryGold, size: 40),
+            child: Icon(Icons.child_care_rounded, color: AppTheme.primaryGold.withValues(alpha: 0.8), size: 36),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Text(
-            'No children registered yet',
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            'No children registered',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+              letterSpacing: -0.3,
+              color: AppTheme.textPrimary,
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             'Tap the button below to add your first child.',
-            style: theme.textTheme.bodyMedium,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppTheme.textSecondary,
+              height: 1.5,
+            ),
             textAlign: TextAlign.center,
           ),
         ],
       ),
-    ).animate().fade(delay: 300.ms).scale(begin: const Offset(0.95, 0.95));
+    ).animate().fade(delay: 200.ms, duration: 500.ms).scale(
+          begin: const Offset(0.98, 0.98),
+          curve: Curves.easeOutCubic,
+        );
   }
 }

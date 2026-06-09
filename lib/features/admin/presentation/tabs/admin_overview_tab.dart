@@ -14,35 +14,36 @@ class AdminOverviewTab extends ConsumerWidget {
     final liveTripsAsync = ref.watch(adminLiveTripsProvider);
 
     return RefreshIndicator(
+      color: kAdminNavy,
       onRefresh: () async {
         ref.invalidate(adminStatsProvider);
         ref.invalidate(adminLiveTripsProvider);
       },
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           // ── Section header ───────────────────────────────────────────────
           const Text(
             'System Health',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: kAdminNavy),
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: kAdminNavy, letterSpacing: -0.3),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 3),
           Text(
             'Real-time snapshot of SafePick operations',
-            style: TextStyle(color: Colors.grey[500], fontSize: 13),
+            style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w400),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // ── Stat cards ──────────────────────────────────────────────────
           statsAsync.when(
             data: (stats) => GridView.count(
               crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
+              crossAxisSpacing: 14,
+              mainAxisSpacing: 14,
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              childAspectRatio: 1.15,
+              childAspectRatio: 1.18,
               children: [
                 _StatCard(
                   title: 'Active Trips',
@@ -69,50 +70,55 @@ class AdminOverviewTab extends ConsumerWidget {
                   color: AppTheme.warningOrange,
                 ),
               ],
-            ).animate().fade(duration: 300.ms).slideY(begin: 0.05),
+            ).animate().fade(duration: 250.ms).slideY(begin: 0.03),
             loading: () => const SizedBox(
-              height: 200,
-              child: Center(child: CircularProgressIndicator(color: kAdminNavy)),
+              height: 180,
+              child: Center(child: CircularProgressIndicator(color: kAdminNavy, strokeWidth: 2.5)),
             ),
             error: (e, _) => _ErrorCard(message: 'Could not load stats: $e'),
           ),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
 
           // ── Live trip indicator ──────────────────────────────────────────
           const Text(
             'Live Right Now',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kAdminNavy),
+            style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, color: kAdminNavy, letterSpacing: -0.2),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
 
           liveTripsAsync.when(
             data: (sessions) {
               if (sessions.isEmpty) {
                 return Container(
-                  padding: const EdgeInsets.all(32),
+                  padding: const EdgeInsets.all(28),
                   decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.border.withValues(alpha: 0.4)),
+                    color: AppTheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.border.withValues(alpha: 0.25)),
                   ),
                   child: Column(
                     children: [
-                      Icon(Icons.airline_seat_recline_normal_rounded, size: 40, color: Colors.grey[300]),
-                      const SizedBox(height: 12),
-                      Text('All quiet — no active trips.', style: TextStyle(color: Colors.grey[500])),
+                      Icon(Icons.airline_seat_recline_normal_rounded, size: 36, color: AppTheme.textMuted.withValues(alpha: 0.3)),
+                      const SizedBox(height: 10),
+                      Text(
+                        'All quiet — no active trips.', 
+                        style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
                     ],
                   ),
                 );
               }
 
               return Container(
-                padding: const EdgeInsets.all(20),
+                padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 8))],
-                  border: Border.all(color: AppTheme.border.withValues(alpha: 0.4)),
+                  color: AppTheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withValues(alpha: 0.015), blurRadius: 10, offset: const Offset(0, 4)),
+                  ],
+                  border: Border.all(color: AppTheme.border.withValues(alpha: 0.25)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -124,32 +130,41 @@ class AdminOverviewTab extends ConsumerWidget {
                           decoration: const BoxDecoration(color: AppTheme.successGreen, shape: BoxShape.circle),
                         ),
                         const SizedBox(width: 8),
-                        Text('${sessions.length} trip${sessions.length > 1 ? 's' : ''} in progress', style: const TextStyle(fontWeight: FontWeight.w600)),
+                        Text(
+                          '${sessions.length} trip${sessions.length > 1 ? 's' : ''} in progress', 
+                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14, letterSpacing: -0.1),
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     ...sessions.take(3).map((s) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.only(bottom: 10),
                       child: Row(
                         children: [
-                          const Icon(Icons.directions_bus_filled_rounded, size: 18, color: kAdminNavy),
+                          const Icon(Icons.directions_bus_filled_rounded, size: 16, color: kAdminNavy),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               'Trip ${s.tripId.substring(0, 8)}…',
-                              style: const TextStyle(fontSize: 13),
+                              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
-                          Text(s.date, style: TextStyle(color: Colors.grey[500], fontSize: 12)),
+                          Text(
+                            s.date, 
+                            style: TextStyle(color: AppTheme.textMuted, fontSize: 11.5, fontWeight: FontWeight.w400),
+                          ),
                         ],
                       ),
                     )),
                     if (sessions.length > 3)
-                      Center(
-                        child: Text(
-                          '+${sessions.length - 3} more',
-                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Center(
+                          child: Text(
+                            '+${sessions.length - 3} more',
+                            style: TextStyle(color: AppTheme.textMuted, fontSize: 11.5, fontWeight: FontWeight.w500),
+                          ),
                         ),
                       ),
                   ],
@@ -157,8 +172,8 @@ class AdminOverviewTab extends ConsumerWidget {
               );
             },
             loading: () => const SizedBox(
-              height: 100,
-              child: Center(child: CircularProgressIndicator(color: kAdminNavy)),
+              height: 120,
+              child: Center(child: CircularProgressIndicator(color: kAdminNavy, strokeWidth: 2.5)),
             ),
             error: (e, _) => _ErrorCard(message: 'Could not load live trips: $e'),
           ),
@@ -188,33 +203,40 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 8)),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.015), blurRadius: 10, offset: const Offset(0, 4)),
         ],
-        border: Border.all(color: AppTheme.border.withValues(alpha: 0.4)),
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.25)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.08),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(icon, color: color, size: 18),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(title, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+              Text(
+                value, 
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, letterSpacing: -0.5),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                title, 
+                style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w400),
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ],
@@ -230,20 +252,20 @@ class _ErrorCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.errorRed.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.errorRed.withValues(alpha: 0.15)),
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline_rounded, color: AppTheme.errorRed.withValues(alpha: 0.6)),
-          const SizedBox(width: 12),
+          Icon(Icons.error_outline_rounded, color: AppTheme.errorRed.withValues(alpha: 0.6), size: 20),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(
               message,
-              style: TextStyle(color: AppTheme.errorRed.withValues(alpha: 0.8), fontSize: 13),
+              style: const TextStyle(color: AppTheme.errorRed, fontSize: 12.5, fontWeight: FontWeight.w500),
             ),
           ),
         ],

@@ -1,4 +1,3 @@
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -46,8 +45,6 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     _noteController.dispose();
     super.dispose();
   }
-
-
 
   Future<void> _captureLocation() async {
     setState(() {
@@ -200,180 +197,260 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEditing = widget.student != null;
+    final hasLocation = _capturedLocation != null;
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Text(isEditing ? 'Edit Student' : 'Add Student'),
+        backgroundColor: AppTheme.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        title: Text(
+          isEditing ? 'Edit Profile' : 'Add Child',
+          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
           onPressed: () => Navigator.of(context).pop(),
         ),
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Form Header description
-                Text(
-                  isEditing ? 'Update Details' : 'Register a Child',
-                  style: theme.textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
-                const SizedBox(height: 8),
-                Text(
-                  'Provide student details and record their primary pickup/dropoff home location.',
-                  style: theme.textTheme.bodyMedium,
-                ).animate().fade(duration: 400.ms, delay: 100.ms).slideY(begin: 0.1),
-                const SizedBox(height: 32),
+      body: Column(
+        children: [
+          // --- Scrollable Form Area ---
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Header Description
+                    Text(
+                      'Provide student details and secure their primary home location for routing.',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
+                    ).animate().fade(duration: 400.ms).slideY(begin: 0.05),
+                    
+                    const SizedBox(height: 24),
 
-                // Name Field
-                TextFormField(
-                  controller: _nameController,
-                  keyboardType: TextInputType.name,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Full Name',
-                    hintText: 'Enter student name',
-                    prefixIcon: Icon(Icons.person_outline_rounded, color: AppTheme.textSecondary),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter student name';
-                    }
-                    return null;
-                  },
-                ).animate().fade(duration: 400.ms, delay: 200.ms).slideY(begin: 0.1),
-                const SizedBox(height: 20),
-
-                // Grade Field
-                TextFormField(
-                  controller: _gradeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Grade / Class',
-                    hintText: 'e.g. Grade 5, Grade A',
-                    prefixIcon: Icon(Icons.school_outlined, color: AppTheme.textSecondary),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter grade';
-                    }
-                    return null;
-                  },
-                ).animate().fade(duration: 400.ms, delay: 300.ms).slideY(begin: 0.1),
-                const SizedBox(height: 20),
-
-                // School Name Field
-                TextFormField(
-                  controller: _schoolNameController,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'School Name',
-                    hintText: 'e.g. Springfield Elementary',
-                    prefixIcon: Icon(Icons.account_balance_outlined, color: AppTheme.textSecondary),
-                  ),
-                ).animate().fade(duration: 400.ms, delay: 400.ms).slideY(begin: 0.1),
-                const SizedBox(height: 20),
-
-                // Note Field
-                TextFormField(
-                  controller: _noteController,
-                  textCapitalization: TextCapitalization.sentences,
-                  maxLines: 2,
-                  decoration: const InputDecoration(
-                    labelText: 'Special Note',
-                    hintText: 'e.g. Needs front seat, allergies, etc.',
-                    prefixIcon: Icon(Icons.note_alt_outlined, color: AppTheme.textSecondary),
-                  ),
-                ).animate().fade(duration: 400.ms, delay: 500.ms).slideY(begin: 0.1),
-                const SizedBox(height: 30),
-
-                // GPS Location Capture Container
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppTheme.border, width: 1),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
+                    // Clean, Unified Form Container
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceCard,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.02),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                        border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Icon(
-                            _capturedLocation != null ? Icons.gps_fixed_rounded : Icons.gps_off_rounded,
-                            color: _capturedLocation != null ? AppTheme.successGreen : AppTheme.warningOrange,
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Home Location GPS',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _capturedLocation != null
-                                      ? 'Coordinates captured!'
-                                      : 'No coordinates set',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: _capturedLocation != null ? AppTheme.successGreen : AppTheme.textMuted,
-                                    fontSize: 12,
-                                  ),
-                                ),
-                              ],
+                          // Name Field
+                          TextFormField(
+                            controller: _nameController,
+                            keyboardType: TextInputType.name,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Full Name',
+                              hintText: 'Enter student name',
+                              prefixIcon: Icon(Icons.person_outline_rounded, size: 20),
                             ),
-                          ),
-                          if (_capturedLocation != null)
-                            const Icon(Icons.check_circle_outline_rounded, color: AppTheme.successGreen),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter student name';
+                              }
+                              return null;
+                            },
+                          ).animate().fade(delay: 50.ms),
+                          const SizedBox(height: 16),
+
+                          // Grade Field
+                          TextFormField(
+                            controller: _gradeController,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'Grade / Class',
+                              hintText: 'e.g. Grade 5, Class A',
+                              prefixIcon: Icon(Icons.school_outlined, size: 20),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Please enter grade';
+                              }
+                              return null;
+                            },
+                          ).animate().fade(delay: 100.ms),
+                          const SizedBox(height: 16),
+
+                          // School Name Field
+                          TextFormField(
+                            controller: _schoolNameController,
+                            textCapitalization: TextCapitalization.words,
+                            textInputAction: TextInputAction.next,
+                            decoration: const InputDecoration(
+                              labelText: 'School Name',
+                              hintText: 'e.g. Springfield Elementary',
+                              prefixIcon: Icon(Icons.account_balance_outlined, size: 20),
+                            ),
+                          ).animate().fade(delay: 150.ms),
+                          const SizedBox(height: 16),
+
+                          // Note Field
+                          TextFormField(
+                            controller: _noteController,
+                            textCapitalization: TextCapitalization.sentences,
+                            textInputAction: TextInputAction.done,
+                            maxLines: 2,
+                            decoration: const InputDecoration(
+                              labelText: 'Special Notes',
+                              hintText: 'e.g. Needs front seat, allergies, etc.',
+                              prefixIcon: Icon(Icons.note_alt_outlined, size: 20),
+                            ),
+                          ).animate().fade(delay: 200.ms),
                         ],
                       ),
-                      if (_capturedLocation != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          'Lat: ${_capturedLocation!.latitude.toStringAsFixed(6)}\nLong: ${_capturedLocation!.longitude.toStringAsFixed(6)}',
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontFamily: 'monospace',
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        onPressed: _fetchingLocation ? null : _captureLocation,
-                        icon: _fetchingLocation
-                            ? const SizedBox(
-                                height: 18,
-                                width: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(AppTheme.background),
-                                ),
-                              )
-                            : const Icon(Icons.my_location_rounded, size: 18),
-                        label: Text(_fetchingLocation ? 'Fetching GPS...' : 'Set Home Location (Current GPS)'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.border,
-                          foregroundColor: AppTheme.textPrimary,
+                    ).animate().fade().slideY(begin: 0.05),
+
+                    const SizedBox(height: 24),
+
+                    // Smart GPS Location Card
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: hasLocation 
+                            ? AppTheme.successGreen.withValues(alpha: 0.03) 
+                            : AppTheme.warningOrange.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: hasLocation 
+                              ? AppTheme.successGreen.withValues(alpha: 0.3)
+                              : AppTheme.warningOrange.withValues(alpha: 0.3),
                         ),
                       ),
-                    ],
-                  ),
-                ).animate().fade(duration: 400.ms, delay: 600.ms).slideY(begin: 0.1),
-                const SizedBox(height: 40),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: hasLocation 
+                                      ? AppTheme.successGreen.withValues(alpha: 0.1)
+                                      : AppTheme.warningOrange.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  hasLocation ? Icons.check_circle_rounded : Icons.gps_off_rounded,
+                                  color: hasLocation ? AppTheme.successGreen : AppTheme.warningOrange,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Home Location',
+                                      style: theme.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.textPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      hasLocation ? 'GPS coordinates secured' : 'Required for accurate routing',
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (hasLocation) ...[
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppTheme.surfaceCard,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+                              ),
+                              child: Text(
+                                '${_capturedLocation!.latitude.toStringAsFixed(6)}, ${_capturedLocation!.longitude.toStringAsFixed(6)}',
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontFamily: 'monospace',
+                                  color: AppTheme.textSecondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            height: 48,
+                            child: OutlinedButton.icon(
+                              onPressed: _fetchingLocation ? null : _captureLocation,
+                              icon: _fetchingLocation
+                                  ? const SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : Icon(
+                                      hasLocation ? Icons.update_rounded : Icons.my_location_rounded, 
+                                      size: 18,
+                                    ),
+                              label: Text(_fetchingLocation 
+                                  ? 'Fetching Signal...' 
+                                  : hasLocation ? 'Update Coordinates' : 'Capture Current Location'),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: hasLocation ? AppTheme.textPrimary : AppTheme.warningOrange,
+                                side: BorderSide(
+                                  color: hasLocation 
+                                      ? AppTheme.border 
+                                      : AppTheme.warningOrange.withValues(alpha: 0.5),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ).animate().fade(delay: 150.ms).slideY(begin: 0.05),
+                  ],
+                ),
+              ),
+            ),
+          ),
 
-                // Register Student Submit Button
-                ElevatedButton(
+          // --- Fixed Bottom Section ---
+          Container(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            decoration: BoxDecoration(
+              color: AppTheme.background,
+              border: Border(top: BorderSide(color: AppTheme.border.withValues(alpha: 0.3))),
+            ),
+            child: SafeArea(
+              top: false,
+              child: SizedBox(
+                height: 54,
+                child: ElevatedButton(
                   onPressed: _isSubmitting ? null : _submitStudent,
                   child: _isSubmitting
                       ? const SizedBox(
@@ -384,12 +461,15 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                             valueColor: AlwaysStoppedAnimation<Color>(AppTheme.background),
                           ),
                         )
-                      : Text(isEditing ? 'Update Details' : 'Register Student'),
-                ).animate().fade(duration: 400.ms, delay: 700.ms).slideY(begin: 0.1),
-              ],
+                      : Text(
+                          isEditing ? 'Save Changes' : 'Register Student',
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                ),
+              ).animate().fade(delay: 200.ms),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

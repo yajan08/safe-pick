@@ -9,7 +9,6 @@ import 'trip_detail_screen.dart';
 import 'create_trip_screen.dart';
 import '../../profile/presentation/driver_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
-import '../../../core/widgets/illustrations.dart';
 
 /// Real-time stream provider that fetches all trips assigned to the logged-in driver.
 final driverTripsProvider = StreamProvider<List<TripModel>>((ref) {
@@ -41,8 +40,6 @@ class DriverDashboard extends ConsumerWidget {
         completedDate.day == now.day;
   }
 
-
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
@@ -51,41 +48,59 @@ class DriverDashboard extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
+        backgroundColor: AppTheme.background,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: true,
         title: SvgPicture.asset(
           'assets/images/logo.svg',
-          height: 32,
-        ),
+          height: 36, // Scaled correctly for brand recognition
+        ).animate().fade().scale(delay: 100.ms, curve: Curves.easeOutBack),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person_outline_rounded, color: AppTheme.primaryGold),
-            onPressed: () {
+          GestureDetector(
+            onTap: () {
               Navigator.of(context).push(
                 MaterialPageRoute(builder: (context) => const DriverProfileScreen()),
               );
             },
-          ),
-          const SizedBox(width: 8),
+            child: Container(
+              margin: const EdgeInsets.only(right: 20),
+              padding: const EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.border.withValues(alpha: 0.6), width: 1.5),
+              ),
+              child: CircleAvatar(
+                radius: 16,
+                backgroundColor: AppTheme.surfaceCard,
+                child: const Icon(Icons.person_outline_rounded, color: AppTheme.textPrimary, size: 18),
+              ),
+            ),
+          ).animate().fade(delay: 200.ms),
         ],
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Welcome Header
+              const SizedBox(height: 16),
+              // Functional Header
               Text(
                 "Today's Trips",
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  color: AppTheme.textPrimary,
                 ),
               ).animate().fade().slideY(begin: -0.05),
-              const SizedBox(height: 8),
+              const SizedBox(height: 4),
               Text(
                 'Assigned transport routes and manifests.',
-                style: theme.textTheme.bodyMedium,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppTheme.textSecondary,
+                ),
               ).animate().fade(delay: 50.ms).slideY(begin: -0.05),
               const SizedBox(height: 24),
 
@@ -126,15 +141,17 @@ class DriverDashboard extends ConsumerWidget {
                         _buildSummaryCards(theme, totalTrips, pendingTrips),
                         const SizedBox(height: 24),
                         Expanded(
-                          child: ListView.builder(
+                          child: ListView.separated(
                             physics: const BouncingScrollPhysics(),
+                            padding: const EdgeInsets.only(bottom: 100), // Clearance for FAB
                             itemCount: sortedTrips.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 16),
                             itemBuilder: (context, index) {
                               final trip = sortedTrips[index];
                               return _buildTripCard(context, theme, trip)
                                   .animate()
                                   .fade(delay: Duration(milliseconds: 150 + (index * 50)))
-                                  .slideY(begin: 0.05);
+                                  .slideY(begin: 0.05, curve: Curves.easeOut);
                             },
                           ),
                         ),
@@ -145,14 +162,14 @@ class DriverDashboard extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Row(
-                        children: [
-                          Expanded(child: ShimmerLoading(width: double.infinity, height: 100, borderRadius: 20)),
-                          const SizedBox(width: 16),
-                          Expanded(child: ShimmerLoading(width: double.infinity, height: 100, borderRadius: 20)),
+                        children: const [
+                          Expanded(child: ShimmerCard(height: 110)),
+                          SizedBox(width: 16),
+                          Expanded(child: ShimmerCard(height: 110)),
                         ],
                       ),
                       const SizedBox(height: 24),
-                      const Expanded(child: ShimmerList(itemCount: 4, itemHeight: 140)),
+                      const Expanded(child: ShimmerList(itemCount: 4, itemHeight: 96)),
                     ],
                   ),
                   error: (error, stackTrace) => _buildErrorState(theme, error.toString()),
@@ -165,8 +182,10 @@ class DriverDashboard extends ConsumerWidget {
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppTheme.primaryGold,
         foregroundColor: AppTheme.background,
+        elevation: 4,
+        highlightElevation: 8,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(18),
         ),
         onPressed: () {
           Navigator.of(context).push(
@@ -175,8 +194,8 @@ class DriverDashboard extends ConsumerWidget {
             ),
           );
         },
-        child: const Icon(Icons.add_rounded),
-      ),
+        child: const Icon(Icons.add_rounded, size: 28),
+      ).animate().fade(delay: 300.ms).scale(begin: const Offset(0.8, 0.8)),
     );
   }
 
@@ -184,47 +203,81 @@ class DriverDashboard extends ConsumerWidget {
     return Row(
       children: [
         Expanded(
-          child: _buildSingleSummaryCard(theme, 'Total Trips', total.toString()),
+          child: _buildSingleSummaryCard(
+            theme: theme, 
+            label: 'Total Routes', 
+            value: total.toString(),
+            icon: Icons.route_rounded,
+            iconColor: AppTheme.primaryGold,
+          ),
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _buildSingleSummaryCard(theme, 'Pending Today', pending.toString()),
+          child: _buildSingleSummaryCard(
+            theme: theme, 
+            label: 'Pending', 
+            value: pending.toString(),
+            icon: Icons.pending_actions_rounded,
+            iconColor: AppTheme.textSecondary,
+          ),
         ),
       ],
-    ).animate().fade(delay: 100.ms).scale(begin: const Offset(0.95, 0.95));
+    ).animate().fade(delay: 100.ms).slideY(begin: 0.05, curve: Curves.easeOut);
   }
 
-  Widget _buildSingleSummaryCard(ThemeData theme, String label, String value) {
+  Widget _buildSingleSummaryCard({
+    required ThemeData theme, 
+    required String label, 
+    required String value,
+    required IconData icon,
+    required Color iconColor,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2C2C2C), // Dark grey background
+        color: AppTheme.surfaceCard, // Replaced harsh dark grey with clean surface
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            value,
-            style: theme.textTheme.displaySmall?.copyWith(
-              color: AppTheme.primaryGold, // Bright amber accents
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: iconColor, size: 20),
+              ),
+              Text(
+                value,
+                style: theme.textTheme.headlineMedium?.copyWith(
+                  color: AppTheme.textPrimary,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 16),
           Text(
             label,
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: Colors.white,
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppTheme.textMuted,
               fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
             ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -236,21 +289,22 @@ class DriverDashboard extends ConsumerWidget {
     final isActive = trip.status.toLowerCase() == 'active';
     final isCompletedToday = _isTripCompletedToday(trip);
 
-    // Dynamic UI states based on daily reset logic
+    // Muted, trustworthy UI states
     final String statusLabel;
-    final Color badgeColor;
+    final Color statusColor;
+    
     if (isActive) {
-      statusLabel = 'ACTIVE';
-      badgeColor = AppTheme.primaryGold;
+      statusLabel = 'In Progress';
+      statusColor = AppTheme.warningOrange;
     } else if (isCompletedToday) {
-      statusLabel = 'COMPLETED';
-      badgeColor = AppTheme.successGreen;
+      statusLabel = 'Completed';
+      statusColor = AppTheme.successGreen;
     } else {
-      statusLabel = 'READY';
-      badgeColor = const Color(0xFFE0E0E0);
+      statusLabel = 'Ready to Start';
+      statusColor = AppTheme.textMuted;
     }
 
-    return GestureDetector(
+    return _TappableCard(
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -259,75 +313,81 @@ class DriverDashboard extends ConsumerWidget {
         );
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.surface,
+          color: AppTheme.surfaceCard,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
+          border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            // Left indicator block
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isMorning 
+                    ? AppTheme.primaryGold.withValues(alpha: 0.1) 
+                    : AppTheme.textSecondary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                isMorning ? Icons.wb_sunny_rounded : Icons.nights_stay_rounded,
+                color: isMorning ? AppTheme.primaryGoldDark : AppTheme.textSecondary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            
+            // Core information
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    trip.tripName,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.textPrimary,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
                     children: [
-                      Text(
-                        trip.tripName,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: statusColor,
+                          shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            isMorning ? Icons.login_rounded : Icons.logout_rounded,
-                            color: AppTheme.primaryGold,
-                            size: 24,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            isMorning ? 'Morning Pick-Up' : 'Afternoon Drop-Off',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.textSecondary,
-                            ),
-                          ),
-                        ],
+                      const SizedBox(width: 6),
+                      Text(
+                        statusLabel,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondary,
+                        ),
                       ),
                     ],
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: badgeColor,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    statusLabel,
-                    style: theme.textTheme.titleSmall?.copyWith(
-                      color: (isCompletedToday || isActive) ? Colors.white : AppTheme.textPrimary,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ),
-              ],
+                ],
+              ),
+            ),
+            
+            // Action indicator
+            const Icon(
+              Icons.chevron_right_rounded,
+              color: AppTheme.textMuted,
+              size: 24,
             ),
           ],
         ),
@@ -340,22 +400,37 @@ class DriverDashboard extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const NoTripsIllustration(size: 160),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.surfaceCard,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: const Icon(Icons.route_outlined, color: AppTheme.textMuted, size: 48),
+          ),
           const SizedBox(height: 24),
           Text(
-            'No trips assigned for today.',
-            style: theme.textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+            'No trips assigned',
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              color: AppTheme.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Check back later, contact transport dispatch, or create a new trip using the button below.',
-            style: theme.textTheme.bodyMedium,
-            textAlign: TextAlign.center,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32.0),
+            child: Text(
+              'Check back later, contact transport dispatch, or create a new trip using the + button below.',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: AppTheme.textSecondary,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
-      ).animate().fade().scale(begin: const Offset(0.95, 0.95)),
+      ).animate().fade().scale(begin: const Offset(0.95, 0.95), curve: Curves.easeOutCubic),
     );
   }
 
@@ -364,8 +439,15 @@ class DriverDashboard extends ConsumerWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline_rounded, color: AppTheme.errorRed, size: 48),
-          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.errorRed.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.error_outline_rounded, color: AppTheme.errorRed, size: 40),
+          ),
+          const SizedBox(height: 24),
           Text(
             'Failed to load assigned trips',
             style: theme.textTheme.titleMedium?.copyWith(
@@ -376,10 +458,65 @@ class DriverDashboard extends ConsumerWidget {
           const SizedBox(height: 8),
           Text(
             error,
-            style: theme.textTheme.bodyMedium,
+            style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textSecondary),
             textAlign: TextAlign.center,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A wrapper widget that provides tactile scale-down feedback on tap.
+class _TappableCard extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+  const _TappableCard({required this.child, required this.onTap});
+
+  @override
+  State<_TappableCard> createState() => _TappableCardState();
+}
+
+class _TappableCardState extends State<_TappableCard> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 100),
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.97).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTapDown: (_) => _controller.forward(),
+      onTapUp: (_) {
+        _controller.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () => _controller.reverse(),
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _scaleAnimation.value,
+            child: child,
+          );
+        },
+        child: widget.child,
       ),
     );
   }

@@ -26,30 +26,48 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppTheme.background,
+        elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppTheme.border),
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1),
         ),
         title: const Text(
           'Remove Student',
-          style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: AppTheme.errorRed,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
         ),
         content: Text(
           'Are you sure you want to remove ${widget.student.name}? This will permanently delete their active profile.',
-          style: const TextStyle(color: AppTheme.textSecondary),
+          style: const TextStyle(
+            color: AppTheme.textSecondary,
+            height: 1.4,
+          ),
         ),
+        actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.textSecondary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.errorRed,
               foregroundColor: AppTheme.background,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remove'),
+            child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -76,10 +94,11 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Student removed successfully'),
+            SnackBar(
+              content: const Text('Student removed successfully'),
               backgroundColor: AppTheme.successGreen,
               behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
           Navigator.pop(context); // Go back to profile
@@ -91,6 +110,7 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
               content: Text('Failed to remove: $e'),
               backgroundColor: AppTheme.errorRed,
               behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
           );
         }
@@ -107,14 +127,26 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: Text(widget.student.name),
+        backgroundColor: AppTheme.background,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        title: Text(
+          widget.student.name,
+          style: theme.textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.5,
+            color: AppTheme.textPrimary,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          color: AppTheme.textPrimary,
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryGold),
+            icon: const Icon(Icons.edit_rounded, size: 22, color: AppTheme.primaryGold),
             tooltip: 'Edit Details',
             onPressed: () {
               Navigator.of(context).push(
@@ -124,41 +156,43 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
               );
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: SafeArea(
         child: _isLoading 
           ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryGold))
-          : SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // QR Code Card
-              _buildQrCodeCard(theme),
-              const SizedBox(height: 24),
+          : Column(
+              children: [
+                // ── Scrollable Content ──
+                Expanded(
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildQrCodeCard(theme),
+                        const SizedBox(height: 20),
 
-              // Student Details Card
-              _buildDetailsCard(theme),
-              const SizedBox(height: 24),
+                        _buildDetailsCard(theme),
+                        const SizedBox(height: 20),
 
-              // Location Card
-              _buildLocationCard(theme),
-              const SizedBox(height: 24),
+                        _buildLocationCard(theme),
+                        
+                        if (widget.student.note.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          _buildNoteCard(theme),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
 
-              // Note Card (if note exists)
-              if (widget.student.note.isNotEmpty) ...[
-                _buildNoteCard(theme),
-                const SizedBox(height: 24),
+                // ── Sticky Bottom Action Bar ──
+                _buildStickyActionButtons(theme),
               ],
-
-              // Action Buttons
-              _buildActionButtons(theme),
-              const SizedBox(height: 32),
-            ],
-          ),
-        ),
+            ),
       ),
     );
   }
@@ -168,28 +202,40 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.4), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.015),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Text(
             'Student QR Code',
-            style: theme.textTheme.labelLarge?.copyWith(color: AppTheme.textSecondary),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppTheme.textSecondary,
+              letterSpacing: 0.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 16),
-          // QR Code with white background for scanability
+          const SizedBox(height: 20),
+          
+          // QR Code 
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.border),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
             ),
             child: QrImageView(
               data: widget.student.studentId,
               version: QrVersions.auto,
-              size: 180,
+              size: 160,
               backgroundColor: Colors.white,
               eyeStyle: const QrEyeStyle(
                 eyeShape: QrEyeShape.square,
@@ -201,36 +247,40 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
+          
           // Student ID Chip
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: AppTheme.primaryGold.withValues(alpha: 0.1),
+              color: AppTheme.primaryGold.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+              border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.2)),
             ),
             child: Text(
               widget.student.studentId,
               style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
                 color: AppTheme.primaryGold,
-                letterSpacing: 2,
+                letterSpacing: 1.5,
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
+          
           Text(
             'Share this code with your driver for quick check-in',
-            style: theme.textTheme.bodyMedium?.copyWith(
+            style: theme.textTheme.bodySmall?.copyWith(
               color: AppTheme.textMuted,
-              fontSize: 12,
+              height: 1.4,
             ),
             textAlign: TextAlign.center,
           ),
         ],
       ),
-    ).animate().fade(duration: 400.ms).scale(begin: const Offset(0.95, 0.95));
+    ).animate().fade(duration: 400.ms, curve: Curves.easeOutCubic).scale(
+      begin: const Offset(0.98, 0.98), curve: Curves.easeOutCubic,
+    );
   }
 
   Widget _buildDetailsCard(ThemeData theme) {
@@ -238,28 +288,43 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.4), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.015),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Student Details',
-            style: theme.textTheme.labelLarge?.copyWith(color: AppTheme.textSecondary),
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppTheme.textSecondary,
+              letterSpacing: 0.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
+          
           _buildDetailRow(theme, Icons.person_rounded, 'Name', widget.student.name),
-          const Divider(color: AppTheme.border, height: 24),
+          Divider(color: AppTheme.border.withValues(alpha: 0.3), height: 24, thickness: 1),
+          
           _buildDetailRow(theme, Icons.school_rounded, 'Grade', widget.student.grade),
-          const Divider(color: AppTheme.border, height: 24),
+          Divider(color: AppTheme.border.withValues(alpha: 0.3), height: 24, thickness: 1),
+          
           _buildDetailRow(
             theme,
             Icons.account_balance_rounded,
             'School',
             widget.student.schoolName.isNotEmpty ? widget.student.schoolName : 'Not set',
           ),
-          const Divider(color: AppTheme.border, height: 24),
+          Divider(color: AppTheme.border.withValues(alpha: 0.3), height: 24, thickness: 1),
+          
           _buildDetailRow(
             theme,
             Icons.circle,
@@ -273,7 +338,7 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
           ),
         ],
       ),
-    ).animate().fade(delay: 100.ms).slideY(begin: 0.05);
+    ).animate().fade(delay: 100.ms, duration: 400.ms).slideY(begin: 0.02, curve: Curves.easeOutCubic);
   }
 
   Widget _buildDetailRow(
@@ -285,19 +350,33 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
   }) {
     return Row(
       children: [
-        Icon(icon, color: AppTheme.primaryGold, size: 20),
-        const SizedBox(width: 12),
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryGold.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: AppTheme.primaryGold, size: 18),
+        ),
+        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label, style: theme.textTheme.labelLarge?.copyWith(color: AppTheme.textMuted)),
+              Text(
+                label, 
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppTheme.textMuted,
+                  letterSpacing: 0.2,
+                )
+              ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: valueColor,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: valueColor ?? AppTheme.textPrimary,
+                  letterSpacing: -0.2,
                 ),
               ),
             ],
@@ -314,24 +393,43 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.4), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.015),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
-          Icon(
-            hasLocation ? Icons.gps_fixed_rounded : Icons.gps_off_rounded,
-            color: hasLocation ? AppTheme.successGreen : AppTheme.textMuted,
-            size: 24,
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: hasLocation 
+                ? AppTheme.successGreen.withValues(alpha: 0.1) 
+                : AppTheme.textMuted.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              hasLocation ? Icons.gps_fixed_rounded : Icons.gps_off_rounded,
+              color: hasLocation ? AppTheme.successGreen : AppTheme.textMuted,
+              size: 20,
+            ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Home Location',
-                  style: theme.textTheme.labelLarge?.copyWith(color: AppTheme.textMuted),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: AppTheme.textMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
@@ -341,83 +439,119 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
                     color: hasLocation ? AppTheme.textPrimary : AppTheme.textMuted,
+                    letterSpacing: -0.2,
                   ),
                 ),
               ],
             ),
           ),
-          Icon(
-            hasLocation ? Icons.check_circle_rounded : Icons.warning_rounded,
-            color: hasLocation ? AppTheme.successGreen : AppTheme.warningOrange,
-            size: 20,
-          ),
+          if (hasLocation)
+             const Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 20)
+          else
+             const Icon(Icons.warning_rounded, color: AppTheme.warningOrange, size: 20),
         ],
       ),
-    ).animate().fade(delay: 200.ms).slideY(begin: 0.05);
+    ).animate().fade(delay: 200.ms, duration: 400.ms).slideY(begin: 0.02, curve: Curves.easeOutCubic);
   }
 
   Widget _buildNoteCard(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.primaryGold.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.2)),
+        color: AppTheme.primaryGold.withValues(alpha: 0.04),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.15)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.note_alt_rounded, color: AppTheme.primaryGold, size: 20),
-          const SizedBox(width: 12),
+          const Padding(
+            padding: EdgeInsets.only(top: 2),
+            child: Icon(Icons.note_alt_rounded, color: AppTheme.primaryGold, size: 20),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'Special Note',
-                  style: theme.textTheme.labelLarge?.copyWith(color: AppTheme.textMuted),
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: AppTheme.textSecondary,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   widget.student.note,
-                  style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.textPrimary,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
           ),
         ],
       ),
-    ).animate().fade(delay: 300.ms).slideY(begin: 0.05);
+    ).animate().fade(delay: 300.ms, duration: 400.ms).slideY(begin: 0.02, curve: Curves.easeOutCubic);
   }
 
-  Widget _buildActionButtons(ThemeData theme) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Edit Button
-        ElevatedButton.icon(
-          onPressed: _isLoading ? null : () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => AddStudentScreen(student: widget.student),
-              ),
-            );
-          },
-          icon: const Icon(Icons.edit_rounded),
-          label: const Text('Edit Details'),
+  Widget _buildStickyActionButtons(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+      decoration: BoxDecoration(
+        color: AppTheme.background,
+        border: Border(
+          top: BorderSide(color: AppTheme.border.withValues(alpha: 0.3), width: 1),
         ),
-        const SizedBox(height: 12),
-        // Remove Button
-        OutlinedButton.icon(
-          onPressed: _isLoading ? null : () => _handleRemove(),
-          icon: const Icon(Icons.person_remove_rounded, color: AppTheme.errorRed),
-          label: const Text('Remove Student'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppTheme.errorRed,
-            side: const BorderSide(color: AppTheme.errorRed, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, -4),
           ),
-        ),
-      ],
-    ).animate().fade(delay: 400.ms).slideY(begin: 0.05);
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ElevatedButton(
+            onPressed: _isLoading ? null : () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AddStudentScreen(student: widget.student),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGold,
+              foregroundColor: AppTheme.background,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: const Text(
+              'Edit Details',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.2),
+            ),
+          ),
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _isLoading ? null : () => _handleRemove(),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.errorRed,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: const Text(
+              'Remove Student',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    ).animate().fade(delay: 400.ms, duration: 400.ms).slideY(begin: 0.05, curve: Curves.easeOutCubic);
   }
 }

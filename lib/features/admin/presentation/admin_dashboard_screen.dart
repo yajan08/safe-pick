@@ -31,20 +31,28 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: kAdminNavy,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.background,
+        foregroundColor: kAdminNavy,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
         title: const Text(
           'Admin Console',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.white),
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: 18,
+            letterSpacing: -0.5,
+            color: kAdminNavy,
+          ),
         ),
-        centerTitle: true,
-        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout_rounded, color: Colors.white),
+            icon: const Icon(Icons.logout_rounded, color: kAdminNavy, size: 22),
             tooltip: 'Sign Out',
             onPressed: () async {
               final messenger = ScaffoldMessenger.of(context);
@@ -53,12 +61,18 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               } catch (e) {
                 if (mounted) {
                   messenger.showSnackBar(
-                    SnackBar(content: Text(e.toString()), behavior: SnackBarBehavior.floating),
+                    SnackBar(
+                      content: Text(e.toString()), 
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: AppTheme.errorRed,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                   );
                 }
               }
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       // IndexedStack keeps tab states alive, preventing full-screen flicker
@@ -68,38 +82,62 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           children: _tabs,
         ),
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (index) => setState(() => _currentIndex = index),
-        backgroundColor: AppTheme.surface,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        indicatorColor: kAdminNavy.withValues(alpha: 0.08),
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        height: 72,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard_rounded, color: kAdminNavy),
-            label: 'Overview',
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          border: Border(
+            top: BorderSide(color: AppTheme.border.withValues(alpha: 0.3), width: 1),
           ),
-          NavigationDestination(
-            icon: Icon(Icons.people_outline_rounded),
-            selectedIcon: Icon(Icons.people_rounded, color: kAdminNavy),
-            label: 'Users',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.directions_bus_outlined),
-            selectedIcon: Icon(Icons.directions_bus_rounded, color: kAdminNavy),
-            label: 'Trips',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics_rounded, color: kAdminNavy),
-            label: 'Reports',
-          ),
-        ],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 10,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (index) => setState(() => _currentIndex = index),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          shadowColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          indicatorColor: kAdminNavy.withValues(alpha: 0.08),
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          height: 68,
+          // Subtle text styling for the labels
+          labelTextStyle: WidgetStateProperty.resolveWith((states) {
+            final isSelected = states.contains(WidgetState.selected);
+            return theme.textTheme.labelSmall?.copyWith(
+              color: isSelected ? kAdminNavy : AppTheme.textMuted,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              letterSpacing: 0.2,
+            );
+          }),
+          destinations: [
+            NavigationDestination(
+              icon: Icon(Icons.dashboard_outlined, color: AppTheme.textMuted),
+              selectedIcon: const Icon(Icons.dashboard_rounded, color: kAdminNavy),
+              label: 'Overview',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.people_outline_rounded, color: AppTheme.textMuted),
+              selectedIcon: const Icon(Icons.people_rounded, color: kAdminNavy),
+              label: 'Users',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.directions_bus_outlined, color: AppTheme.textMuted),
+              selectedIcon: const Icon(Icons.directions_bus_rounded, color: kAdminNavy),
+              label: 'Trips',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.analytics_outlined, color: AppTheme.textMuted),
+              selectedIcon: const Icon(Icons.analytics_rounded, color: kAdminNavy),
+              label: 'Reports',
+            ),
+          ],
+        ),
       ),
     );
   }

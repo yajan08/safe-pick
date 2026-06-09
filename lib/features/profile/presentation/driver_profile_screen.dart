@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/snackbar_utils.dart';
 
 class DriverProfileScreen extends ConsumerStatefulWidget {
   const DriverProfileScreen({super.key});
@@ -31,6 +30,30 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     _loadProfile();
   }
 
+  void _showErrorDialog(String message) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Action Failed', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 22)),
+        content: Text(message, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16)),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.textPrimary, 
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
+            ),
+            child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _loadProfile() async {
     try {
       final user = ref.read(firebaseAuthProvider).currentUser;
@@ -41,6 +64,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
           final data = doc.data()!;
           _nameController.text = (data['name'] ?? '').toString();
           _phoneController.text = (data['phone'] ?? '').toString();
+          _vehicleInputController.clear(); // Clear any stale input
           _vehicleNumbers
             ..clear()
             ..addAll(_extractVehicleNumbers(data));
@@ -52,7 +76,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
         }
       }
     } catch (e) {
-      if (mounted) SnackBarUtils.showError(context, 'Failed to load profile');
+      _showErrorDialog('Failed to load profile details. Please check your connection.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -66,7 +90,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
       final user = ref.read(firebaseAuthProvider).currentUser;
       if (user != null) {
         if (_vehicleNumbers.isEmpty) {
-          throw 'Add at least one vehicle number.';
+          throw 'Please add at least one vehicle number.';
         }
 
         await ref.read(firestoreProvider).collection('users').doc(user.uid).update({
@@ -76,13 +100,14 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
           'vehicle_numbers': _vehicleNumbers,
           'vehicle_number': _vehicleNumbers.first,
         });
+        
+        // Silent success: instantly return to read-only view
         if (mounted) {
-          SnackBarUtils.showSuccess(context, 'Profile updated successfully!');
           setState(() => _isEditing = false);
         }
       }
     } catch (e) {
-      if (mounted) SnackBarUtils.showError(context, 'Failed to update profile: $e');
+      _showErrorDialog('Failed to save profile: $e');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -109,10 +134,10 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   }
 
   void _addVehicleNumber() {
-    final value = _vehicleInputController.text.trim();
+    final value = _vehicleInputController.text.trim().toUpperCase();
     if (value.isEmpty) return;
 
-    if (_vehicleNumbers.any((vehicle) => vehicle.toLowerCase() == value.toLowerCase())) {
+    if (_vehicleNumbers.any((vehicle) => vehicle.toUpperCase() == value)) {
       _vehicleInputController.clear();
       return;
     }
@@ -123,8 +148,16 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     });
   }
 
+  void _setPrimaryVehicle(int index) {
+    if (index == 0) return;
+    setState(() {
+      final selectedVehicle = _vehicleNumbers.removeAt(index);
+      _vehicleNumbers.insert(0, selectedVehicle);
+    });
+  }
+
   void _startEditing() {
-    _vehicleInputController.text = _vehicleNumbers.isNotEmpty ? _vehicleNumbers.first : '';
+    _vehicleInputController.clear(); // Explicitly clear the field
     setState(() => _isEditing = true);
   }
 
@@ -143,13 +176,47 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   }
 
   Future<void> _handleSignOut() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.surfaceCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Sign Out',
+          style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, fontSize: 24),
+        ),
+        content: const Text(
+          'Are you sure you want to sign out of your account?',
+          style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('CANCEL', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontSize: 16)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.textPrimary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              minimumSize: const Size(0, 48),
+            ),
+            child: const Text('SIGN OUT', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
     try {
       await ref.read(firebaseAuthProvider).signOut();
       if (mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      if (mounted) SnackBarUtils.showError(context, 'Error signing out: $e');
+      _showErrorDialog('Error signing out. Please try again.');
     }
   }
 
@@ -157,34 +224,33 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: AppTheme.surfaceCard,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppTheme.errorRed, width: 2),
         ),
         title: const Text(
           'Delete Account',
-          style: TextStyle(
-            color: AppTheme.errorRed,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w900, fontSize: 24),
         ),
         content: const Text(
           'Are you absolutely sure you want to permanently delete your account and all associated active vehicle profiles? This action cannot be undone.',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textPrimary)),
+            child: const Text('CANCEL', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontSize: 16)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.errorRed,
-              foregroundColor: AppTheme.background,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              minimumSize: const Size(0, 48),
             ),
-            child: const Text('Delete Permanently'),
+            child: const Text('DELETE PERMANENTLY', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -198,7 +264,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      if (mounted) SnackBarUtils.showError(context, 'Error deleting account: $e');
+      _showErrorDialog('Error deleting account: $e');
     }
   }
 
@@ -215,7 +281,9 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('My Profile'),
+        title: Text(_isEditing ? 'Edit Profile' : 'Driver Profile', style: const TextStyle(fontWeight: FontWeight.w900)),
+        backgroundColor: AppTheme.background,
+        elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           onPressed: () => Navigator.of(context).pop(),
@@ -226,184 +294,253 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
             ? const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold)))
             : SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      // Subdued Header
                       Center(
                         child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.2),
-                          child: const Icon(Icons.person_rounded, size: 50, color: AppTheme.primaryGold),
-                        ).animate().scale(delay: 100.ms, curve: Curves.easeOutBack),
+                          radius: 48,
+                          backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.1),
+                          child: const Icon(Icons.person_rounded, size: 48, color: AppTheme.primaryGold),
+                        ).animate().scale(delay: 100.ms, curve: Curves.easeOutCubic),
                       ),
-                      const SizedBox(height: 32),
+                      const SizedBox(height: 24),
 
                       if (!_isEditing) ...[
-                        // Read-only User Details Card
+                        // ─── READ-ONLY VIEW ───
                         Container(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: AppTheme.surface,
+                            color: AppTheme.surfaceCard,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppTheme.border),
+                            border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
+                            boxShadow: [
+                              BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                            ],
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildDetailRow('Full Name', _nameController.text, Icons.person_outline_rounded),
-                              const Divider(color: AppTheme.border, height: 24),
+                              _buildDetailRow('Full Name', _nameController.text, Icons.badge_outlined),
+                              const Divider(color: AppTheme.border, height: 32, thickness: 0.5),
                               _buildDetailRow('Email Address', _email, Icons.email_outlined),
-                              const Divider(color: AppTheme.border, height: 24),
+                              const Divider(color: AppTheme.border, height: 32, thickness: 0.5),
                               _buildDetailRow('Phone Number', _phoneController.text, Icons.phone_outlined),
-                              const Divider(color: AppTheme.border, height: 24),
-                              _buildDetailRow('Gender', _selectedGender, Icons.wc_rounded),
-                              const Divider(color: AppTheme.border, height: 24),
+                              const Divider(color: AppTheme.border, height: 32, thickness: 0.5),
                               _buildVehicleSummary(),
                             ],
                           ),
                         ).animate().fade(duration: 300.ms),
-                        const SizedBox(height: 32),
                         
-                        // Edit Details Action Button
+                        const SizedBox(height: 40),
+                        
+                        // Action Buttons Stack
                         SizedBox(
                           height: 56,
                           child: ElevatedButton.icon(
                             onPressed: _startEditing,
-                            icon: const Icon(Icons.edit_rounded, color: AppTheme.background),
-                            label: const Text('Edit Details', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            icon: const Icon(Icons.edit_rounded, size: 24),
+                            label: const Text('EDIT PROFILE DETAILS', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryGold,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        // Sign Out & Delete Buttons
-                        Row(
-                          children: [
-                            Expanded(
-                              child: SizedBox(
-                                height: 56,
-                                child: OutlinedButton.icon(
-                                  onPressed: _handleSignOut,
-                                  icon: const Icon(Icons.logout_rounded, color: AppTheme.textPrimary),
-                                  label: const Text('Sign Out', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textPrimary)),
-                                  style: OutlinedButton.styleFrom(
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  ),
-                                ),
-                              ),
+                        SizedBox(
+                          height: 56,
+                          child: OutlinedButton.icon(
+                            onPressed: _handleSignOut,
+                            icon: const Icon(Icons.logout_rounded, size: 24),
+                            label: const Text('SIGN OUT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.textPrimary,
+                              side: BorderSide(color: AppTheme.border.withValues(alpha: 0.5), width: 2),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                             ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: SizedBox(
-                                height: 56,
-                                child: OutlinedButton.icon(
-                                  onPressed: _handleDeleteAccount,
-                                  icon: const Icon(Icons.delete_forever_rounded, color: AppTheme.errorRed),
-                                  label: const Text('Delete', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.errorRed)),
-                                  style: OutlinedButton.styleFrom(
-                                    side: const BorderSide(color: AppTheme.errorRed, width: 1.5),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                          ),
                         ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          height: 56,
+                          child: OutlinedButton.icon(
+                            onPressed: _handleDeleteAccount,
+                            icon: const Icon(Icons.delete_forever_rounded, size: 24),
+                            label: const Text('DELETE ACCOUNT', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, letterSpacing: 1.0)),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppTheme.errorRed,
+                              side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.5), width: 2),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
                       ] else ...[
-                        // Editable Input Fields
-                        TextFormField(
-                          controller: _nameController,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: const InputDecoration(
-                            labelText: 'Full Name',
-                            prefixIcon: Icon(Icons.person_outline_rounded),
+                        // ─── EDIT VIEW ───
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceCard,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppTheme.border.withValues(alpha: 0.3)),
                           ),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
-                        ).animate().fade(delay: 100.ms).slideY(begin: 0.1),
-                        const SizedBox(height: 20),
-
-                        TextFormField(
-                          controller: _phoneController,
-                          keyboardType: TextInputType.phone,
-                          decoration: const InputDecoration(
-                            labelText: 'Phone Number',
-                            prefixIcon: Icon(Icons.phone_outlined),
-                          ),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
-                        ).animate().fade(delay: 200.ms).slideY(begin: 0.1),
-                        const SizedBox(height: 20),
-
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedGender,
-                          decoration: const InputDecoration(
-                            labelText: 'Gender',
-                            prefixIcon: Icon(Icons.wc_rounded),
-                          ),
-                          dropdownColor: AppTheme.surface,
-                          items: const [
-                            DropdownMenuItem(value: 'Male', child: Text('Male')),
-                            DropdownMenuItem(value: 'Female', child: Text('Female')),
-                            DropdownMenuItem(value: 'Other', child: Text('Other')),
-                          ],
-                          onChanged: (v) {
-                            if (v != null) setState(() => _selectedGender = v);
-                          },
-                        ).animate().fade(delay: 300.ms).slideY(begin: 0.1),
-                        const SizedBox(height: 20),
-
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              'Vehicle Numbers',
-                              style: TextStyle(
-                                color: AppTheme.textMuted,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextFormField(
+                                controller: _nameController,
+                                textCapitalization: TextCapitalization.words,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                decoration: const InputDecoration(
+                                  labelText: 'Full Name',
+                                  prefixIcon: Icon(Icons.person_outline_rounded),
+                                ),
+                                validator: (v) => v == null || v.trim().isEmpty ? 'Name is required' : null,
                               ),
-                            ),
-                            const SizedBox(height: 16), // Increased spacing
-                            TextFormField(
-                              controller: _vehicleInputController,
-                              textCapitalization: TextCapitalization.characters,
-                              decoration: const InputDecoration(
-                                labelText: 'Add Vehicle Number',
-                                prefixIcon: Icon(Icons.directions_car_rounded),
+                              const SizedBox(height: 20),
+
+                              TextFormField(
+                                controller: _phoneController,
+                                keyboardType: TextInputType.phone,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                decoration: const InputDecoration(
+                                  labelText: 'Phone Number',
+                                  prefixIcon: Icon(Icons.phone_outlined),
+                                ),
+                                validator: (v) => v == null || v.trim().isEmpty ? 'Phone number is required' : null,
                               ),
-                              onFieldSubmitted: (_) => _addVehicleNumber(),
-                            ),
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              height: 56,
-                              width: double.infinity,
-                              child: ElevatedButton(
-                                onPressed: _addVehicleNumber,
-                                child: const Text('Add'),
+                              const SizedBox(height: 20),
+
+                              DropdownButtonFormField<String>(
+                                initialValue: _selectedGender,
+                                decoration: const InputDecoration(
+                                  labelText: 'Gender',
+                                  prefixIcon: Icon(Icons.wc_rounded),
+                                ),
+                                dropdownColor: AppTheme.surface,
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppTheme.textPrimary),
+                                items: const [
+                                  DropdownMenuItem(value: 'Male', child: Text('Male')),
+                                  DropdownMenuItem(value: 'Female', child: Text('Female')),
+                                  DropdownMenuItem(value: 'Other', child: Text('Other')),
+                                ],
+                                onChanged: (v) {
+                                  if (v != null) setState(() => _selectedGender = v);
+                                },
                               ),
-                            ),
-                            const SizedBox(height: 12),
-                            Text(
-                              _vehicleNumbers.isEmpty
-                                  ? 'No vehicles added yet.'
-                                  : 'Current vehicles are shown below. The first one is saved as the primary vehicle.',
-                              style: const TextStyle(color: AppTheme.textMuted),
-                            ),
-                            const SizedBox(height: 8),
-                            if (_vehicleNumbers.isNotEmpty)
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
+                              const SizedBox(height: 32),
+
+                              const Text(
+                                'ASSIGNED VEHICLES',
+                                style: TextStyle(
+                                  color: AppTheme.textSecondary,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              
+                              Row(
                                 children: [
-                                  for (var index = 0; index < _vehicleNumbers.length; index++)
-                                    InputChip(
-                                      label: Text(_vehicleNumbers[index]),
-                                      onDeleted: () => _removeVehicleNumber(index),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _vehicleInputController,
+                                      textCapitalization: TextCapitalization.characters,
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                      decoration: const InputDecoration(
+                                        labelText: 'Vehicle Plate',
+                                        hintText: 'e.g. MH12AB1234',
+                                        prefixIcon: Icon(Icons.directions_car_rounded),
+                                      ),
+                                      onFieldSubmitted: (_) => _addVehicleNumber(),
                                     ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  SizedBox(
+                                    height: 56,
+                                    width: 90,
+                                    child: ElevatedButton(
+                                      onPressed: _addVehicleNumber,
+                                      style: ElevatedButton.styleFrom(
+                                        minimumSize: const Size(0, 56), 
+                                        padding: EdgeInsets.zero,
+                                        backgroundColor: AppTheme.textPrimary,
+                                        foregroundColor: Colors.white,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      ),
+                                      child: const Text('ADD', style: TextStyle(fontWeight: FontWeight.w900)),
+                                    ),
+                                  ),
                                 ],
                               ),
-                          ],
-                        ).animate().fade(delay: 400.ms).slideY(begin: 0.1),
+                              const SizedBox(height: 16),
+
+                              if (_vehicleNumbers.isEmpty)
+                                const Text(
+                                  'No vehicles linked. Please add at least one.',
+                                  style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold),
+                                )
+                              else
+                                ListView.separated(
+                                  shrinkWrap: true,
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  itemCount: _vehicleNumbers.length,
+                                  separatorBuilder: (_, _) => const SizedBox(height: 8),
+                                  itemBuilder: (context, index) {
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.background,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                _vehicleNumbers[index],
+                                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.textPrimary),
+                                              ),
+                                              if (index == 0)
+                                                const Text(
+                                                  'Primary Vehicle',
+                                                  style: TextStyle(color: AppTheme.primaryGoldDark, fontSize: 12, fontWeight: FontWeight.w800),
+                                                )
+                                              else
+                                                GestureDetector(
+                                                  onTap: () => _setPrimaryVehicle(index),
+                                                  child: const Text(
+                                                    'Set as Primary',
+                                                    style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.w800, decoration: TextDecoration.underline),
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.delete_rounded, size: 28),
+                                            color: AppTheme.errorRed,
+                                            onPressed: () => _removeVehicleNumber(index),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                            ],
+                          ),
+                        ).animate().fade(delay: 100.ms).slideY(begin: 0.05),
+
                         const SizedBox(height: 32),
 
                         Row(
@@ -413,7 +550,13 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                                 height: 56,
                                 child: OutlinedButton(
                                   onPressed: _cancelEditing,
-                                  child: const Text('Cancel', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                  style: OutlinedButton.styleFrom(
+                                    minimumSize: const Size(0, 56), 
+                                    foregroundColor: AppTheme.textPrimary,
+                                    side: BorderSide(color: AppTheme.border.withValues(alpha: 0.5), width: 2),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  ),
+                                  child: const Text('CANCEL', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
                                 ),
                               ),
                             ),
@@ -423,18 +566,21 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                                 height: 56,
                                 child: ElevatedButton(
                                   onPressed: _isSaving ? null : _saveProfile,
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: const Size(0, 56), 
+                                    backgroundColor: AppTheme.primaryGold,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                  ),
                                   child: _isSaving
-                                      ? const SizedBox(
-                                          height: 24, width: 24,
-                                          child: CircularProgressIndicator(color: AppTheme.background, strokeWidth: 2.5),
-                                        )
-                                      : const Text('Save', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                      ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5))
+                                      : const Text('SAVE', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900)),
                                 ),
                               ),
                             ),
                           ],
-                        ).animate().fade(delay: 500.ms),
-                      ]
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -447,18 +593,19 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppTheme.primaryGold, size: 24),
+        Icon(icon, color: AppTheme.primaryGold, size: 26),
         const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                label,
+                label.toUpperCase(),
                 style: const TextStyle(
                   color: AppTheme.textMuted,
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.0,
                 ),
               ),
               const SizedBox(height: 4),
@@ -466,8 +613,8 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                 value.isEmpty ? 'Not Provided' : value,
                 style: const TextStyle(
                   color: AppTheme.textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
@@ -478,54 +625,60 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   }
 
   Widget _buildVehicleSummary() {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
-            Icon(Icons.directions_car_outlined, color: AppTheme.primaryGold, size: 24),
-            SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                'Vehicle Numbers',
+        const Icon(Icons.directions_car_rounded, color: AppTheme.primaryGold, size: 26),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ASSIGNED VEHICLES',
                 style: TextStyle(
                   color: AppTheme.textMuted,
                   fontSize: 12,
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.0,
                 ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        if (_vehicleNumbers.isEmpty)
-          const Padding(
-            padding: EdgeInsets.only(left: 40),
-            child: Text(
-              'Not Provided',
-              style: TextStyle(
-                color: AppTheme.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          )
-        else
-          Padding(
-            padding: const EdgeInsets.only(left: 40),
-            child: Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (var index = 0; index < _vehicleNumbers.length; index++)
-                  Chip(
-                    label: Text(_vehicleNumbers[index]),
-                    backgroundColor: AppTheme.background,
+              const SizedBox(height: 8),
+              if (_vehicleNumbers.isEmpty)
+                const Text(
+                  'Not Provided',
+                  style: TextStyle(
+                    color: AppTheme.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
                   ),
-              ],
-            ),
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _vehicleNumbers.map((vehicle) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryGold.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+                      ),
+                      child: Text(
+                        vehicle,
+                        style: const TextStyle(
+                          color: AppTheme.primaryGoldDark,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+            ],
           ),
+        ),
       ],
     );
   }

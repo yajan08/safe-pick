@@ -67,12 +67,14 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        backgroundColor: AppTheme.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Row(
           children: [
-            Icon(Icons.analytics_rounded, color: kAdminNavy, size: 22),
+            Icon(Icons.analytics_rounded, color: kAdminNavy, size: 20),
             SizedBox(width: 10),
-            Expanded(child: Text('Student Report', style: TextStyle(fontSize: 18))),
+            Expanded(child: Text('Student Report', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, letterSpacing: -0.2))),
           ],
         ),
         content: Column(
@@ -83,7 +85,7 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
             _ReportLine(label: 'ID', value: _selectedStudent!.studentId),
             _ReportLine(label: 'School', value: _selectedStudent!.schoolName.isNotEmpty ? _selectedStudent!.schoolName : '—'),
             _ReportLine(label: 'Grade', value: _selectedStudent!.grade.isNotEmpty ? _selectedStudent!.grade : '—'),
-            const Divider(height: 28),
+            Divider(height: 24, color: AppTheme.border.withValues(alpha: 0.25)),
             _ReportLine(label: 'Total Trips', value: '$totalTrips'),
             _ReportLine(label: 'Attendance Rate', value: '$rate%'),
             _ReportLine(label: 'Total Absences', value: '$absences'),
@@ -91,7 +93,10 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close', style: TextStyle(color: kAdminNavy))),
+          TextButton(
+            onPressed: () => Navigator.pop(context), 
+            child: const Text('Close', style: TextStyle(color: kAdminNavy, fontWeight: FontWeight.w600, fontSize: 13.5)),
+          ),
         ],
       ),
     );
@@ -106,18 +111,20 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
           child: TextField(
             onChanged: (v) => setState(() => _searchQuery = v),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               hintText: 'Search students by name or ID…',
-              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
-              filled: true, fillColor: Colors.white,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.4))),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.4))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kAdminNavy, width: 1.5)),
+              hintStyle: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.5), fontSize: 13.5, fontWeight: FontWeight.w400),
+              prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textMuted.withValues(alpha: 0.6), size: 20),
+              filled: true, 
+              fillColor: AppTheme.surface,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.25))),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.25))),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kAdminNavy, width: 1.5)),
             ),
           ),
         ),
@@ -126,26 +133,37 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
             data: (all) {
               final students = _filterStudents(all);
               if (students.isEmpty) {
-                return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.school_outlined, size: 48, color: Colors.grey[300]),
-                  const SizedBox(height: 12),
-                  Text(_searchQuery.isNotEmpty ? 'No students match.' : 'No students.', style: TextStyle(color: Colors.grey[500])),
-                ]));
+                return Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min, 
+                    children: [
+                      Icon(Icons.school_outlined, size: 44, color: AppTheme.textMuted.withValues(alpha: 0.3)),
+                      const SizedBox(height: 12),
+                      Text(
+                        _searchQuery.isNotEmpty ? 'No students match.' : 'No students available.', 
+                        style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
+                );
               }
               return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                 itemCount: students.length,
                 itemBuilder: (ctx, i) {
                   final s = students[i];
-                  return _StudentTile(student: s, onTap: () {
-                    setState(() => _selectedStudent = s);
-                    _loadRideLogs(s.studentId);
-                  }).animate().fade(delay: Duration(milliseconds: 25 * i.clamp(0, 12))).slideX(begin: 0.02);
+                  return _StudentTile(
+                    student: s, 
+                    onTap: () {
+                      setState(() => _selectedStudent = s);
+                      _loadRideLogs(s.studentId);
+                    },
+                  ).animate().fade(delay: Duration(milliseconds: 20 * i.clamp(0, 12))).slideX(begin: 0.015);
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator(color: kAdminNavy)),
-            error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: Colors.red))),
+            loading: () => const Center(child: CircularProgressIndicator(color: kAdminNavy, strokeWidth: 2.5)),
+            error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w500))),
           ),
         ),
       ],
@@ -162,41 +180,57 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
               padding: const EdgeInsets.fromLTRB(12, 12, 20, 0),
               child: Row(
                 children: [
-                  IconButton(icon: const Icon(Icons.arrow_back_rounded), onPressed: () => setState(() { _selectedStudent = null; _logs.clear(); })),
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, size: 22), 
+                    onPressed: () => setState(() { _selectedStudent = null; _logs.clear(); }),
+                  ),
                   Expanded(
-                    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      Text(_selectedStudent!.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      Text('${_selectedStudent!.studentId} • ${_selectedStudent!.schoolName}', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-                    ]),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start, 
+                      children: [
+                        Text(_selectedStudent!.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5, letterSpacing: -0.2)),
+                        const SizedBox(height: 1),
+                        Text(
+                          '${_selectedStudent!.studentId} • ${_selectedStudent!.schoolName}', 
+                          style: TextStyle(color: AppTheme.textMuted, fontSize: 11.5, fontWeight: FontWeight.w400),
+                        ),
+                      ],
+                    ),
                   ),
                   OutlinedButton.icon(
                     onPressed: _showReport,
-                    icon: const Icon(Icons.summarize_rounded, size: 16, color: kAdminNavy),
-                    label: const Text('Stats', style: TextStyle(color: kAdminNavy, fontSize: 13)),
+                    icon: const Icon(Icons.summarize_rounded, size: 15, color: kAdminNavy),
+                    label: const Text('Stats', style: TextStyle(color: kAdminNavy, fontSize: 12.5, fontWeight: FontWeight.w600)),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: kAdminNavy.withValues(alpha: 0.3)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      side: BorderSide(color: kAdminNavy.withValues(alpha: 0.25)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
 
             // Timeline
             Expanded(
               child: _isLoadingLogs
-                  ? const Center(child: CircularProgressIndicator(color: kAdminNavy))
+                  ? const Center(child: CircularProgressIndicator(color: kAdminNavy, strokeWidth: 2.5))
                   : _logs.isEmpty
-                      ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.history_rounded, size: 48, color: Colors.grey[300]),
-                          const SizedBox(height: 12),
-                          Text('No ride history.', style: TextStyle(color: Colors.grey[500])),
-                        ]))
+                      ? Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min, 
+                            children: [
+                              Icon(Icons.history_rounded, size: 44, color: AppTheme.textMuted.withValues(alpha: 0.3)),
+                              const SizedBox(height: 12),
+                              Text('No ride history found.', style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500)),
+                            ],
+                          ),
+                        )
                       : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 80), // extra bottom for FAB
+                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 84), // extra bottom for FAB
                           itemCount: _logs.length,
                           itemBuilder: (_, i) => _TimelineNode(log: _logs[i], isLast: i == _logs.length - 1),
                         ),
@@ -214,11 +248,15 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
               onPressed: _isGeneratingPdf ? null : _downloadPdf,
               backgroundColor: kAdminNavy,
               foregroundColor: Colors.white,
+              elevation: 2,
               icon: _isGeneratingPdf
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Icon(Icons.picture_as_pdf_rounded, size: 20),
-              label: Text(_isGeneratingPdf ? 'Generating…' : 'Download PDF'),
-            ).animate().fade().slideY(begin: 0.3),
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.picture_as_pdf_rounded, size: 18),
+              label: Text(
+                _isGeneratingPdf ? 'Generating…' : 'Download PDF', 
+                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: -0.1),
+              ),
+            ).animate().fade().slideY(begin: 0.2),
           ),
       ],
     );
@@ -226,7 +264,7 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// Private widgets (unchanged from before, moved here for completeness)
+// Private widgets
 // ──────────────────────────────────────────────────────────────────────────────
 
 class _StudentTile extends StatelessWidget {
@@ -236,7 +274,7 @@ class _StudentTile extends StatelessWidget {
 
   Color get _statusColor {
     switch (student.currentStatus) {
-      case 'In Van': return Colors.orange;
+      case 'In Van': return AppTheme.warningOrange;
       case 'At School': return kAdminNavy;
       case 'Absent': return AppTheme.errorRed;
       default: return AppTheme.successGreen;
@@ -248,16 +286,26 @@ class _StudentTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(14),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 12, offset: const Offset(0, 4))],
-        border: Border.all(color: AppTheme.border.withValues(alpha: 0.35)),
+        color: AppTheme.surface, 
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withValues(alpha: 0.015), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.25)),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        leading: CircleAvatar(radius: 20, backgroundColor: _statusColor.withValues(alpha: 0.08), child: Icon(Icons.school_rounded, color: _statusColor, size: 20)),
-        title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-        subtitle: Text('${student.studentId} • ${student.currentStatus}', style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-        trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400], size: 20),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        leading: CircleAvatar(
+          radius: 18, 
+          backgroundColor: _statusColor.withValues(alpha: 0.08), 
+          child: Icon(Icons.school_rounded, color: _statusColor, size: 18),
+        ),
+        title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, letterSpacing: -0.1)),
+        subtitle: Text(
+          '${student.studentId} • ${student.currentStatus}', 
+          style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w400),
+        ),
+        trailing: Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted.withValues(alpha: 0.4), size: 20),
         onTap: onTap,
       ),
     );
@@ -274,7 +322,7 @@ class _TimelineNode extends StatelessWidget {
       case 'Absent': return AppTheme.warningOrange;
       case 'At School': return kAdminNavy;
       case 'At Home': return AppTheme.successGreen;
-      default: return Colors.grey;
+      default: return AppTheme.textMuted.withValues(alpha: 0.5);
     }
   }
 
@@ -283,35 +331,58 @@ class _TimelineNode extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return IntrinsicHeight(
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        SizedBox(width: 24, child: Column(children: [
-          Container(width: 12, height: 12, decoration: BoxDecoration(color: _dotColor, shape: BoxShape.circle)),
-          if (!isLast) Expanded(child: Container(width: 2, color: Colors.grey[200])),
-        ])),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.only(bottom: 24),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                Text(log.date, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(color: _dotColor.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(8)),
-                  child: Text(log.status.toUpperCase(), style: TextStyle(color: _dotColor, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
-                ),
-              ]),
-              const SizedBox(height: 4),
-              Text('${log.tripName} • ${log.driverName}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-              const SizedBox(height: 2),
-              Text('Boarded: ${_fmtTime(log.boardedAt)}  •  Alighted: ${_fmtTime(log.alightedAt)}',
-                  style: TextStyle(color: Colors.grey[400], fontSize: 11)),
-              if (log.vehicleNumber.isNotEmpty)
-                Padding(padding: const EdgeInsets.only(top: 2), child: Text('Vehicle: ${log.vehicleNumber}', style: TextStyle(color: Colors.grey[400], fontSize: 11))),
-            ]),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start, 
+        children: [
+          SizedBox(
+            width: 20, 
+            child: Column(
+              children: [
+                const SizedBox(height: 4),
+                Container(width: 10, height: 10, decoration: BoxDecoration(color: _dotColor, shape: BoxShape.circle)),
+                if (!isLast) Expanded(child: Container(width: 1.5, color: AppTheme.border.withValues(alpha: 0.3))),
+              ],
+            ),
           ),
-        ),
-      ]),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start, 
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+                    children: [
+                      Text(log.date, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(color: _dotColor.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4)),
+                        child: Text(
+                          log.status.toUpperCase(), 
+                          style: TextStyle(color: _dotColor, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 3),
+                  Text('${log.tripName} • ${log.driverName}', style: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.9), fontSize: 12.5, fontWeight: FontWeight.w500)),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Boarded: ${_fmtTime(log.boardedAt)}   •   Alighted: ${_fmtTime(log.alightedAt)}',
+                    style: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.6), fontSize: 11, fontWeight: FontWeight.w400),
+                  ),
+                  if (log.vehicleNumber.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 2), 
+                      child: Text('Vehicle: ${log.vehicleNumber}', style: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.6), fontSize: 11, fontWeight: FontWeight.w400)),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -324,11 +395,21 @@ class _ReportLine extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
-        Flexible(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13), overflow: TextOverflow.ellipsis, textAlign: TextAlign.end)),
-      ]),
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+        children: [
+          Text(label, style: TextStyle(color: AppTheme.textMuted, fontSize: 12.5, fontWeight: FontWeight.w400)),
+          Flexible(
+            child: Text(
+              value, 
+              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5), 
+              overflow: TextOverflow.ellipsis, 
+              textAlign: TextAlign.end,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

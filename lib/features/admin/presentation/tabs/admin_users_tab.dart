@@ -55,18 +55,29 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
       children: [
         // ── Search ────────────────────────────────────────────────────────
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
           child: TextField(
             onChanged: (v) => setState(() => _searchQuery = v),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               hintText: 'Search by name or phone…',
-              hintStyle: TextStyle(color: Colors.grey[400], fontSize: 14),
-              prefixIcon: const Icon(Icons.search_rounded, color: Colors.grey),
-              filled: true, fillColor: Colors.white,
+              hintStyle: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.6), fontSize: 14),
+              prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textMuted.withValues(alpha: 0.7), size: 20),
+              filled: true, 
+              fillColor: AppTheme.surface,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.4))),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.4))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: kAdminNavy, width: 1.5)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12), 
+                borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.3)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12), 
+                borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.3)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12), 
+                borderSide: const BorderSide(color: kAdminNavy, width: 1.2),
+              ),
             ),
           ),
         ),
@@ -74,7 +85,7 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
         // ── Filter chips ──────────────────────────────────────────────────
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           child: Row(
             children: ['All', 'Parents', 'Drivers', 'Admins'].map((role) {
               final sel = _filterRole == role;
@@ -84,16 +95,21 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
                   label: Text(role),
                   selected: sel,
                   onSelected: (_) => setState(() => _filterRole = role),
-                  backgroundColor: Colors.white,
+                  backgroundColor: AppTheme.surface,
                   selectedColor: kAdminNavy.withValues(alpha: 0.08),
                   checkmarkColor: kAdminNavy,
+                  showCheckmark: false,
                   labelStyle: TextStyle(
-                    color: sel ? kAdminNavy : Colors.grey[600],
-                    fontWeight: sel ? FontWeight.bold : FontWeight.normal, fontSize: 13,
+                    color: sel ? kAdminNavy : AppTheme.textMuted,
+                    fontWeight: sel ? FontWeight.w600 : FontWeight.w500, 
+                    fontSize: 13,
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
-                    side: BorderSide(color: sel ? kAdminNavy.withValues(alpha: 0.3) : AppTheme.border.withValues(alpha: 0.5)),
+                    side: BorderSide(
+                      color: sel ? kAdminNavy.withValues(alpha: 0.4) : AppTheme.border.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
                   ),
                 ),
               );
@@ -108,26 +124,36 @@ class _AdminUsersTabState extends ConsumerState<AdminUsersTab> {
               final users = _applyFilters(allUsers);
               if (users.isEmpty) {
                 return Center(
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.search_off_rounded, size: 48, color: Colors.grey[300]),
-                    const SizedBox(height: 12),
-                    Text(_searchQuery.isNotEmpty ? 'No users match your search.' : 'No users found.',
-                        style: TextStyle(color: Colors.grey[500])),
-                  ]),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min, 
+                    children: [
+                      Icon(Icons.search_off_rounded, size: 44, color: AppTheme.textMuted.withValues(alpha: 0.4)),
+                      const SizedBox(height: 12),
+                      Text(
+                        _searchQuery.isNotEmpty ? 'No users match your search.' : 'No users found.',
+                        style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                      ),
+                    ],
+                  ),
                 );
               }
               return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
                 itemCount: users.length,
                 itemBuilder: (context, i) {
                   final user = users[i];
                   return _UserTile(user: user, onTap: () => _openUserDetail(user))
-                      .animate().fade(delay: Duration(milliseconds: 30 * i.clamp(0, 10))).slideX(begin: 0.02);
+                      .animate().fade(delay: Duration(milliseconds: 25 * i.clamp(0, 10))).slideX(begin: 0.015);
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator(color: kAdminNavy)),
-            error: (e, _) => Center(child: Padding(padding: const EdgeInsets.all(32), child: Text('Error: $e', style: const TextStyle(color: Colors.red)))),
+            loading: () => const Center(child: CircularProgressIndicator(color: kAdminNavy, strokeWidth: 2.5)),
+            error: (e, _) => Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32), 
+                child: Text('Error: $e', style: const TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w500)),
+              ),
+            ),
           ),
         ),
       ],
@@ -144,7 +170,7 @@ class _UserTile extends StatelessWidget {
   final VoidCallback onTap;
   const _UserTile({required this.user, required this.onTap});
 
-  Color get _roleColor => user.role == 'driver' ? Colors.teal : user.role == 'admin' ? kAdminNavy : Colors.blue;
+  Color get _roleColor => user.role == 'driver' ? Colors.teal : user.role == 'admin' ? kAdminNavy : Colors.blueGrey;
   IconData get _roleIcon => user.role == 'driver' ? Icons.directions_car_rounded : user.role == 'admin' ? Icons.admin_panel_settings_rounded : Icons.person_rounded;
 
   @override
@@ -155,29 +181,54 @@ class _UserTile extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 12, offset: const Offset(0, 4))],
-          border: Border.all(color: AppTheme.border.withValues(alpha: 0.35)),
+          color: AppTheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.015), 
+              blurRadius: 8, 
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(color: AppTheme.border.withValues(alpha: 0.25)),
         ),
         child: ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-          leading: CircleAvatar(radius: 20, backgroundColor: _roleColor.withValues(alpha: 0.08), child: Icon(_roleIcon, color: _roleColor, size: 20)),
-          title: Text(user.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
-          subtitle: Row(
-            children: [
-              Text(user.phone.isNotEmpty ? user.phone : user.role.toUpperCase(), style: TextStyle(color: Colors.grey[500], fontSize: 12)),
-              if (isInactive) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(color: AppTheme.errorRed.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6)),
-                  child: const Text('SUSPENDED', style: TextStyle(color: AppTheme.errorRed, fontSize: 9, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ],
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          leading: CircleAvatar(
+            radius: 18, 
+            backgroundColor: _roleColor.withValues(alpha: 0.08), 
+            child: Icon(_roleIcon, color: _roleColor, size: 18),
           ),
-          trailing: Icon(Icons.chevron_right_rounded, color: Colors.grey[400], size: 20),
+          title: Text(
+            user.name, 
+            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, letterSpacing: -0.2),
+          ),
+          subtitle: Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Row(
+              children: [
+                Text(
+                  user.phone.isNotEmpty ? user.phone : user.role.toUpperCase(), 
+                  style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w400),
+                ),
+                if (isInactive) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.errorRed.withValues(alpha: 0.08), 
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: const Text(
+                      'SUSPENDED', 
+                      style: TextStyle(color: AppTheme.errorRed, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.3),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          trailing: Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted.withValues(alpha: 0.5), size: 20),
           onTap: onTap,
         ),
       ),
@@ -285,10 +336,10 @@ class _UserDetailSheetState extends ConsumerState<_UserDetailSheet> {
 
     return Container(
       constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-      padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: SingleChildScrollView(
         child: Column(
@@ -296,48 +347,82 @@ class _UserDetailSheetState extends ConsumerState<_UserDetailSheet> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Handle
-            Center(child: Container(width: 36, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)))),
+            Center(
+              child: Container(
+                width: 40, 
+                height: 4, 
+                decoration: BoxDecoration(color: AppTheme.border.withValues(alpha: 0.4), borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
             const SizedBox(height: 24),
 
             // Avatar + role
             Row(
               children: [
-                CircleAvatar(radius: 26, backgroundColor: kAdminNavy.withValues(alpha: 0.08), child: const Icon(Icons.person_rounded, color: kAdminNavy, size: 26)),
-                const SizedBox(width: 16),
+                CircleAvatar(
+                  radius: 24, 
+                  backgroundColor: kAdminNavy.withValues(alpha: 0.08), 
+                  child: const Icon(Icons.person_rounded, color: kAdminNavy, size: 24),
+                ),
+                const SizedBox(width: 14),
                 Expanded(
-                  child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(widget.user.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 2),
-                    Text(widget.user.role.toUpperCase(), style: TextStyle(color: Colors.grey[500], fontSize: 12, letterSpacing: 1.2, fontWeight: FontWeight.w500)),
-                  ]),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start, 
+                    children: [
+                      Text(
+                        widget.user.name, 
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, letterSpacing: -0.3),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        widget.user.role.toUpperCase(), 
+                        style: TextStyle(color: AppTheme.textMuted, fontSize: 11, letterSpacing: 1.0, fontWeight: FontWeight.w600),
+                      ),
+                    ],
+                  ),
                 ),
                 if (!_isEditing)
-                  IconButton(icon: const Icon(Icons.edit_rounded, color: kAdminNavy, size: 20), onPressed: () => setState(() => _isEditing = true)),
+                  IconButton(
+                    icon: const Icon(Icons.edit_outlined, color: kAdminNavy, size: 20), 
+                    onPressed: () => setState(() => _isEditing = true),
+                  ),
               ],
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
             // ── Status toggle ─────────────────────────────────────────────
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: BoxDecoration(
-                color: isActive ? AppTheme.successGreen.withValues(alpha: 0.04) : AppTheme.errorRed.withValues(alpha: 0.04),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: isActive ? AppTheme.successGreen.withValues(alpha: 0.2) : AppTheme.errorRed.withValues(alpha: 0.2)),
+                color: isActive ? AppTheme.successGreen.withValues(alpha: 0.03) : AppTheme.errorRed.withValues(alpha: 0.03),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: isActive ? AppTheme.successGreen.withValues(alpha: 0.15) : AppTheme.errorRed.withValues(alpha: 0.15)),
               ),
               child: Row(
                 children: [
-                  Icon(isActive ? Icons.check_circle_rounded : Icons.block_rounded, color: isActive ? AppTheme.successGreen : AppTheme.errorRed, size: 20),
+                  Icon(
+                    isActive ? Icons.check_circle_outline_rounded : Icons.block_rounded, 
+                    color: isActive ? AppTheme.successGreen : AppTheme.errorRed, 
+                    size: 18,
+                  ),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(isActive ? 'Active' : 'Suspended', style: TextStyle(fontWeight: FontWeight.w600, color: isActive ? AppTheme.successGreen : AppTheme.errorRed))),
+                  Expanded(
+                    child: Text(
+                      isActive ? 'Active Status' : 'Suspended Status', 
+                      style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5, color: isActive ? AppTheme.successGreen : AppTheme.errorRed),
+                    ),
+                  ),
                   _isTogglingStatus
-                      ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
-                      : Switch(
-                          value: isActive,
-                          activeTrackColor: AppTheme.successGreen.withValues(alpha: 0.3),
-                          thumbColor: WidgetStateProperty.resolveWith((states) => 
-                            states.contains(WidgetState.selected) ? AppTheme.successGreen : Colors.grey),
-                          onChanged: (_) => _toggleStatus(),
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : SizedBox(
+                          height: 28,
+                          child: Switch(
+                            value: isActive,
+                            activeTrackColor: AppTheme.successGreen.withValues(alpha: 0.2),
+                            thumbColor: WidgetStateProperty.resolveWith((states) => 
+                              states.contains(WidgetState.selected) ? AppTheme.successGreen : Colors.grey[400]),
+                            onChanged: (_) => _toggleStatus(),
+                          ),
                         ),
                 ],
               ),
@@ -359,41 +444,50 @@ class _UserDetailSheetState extends ConsumerState<_UserDetailSheet> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: () => setState(() => _isEditing = false),
-                      style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                      child: const Text('Cancel'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        side: BorderSide(color: AppTheme.border.withValues(alpha: 0.4)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      child: Text('Cancel', style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w600)),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: _isSaving ? null : _saveEdits,
-                      style: ElevatedButton.styleFrom(backgroundColor: kAdminNavy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: kAdminNavy, 
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
                       child: _isSaving
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Save', style: TextStyle(color: Colors.white)),
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                          : const Text('Save Changes', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ],
               ),
             ] else ...[
               _DetailRow(icon: Icons.fingerprint_rounded, label: 'UID', value: widget.user.uid),
-              _DetailRow(icon: Icons.phone_rounded, label: 'Phone', value: widget.user.phone.isNotEmpty ? widget.user.phone : '—'),
-              _DetailRow(icon: Icons.calendar_today_rounded, label: 'Joined', value: widget.user.createdAt.toString().split(' ')[0]),
+              _DetailRow(icon: Icons.phone_outlined, label: 'Phone', value: widget.user.phone.isNotEmpty ? widget.user.phone : '—'),
+              _DetailRow(icon: Icons.calendar_today_outlined, label: 'Joined', value: widget.user.createdAt.toString().split(' ')[0]),
               if (widget.user.role == 'driver' && widget.user.vehicleNumbers.isNotEmpty)
-                _DetailRow(icon: Icons.directions_car_rounded, label: 'Vehicles', value: widget.user.vehicleNumbers.join(', ')),
+                _DetailRow(icon: Icons.directions_car_outlined, label: 'Vehicles', value: widget.user.vehicleNumbers.join(', ')),
             ],
 
             // ── Driver metrics ────────────────────────────────────────────
             if (widget.user.role == 'driver') ...[
-              const SizedBox(height: 24),
-              const Divider(),
+              const SizedBox(height: 16),
+              Divider(color: AppTheme.border.withValues(alpha: 0.2)),
               const SizedBox(height: 12),
-              const Text('Trip History', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+              const Text('Trip History', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: kAdminNavy)),
               const SizedBox(height: 12),
               if (_isLoadingSessions)
-                const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: kAdminNavy)))
+                const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator(color: kAdminNavy, strokeWidth: 2)))
               else if (_driverSessions.isEmpty)
-                Text('No trip sessions recorded.', style: TextStyle(color: Colors.grey[500], fontSize: 13))
+                Text('No trip sessions recorded.', style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500))
               else ...[
                 _DriverMetricRow(label: 'Total Sessions', value: '${_driverSessions.length}'),
                 _DriverMetricRow(
@@ -406,14 +500,15 @@ class _UserDetailSheetState extends ConsumerState<_UserDetailSheet> {
 
             const SizedBox(height: 24),
             SizedBox(
-              width: double.infinity, height: 50,
+              width: double.infinity, 
+              height: 46,
               child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
                 style: OutlinedButton.styleFrom(
-                  side: BorderSide(color: kAdminNavy.withValues(alpha: 0.3)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  side: BorderSide(color: kAdminNavy.withValues(alpha: 0.2)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                child: const Text('Close', style: TextStyle(color: kAdminNavy)),
+                child: const Text('Close', style: TextStyle(color: kAdminNavy, fontSize: 14, fontWeight: FontWeight.w600)),
               ),
             ),
           ],
@@ -438,13 +533,14 @@ class _EditField extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.4))),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.4))),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kAdminNavy, width: 1.5)),
+        labelStyle: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.3))),
+        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.3))),
+        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: kAdminNavy, width: 1.2)),
       ),
     );
   }
@@ -459,13 +555,13 @@ class _DetailRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.only(bottom: 12),
       child: Row(children: [
-        Icon(icon, color: Colors.grey[400], size: 18),
-        const SizedBox(width: 12),
-        Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 13)),
+        Icon(icon, color: AppTheme.textMuted.withValues(alpha: 0.6), size: 16),
+        const SizedBox(width: 10),
+        Text(label, style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500)),
         const Spacer(),
-        Flexible(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13), overflow: TextOverflow.ellipsis, textAlign: TextAlign.end)),
+        Flexible(child: Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: Colors.black87), overflow: TextOverflow.ellipsis, textAlign: TextAlign.end)),
       ]),
     );
   }
@@ -481,7 +577,7 @@ class _DriverMetricRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-        Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+        Text(label, style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500)),
         Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
       ]),
     );

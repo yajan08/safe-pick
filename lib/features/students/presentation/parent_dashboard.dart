@@ -8,7 +8,6 @@ import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
 import '../../profile/presentation/parent_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
-import '../../../core/widgets/illustrations.dart';
 import '../../trips/data/trip_service.dart';
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
@@ -37,7 +36,8 @@ class SelectedStudentIdNotifier extends Notifier<String?> {
   void updateStudent(String? id) => state = id;
 }
 
-final selectedStudentIdProvider = NotifierProvider<SelectedStudentIdNotifier, String?>(
+final selectedStudentIdProvider =
+    NotifierProvider<SelectedStudentIdNotifier, String?>(
   SelectedStudentIdNotifier.new,
 );
 
@@ -52,44 +52,21 @@ class ParentDashboard extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        elevation: 0,
-        centerTitle: true,
-        title: SvgPicture.asset(
-          'assets/images/logo.svg',
-          height: 32,
-        ),
-        actions: [
-          GestureDetector(
-            onTap: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => const ParentProfileScreen(),
-                ),
-              );
-            },
-            child: Container(
-              margin: const EdgeInsets.only(right: 16),
-              child: CircleAvatar(
-                radius: 18,
-                backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.15),
-                child: const Icon(Icons.person_rounded, color: AppTheme.primaryGold, size: 20),
-              ),
-            ),
-          ),
-        ],
-      ),
+      // Use a custom header that merges the app bar + student selector
+      // into one tight, unified surface — eliminating the dead zone between them.
       body: SafeArea(
+        bottom: false,
         child: studentsAsync.when(
           data: (students) {
             if (students.isEmpty) {
               return _buildEmptyState(context, theme);
             }
 
-            // Auto-select the first child if none is selected
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (selectedId == null && students.isNotEmpty) {
-                ref.read(selectedStudentIdProvider.notifier).updateStudent(students.first.studentId);
+                ref
+                    .read(selectedStudentIdProvider.notifier)
+                    .updateStudent(students.first.studentId);
               }
             });
 
@@ -98,189 +75,309 @@ class ParentDashboard extends ConsumerWidget {
               orElse: () => students.first,
             );
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Child Selector Header
-                  _buildHeader(context, ref, theme, students, selectedStudent),
-                  SizedBox(height: students.length == 1 ? 8 : 12),
-                  
-                  // Dashboard Content for Selected Student
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: SingleChildScrollView(
-                        key: ValueKey<String>(selectedStudent.studentId),
-                        physics: const BouncingScrollPhysics(),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            _buildProfileCard(context, theme, selectedStudent),
-                            const SizedBox(height: 16),
-                            _buildSquareStatusAndEtaCards(theme, selectedStudent),
-                            const SizedBox(height: 16),
-                            _buildMapCard(context, theme, selectedStudent),
-                            const SizedBox(height: 32),
-                          ],
-                        ),
-                      ),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Unified header: logo row + student identity, zero gap ──
+                _buildUnifiedHeader(context, ref, theme, students, selectedStudent),
+
+                // ── Fixed card layout — no scroll, no Expanded ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 260),
+                    switchInCurve: Curves.easeOutCubic,
+                    switchOutCurve: Curves.easeInCubic,
+                    child: Column(
+                      key: ValueKey<String>(selectedStudent.studentId),
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _buildProfileCard(context, theme, selectedStudent),
+                        const SizedBox(height: 12),
+                        _buildSquareStatusAndEtaCards(theme, selectedStudent),
+                        const SizedBox(height: 12),
+                        _buildMapCard(context, theme, selectedStudent),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             );
           },
-          loading: () => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const ShimmerLoading(width: 100, height: 16),
-                const SizedBox(height: 8),
-                const ShimmerLoading(width: double.infinity, height: 48),
-                const SizedBox(height: 24),
-                const ShimmerCard(height: 140),
-                const ShimmerCard(height: 100),
-                const ShimmerCard(height: 100),
-              ],
-            ),
-          ),
+          loading: () => _buildShimmer(),
           error: (error, stackTrace) => _buildErrorState(theme, error.toString()),
         ),
       ),
     );
   }
 
-  Widget _buildHeader(BuildContext context, WidgetRef ref, ThemeData theme, List<StudentModel> students, StudentModel selected) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // Unified header — collapses the AppBar + student-name gap into one surface
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildUnifiedHeader(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    List<StudentModel> students,
+    StudentModel selected,
+  ) {
+    return Container(
+      color: AppTheme.background,
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // ── Logo row ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              SvgPicture.asset(
+                'assets/images/logo.svg',
+                height: 32,
+              ).animate().fade().scale(delay: 80.ms, curve: Curves.easeOutBack),
+              GestureDetector(
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ParentProfileScreen()),
+                ),
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                        color: AppTheme.border.withValues(alpha: 0.55), width: 1.5),
+                  ),
+                  child: CircleAvatar(
+                    radius: 15,
+                    backgroundColor: AppTheme.surfaceCard,
+                    child: const Icon(Icons.person_outline_rounded,
+                        color: AppTheme.textPrimary, size: 17),
+                  ),
+                ),
+              ).animate().fade(delay: 160.ms),
+            ],
+          ),
+
+          // ── Divider — very subtle ──
+          const SizedBox(height: 14),
+          Container(
+            height: 0.5,
+            color: AppTheme.border.withValues(alpha: 0.35),
+          ),
+          const SizedBox(height: 14),
+
+          // ── Student identity — directly below, no gap ──
+          _buildStudentIdentity(ref, theme, students, selected),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentIdentity(
+    WidgetRef ref,
+    ThemeData theme,
+    List<StudentModel> students,
+    StudentModel selected,
+  ) {
     if (students.length == 1) {
       return Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
-              color: AppTheme.primaryGold.withValues(alpha: 0.1),
+              color: AppTheme.surfaceCard,
               shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
             ),
-            child: const Icon(Icons.child_care_rounded, color: AppTheme.primaryGold, size: 24),
+            child: const Icon(Icons.child_care_rounded,
+                color: AppTheme.textSecondary, size: 18),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Tracking',
-                  style: theme.textTheme.labelMedium?.copyWith(color: AppTheme.textSecondary),
+          const SizedBox(width: 10),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Tracking',
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: AppTheme.textMuted,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.4,
                 ),
-                Text(
-                  selected.name,
-                  style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, height: 1.1),
+              ),
+              Text(
+                selected.name,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                  color: AppTheme.textPrimary,
+                  height: 1.1,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
-      ).animate().fade().slideY(begin: -0.05);
+      ).animate().fade().slideY(begin: -0.04);
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    // Multiple students — compact dropdown
+    return Row(
       children: [
-        Text(
-          'Select Child',
-          style: theme.textTheme.labelLarge?.copyWith(color: AppTheme.textSecondary),
-        ),
-        const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          padding: const EdgeInsets.all(7),
           decoration: BoxDecoration(
-            color: AppTheme.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.border),
+            color: AppTheme.surfaceCard,
+            shape: BoxShape.circle,
+            border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
           ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              value: selected.studentId,
-              isExpanded: true,
-              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppTheme.primaryGold),
-              items: students.map((StudentModel student) {
-                return DropdownMenuItem<String>(
-                  value: student.studentId,
-                  child: Text(
-                    student.name,
-                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                );
-              }).toList(),
-              onChanged: (String? newValue) {
-                if (newValue != null) {
-                  ref.read(selectedStudentIdProvider.notifier).updateStudent(newValue);
-                }
-              },
+          child: const Icon(Icons.child_care_rounded,
+              color: AppTheme.textSecondary, size: 18),
+        ),
+        const SizedBox(width: 10),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Tracking',
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: AppTheme.textMuted,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.4,
+              ),
             ),
-          ),
+            SizedBox(
+              height: 32,
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  isDense: true,
+                  value: selected.studentId,
+                  icon: const Padding(
+                    padding: EdgeInsets.only(left: 6.0),
+                    child: Icon(Icons.expand_more_rounded,
+                        color: AppTheme.textSecondary, size: 20),
+                  ),
+                  dropdownColor: AppTheme.surfaceCard,
+                  borderRadius: BorderRadius.circular(16),
+                  items: students.map((StudentModel student) {
+                    return DropdownMenuItem<String>(
+                      value: student.studentId,
+                      child: Text(
+                        student.name,
+                        style: Theme.of(
+                                WidgetsBinding.instance.rootElement! as BuildContext)
+                            .textTheme
+                            .titleLarge
+                            ?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.4,
+                              color: AppTheme.textPrimary,
+                            ),
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      ref
+                          .read(selectedStudentIdProvider.notifier)
+                          .updateStudent(newValue);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ],
         ),
       ],
-    ).animate().fade().slideY(begin: -0.1);
+    ).animate().fade().slideY(begin: -0.04);
   }
 
-  Widget _buildProfileCard(BuildContext context, ThemeData theme, StudentModel student) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // Profile Card — cleaner, slightly denser
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildProfileCard(
+      BuildContext context, ThemeData theme, StudentModel student) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      decoration: _cardDecoration(),
       child: Row(
         children: [
-          const StudentProfileAccent(size: 56),
-          const SizedBox(width: 16),
+          Container(
+            height: 44,
+            width: 44,
+            decoration: BoxDecoration(
+              color: AppTheme.background,
+              shape: BoxShape.circle,
+              border:
+                  Border.all(color: AppTheme.border.withValues(alpha: 0.55)),
+            ),
+            child: const Icon(Icons.person_rounded,
+                color: AppTheme.textMuted, size: 20),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryGold.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    'ID: ${student.studentId}',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryGold,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        student.schoolName.isNotEmpty
+                            ? student.schoolName
+                            : 'No School Assigned',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: AppTheme.textPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.background,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                            color: AppTheme.border.withValues(alpha: 0.6)),
+                      ),
+                      child: Text(
+                        'ID: ${student.studentId}',
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textMuted,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  student.grade.isNotEmpty ? student.grade : 'Grade Not Set',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppTheme.textSecondary,
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  student.schoolName.isNotEmpty ? student.schoolName : 'No School Set',
-                  style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textSecondary),
-                ),
-                Text(
-                  'Grade: ${student.grade}',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
           ),
         ],
       ),
-    ).animate().fade(delay: 50.ms).slideY(begin: 0.05);
+    ).animate().fade(delay: 40.ms).slideY(begin: 0.04, curve: Curves.easeOut);
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Status + ETA — side-by-side, balanced, tight
+  // ─────────────────────────────────────────────────────────────────────────
   Widget _buildSquareStatusAndEtaCards(ThemeData theme, StudentModel student) {
     Color statusColor;
     IconData statusIcon;
@@ -291,7 +388,7 @@ class ParentDashboard extends ConsumerWidget {
         statusIcon = Icons.directions_bus_rounded;
         break;
       case 'At School':
-        statusColor = AppTheme.primaryGold;
+        statusColor = AppTheme.primaryGoldDark;
         statusIcon = Icons.school_rounded;
         break;
       case 'Absent':
@@ -319,7 +416,7 @@ class ParentDashboard extends ConsumerWidget {
           break;
         case 'At School':
         default:
-          etaText = 'Not Started';
+          etaText = 'Standby';
           break;
       }
     }
@@ -327,116 +424,55 @@ class ParentDashboard extends ConsumerWidget {
     return Row(
       children: [
         Expanded(
-          child: AspectRatio(
-            aspectRatio: 1.0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(statusIcon, color: statusColor, size: 36),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Status',
-                    style: TextStyle(
-                      color: AppTheme.textMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      student.currentStatus,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          child: _InfoTile(
+            icon: statusIcon,
+            iconColor: statusColor,
+            label: 'Current Status',
+            value: student.currentStatus,
+            dotColor: statusColor,
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Expanded(
-          child: AspectRatio(
-            aspectRatio: 1.0,
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.access_time_rounded, color: AppTheme.primaryGold, size: 36),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Est. Arrival',
-                    style: TextStyle(
-                      color: AppTheme.textMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Text(
-                      etaText,
-                      style: const TextStyle(
-                        color: AppTheme.textPrimary,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          child: _InfoTile(
+            icon: Icons.schedule_rounded,
+            iconColor: AppTheme.textSecondary,
+            label: 'Est. Arrival',
+            value: etaText,
           ),
         ),
       ],
-    ).animate().fade(delay: 100.ms).slideY(begin: 0.05);
+    ).animate().fade(delay: 80.ms).slideY(begin: 0.04, curve: Curves.easeOut);
   }
 
-  Widget _buildMapCard(BuildContext context, ThemeData theme, StudentModel student) {
+  // ─────────────────────────────────────────────────────────────────────────
+  // Live Tracking CTA card
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildMapCard(
+      BuildContext context, ThemeData theme, StudentModel student) {
     return _TappableCard(
       onTap: () async {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGold)),
+          builder: (_) => Center(
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceCard,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const CircularProgressIndicator(
+                  color: AppTheme.primaryGold),
+            ),
+          ),
         );
 
         try {
-          final tripService = ProviderScope.containerOf(context).read(tripServiceProvider);
-          final sessionId = await tripService.getActiveSessionIdForStudent(student.studentId);
+          final tripService =
+              ProviderScope.containerOf(context).read(tripServiceProvider);
+          final sessionId =
+              await tripService.getActiveSessionIdForStudent(student.studentId);
 
           if (context.mounted) {
             Navigator.of(context).pop();
@@ -452,7 +488,9 @@ class ParentDashboard extends ConsumerWidget {
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('No active trip in progress for this student.'),
+                  content:
+                      Text('No active trip in progress for this student.'),
+                  backgroundColor: AppTheme.textSecondary,
                   behavior: SnackBarBehavior.floating,
                 ),
               );
@@ -462,50 +500,81 @@ class ParentDashboard extends ConsumerWidget {
           if (context.mounted) {
             Navigator.of(context).pop();
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error finding trip: $e')),
+              SnackBar(
+                  content: Text('Error finding trip: $e'),
+                  backgroundColor: AppTheme.errorRed),
             );
           }
         }
       },
       child: Container(
-        height: 180,
-        decoration: BoxDecoration(
-          color: AppTheme.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+        height: 80,
+        decoration: _cardDecoration(),
+        child: Row(
+          children: [
+            // Gold accent strip with pulsing pin
+            Container(
+              width: 72,
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGold.withValues(alpha: 0.06),
+                borderRadius:
+                    const BorderRadius.horizontal(left: Radius.circular(19)),
+                border: Border(
+                    right: BorderSide(
+                        color: AppTheme.border.withValues(alpha: 0.28))),
+              ),
+              child: Center(
+                child: const Icon(Icons.location_on_rounded,
+                        color: AppTheme.primaryGold, size: 26)
+                    .animate(onPlay: (c) => c.repeat(reverse: true))
+                    .scale(
+                        begin: const Offset(1, 1),
+                        end: const Offset(1.12, 1.12),
+                        duration: 1.4.seconds,
+                        curve: Curves.easeInOut),
+              ),
+            ),
+            // Label
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Live Tracking',
+                      style: theme.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textPrimary,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Tap to view van location',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.only(right: 18),
+              child: Icon(Icons.arrow_forward_ios_rounded,
+                  color: AppTheme.textMuted, size: 14),
             ),
           ],
         ),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const LiveTrackingIllustration(size: 56),
-              const SizedBox(height: 12),
-              Text(
-                'Live Tracking Map',
-                style: theme.textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Tap to view van location',
-                style: theme.textTheme.bodySmall?.copyWith(color: AppTheme.textMuted),
-              ),
-            ],
-          ),
-        ),
-      ).animate().fade(delay: 150.ms).slideY(begin: 0.05),
+      ).animate().fade(delay: 120.ms).slideY(begin: 0.04, curve: Curves.easeOut),
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Empty state
+  // ─────────────────────────────────────────────────────────────────────────
   Widget _buildEmptyState(BuildContext context, ThemeData theme) {
     return Center(
       child: Padding(
@@ -513,59 +582,201 @@ class ParentDashboard extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const NoStudentsIllustration(size: 160),
-            const SizedBox(height: 32),
-            Text(
-              'No students linked yet',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: AppTheme.background,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppTheme.border),
               ),
+              child: const Icon(Icons.child_care_rounded,
+                  color: AppTheme.textMuted, size: 48),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 24),
+            Text('No students linked',
+                style: theme.textTheme.titleLarge
+                    ?.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 12),
             Text(
-              'Add a student to your account in the Profile screen to start tracking.',
-              style: theme.textTheme.bodyMedium,
+              'Add a student to your account in the Profile screen to start monitoring their rides securely.',
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: AppTheme.textSecondary, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
-            SizedBox(
-              width: 200,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const ParentProfileScreen(),
-                    ),
-                  );
-                },
-                child: const Text('Go to Profile'),
+            OutlinedButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ParentProfileScreen()),
               ),
+              icon: const Icon(Icons.person_add_alt_1_rounded, size: 20),
+              label: const Text('Go to Profile'),
             ),
           ],
-        ).animate().fade(duration: 300.ms).scale(begin: const Offset(0.95, 0.95)),
+        ).animate().fade(duration: 400.ms).scale(
+            begin: const Offset(0.95, 0.95), curve: Curves.easeOutCubic),
       ),
     );
   }
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Error state
+  // ─────────────────────────────────────────────────────────────────────────
   Widget _buildErrorState(ThemeData theme, String error) {
     return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.errorRed.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline_rounded,
+                  color: AppTheme.errorRed, size: 40),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Unable to load dashboard',
+              style: theme.textTheme.titleMedium?.copyWith(
+                  color: AppTheme.errorRed, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              error,
+              style: theme.textTheme.bodyMedium
+                  ?.copyWith(color: AppTheme.textSecondary),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Loading shimmer
+  // ─────────────────────────────────────────────────────────────────────────
+  Widget _buildShimmer() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const ShimmerLoading(width: 100, height: 12),
+          const SizedBox(height: 6),
+          const ShimmerLoading(width: 160, height: 28),
+          const SizedBox(height: 20),
+          const ShimmerCard(height: 72),
+          const SizedBox(height: 12),
+          Row(
+            children: const [
+              Expanded(child: ShimmerCard(height: 110)),
+              SizedBox(width: 12),
+              Expanded(child: ShimmerCard(height: 110)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const ShimmerCard(height: 80),
+        ],
+      ),
+    );
+  }
+
+  BoxDecoration _cardDecoration() {
+    return BoxDecoration(
+      color: AppTheme.surfaceCard,
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.025),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+      border: Border.all(color: AppTheme.border.withValues(alpha: 0.45)),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reusable info tile for Status + ETA cards
+// ─────────────────────────────────────────────────────────────────────────────
+class _InfoTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final String value;
+  final Color? dotColor;
+
+  const _InfoTile({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+    this.dotColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 14),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceCard,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.025),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: AppTheme.border.withValues(alpha: 0.45)),
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const ErrorStateIllustration(size: 120),
-          const SizedBox(height: 24),
+          Icon(icon, color: iconColor, size: 24),
+          const SizedBox(height: 10),
           Text(
-            'Failed to load students',
-            style: theme.textTheme.titleMedium?.copyWith(
-              color: AppTheme.errorRed,
-              fontWeight: FontWeight.bold,
+            label,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppTheme.textMuted,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.2,
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            error,
-            style: theme.textTheme.bodyMedium,
-            textAlign: TextAlign.center,
+          const SizedBox(height: 5),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (dotColor != null) ...[
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: dotColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 5),
+                ],
+                Text(
+                  value,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: AppTheme.textPrimary,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -573,7 +784,9 @@ class ParentDashboard extends ConsumerWidget {
   }
 }
 
-/// A wrapper widget that provides tactile scale-down feedback on tap.
+// ─────────────────────────────────────────────────────────────────────────────
+// Tappable card with scale feedback — unchanged
+// ─────────────────────────────────────────────────────────────────────────────
 class _TappableCard extends StatefulWidget {
   final Widget child;
   final VoidCallback onTap;
@@ -583,7 +796,8 @@ class _TappableCard extends StatefulWidget {
   State<_TappableCard> createState() => _TappableCardState();
 }
 
-class _TappableCardState extends State<_TappableCard> with SingleTickerProviderStateMixin {
+class _TappableCardState extends State<_TappableCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -591,11 +805,11 @@ class _TappableCardState extends State<_TappableCard> with SingleTickerProviderS
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 100),
+      duration: const Duration(milliseconds: 150),
       vsync: this,
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.97).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
     );
   }
 
@@ -616,12 +830,8 @@ class _TappableCardState extends State<_TappableCard> with SingleTickerProviderS
       onTapCancel: () => _controller.reverse(),
       child: AnimatedBuilder(
         animation: _scaleAnimation,
-        builder: (context, child) {
-          return Transform.scale(
-            scale: _scaleAnimation.value,
-            child: child,
-          );
-        },
+        builder: (context, child) =>
+            Transform.scale(scale: _scaleAnimation.value, child: child),
         child: widget.child,
       ),
     );

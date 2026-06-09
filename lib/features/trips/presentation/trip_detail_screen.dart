@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -80,7 +79,6 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           setState(() {
             _currentPosition = position;
           });
-          // Update markers with the new initial position
           final manifestAsync = ref.read(tripManifestProvider(widget.tripId));
           if (manifestAsync.hasValue) {
             _buildMarkers(manifestAsync.value!);
@@ -150,7 +148,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   // ─── LIVE TRACKING ENGINE ────────────────────────────
   
   void _checkGeofences(Position currentPos, List<TripManifestModel> manifest, String sessionId, String tripType) {
-    if (_approachingStudentId != null) return; // Debounce if already showing a banner
+    if (_approachingStudentId != null) return; 
 
     for (var student in manifest) {
       if (student.homeLocation == null) continue;
@@ -166,13 +164,13 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         if (currentStatus.toLowerCase() == 'at home') {
           isActiveTarget = true;
           nextStatus = 'In Van';
-          actionLabel = 'Scan or Mark In Van';
+          actionLabel = 'MARK AS PICKED UP';
         }
       } else {
         if (currentStatus.toLowerCase() == 'in van') {
           isActiveTarget = true;
           nextStatus = 'At Home';
-          actionLabel = 'Mark Dropped at Home';
+          actionLabel = 'MARK AS DROPPED OFF';
         }
       }
       
@@ -192,7 +190,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
             _approachingNextStatus = nextStatus;
           });
         }
-        break; // Only trigger one banner at a time
+        break; 
       }
     }
   }
@@ -200,26 +198,17 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   Future<void> _startLiveTracking(String sessionId) async {
     if (_isLiveTracking) return;
 
-    // 1. Check GPS Permissions
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        if (mounted) _showError('Location permissions are required for live tracking.');
-        return;
-      }
+      if (permission == LocationPermission.denied) return;
     }
 
-    // 2. Connect to EMQX
     final connected = await _mqttService.connect('driver_${widget.tripId}');
-    if (!connected) {
-      if (mounted) _showError('Failed to connect to tracking server.');
-      return;
-    }
+    if (!connected) return;
 
     setState(() => _isLiveTracking = true);
 
-    // 3. Start the GPS Stream (It just updates the variable silently)
     _positionStream = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
@@ -242,7 +231,6 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       }
     });
 
-    // 4. The Heartbeat Timer forces a publish exactly every 3 seconds
     _publishTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       if (_currentPosition != null && _isLiveTracking) {
         _mqttService.publishLocation(
@@ -256,23 +244,20 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   void _stopLiveTracking() {
-    // Kill the GPS stream
     _positionStream?.cancel();
     _positionStream = null;
     
-    // Kill the 3-second timer
     _publishTimer?.cancel();
     _publishTimer = null;
     _currentPosition = null;
 
-    // Disconnect from EMQX
     _mqttService.disconnect();
     _isLiveTracking = false;
   }
 
   @override
   void dispose() {
-    _stopLiveTracking(); // Ensure we don't leave a ghost connection if they close the app!
+    _stopLiveTracking(); 
     super.dispose();
   }
 
@@ -283,28 +268,16 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       await tripService.startDailySession(widget.tripId);
       ref.invalidate(tripDetailsProvider(widget.tripId));
       
-      // --- ADD THIS BLOCK TO START TRACKING ---
       try {
         final newSession = await ref.read(activeSessionProvider(widget.tripId).future);
         if (newSession != null) {
           await _startLiveTracking(newSession.sessionId);
         }
       } catch (e) {
-        debugPrint('Could not immediately start tracking: $e');
-      }
-      // ----------------------------------------
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Trip session started!'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        debugPrint('Tracking init delayed: $e');
       }
     } catch (e) {
-      if (mounted) _showError(e.toString());
+      debugPrint('Error starting trip: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -314,15 +287,22 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        title: const Text('End Trip', style: TextStyle(color: AppTheme.textPrimary)),
-        content: const Text('Are you sure you want to end this trip?', style: TextStyle(color: AppTheme.textSecondary)),
+        backgroundColor: AppTheme.surfaceCard,
+        title: const Text('End Trip', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to end this trip? You will stop tracking.', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16)),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), 
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16))
+          ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed, foregroundColor: Colors.white),
-            child: const Text('End Trip'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.errorRed, 
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
+            ),
+            child: const Text('END TRIP', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -330,26 +310,15 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
     if (confirm != true) return;
 
-    // --- ADD THIS LINE ---
     _stopLiveTracking();
-    // ---------------------
 
     setState(() => _isLoading = true);
     try {
       final tripService = ref.read(tripServiceProvider);
       await tripService.endDailySession(sessionId, widget.tripId);
       ref.invalidate(tripDetailsProvider(widget.tripId));
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Trip ended successfully.'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
     } catch (e) {
-      if (mounted) _showError(e.toString());
+      debugPrint('Error ending trip: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -359,15 +328,22 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        title: const Text('Reopen Trip', style: TextStyle(color: AppTheme.textPrimary)),
-        content: const Text('Are you sure you want to reopen this trip? This will set it back to In Progress.', style: TextStyle(color: AppTheme.textSecondary)),
+        backgroundColor: AppTheme.surfaceCard,
+        title: const Text('Reopen Trip', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to reopen this trip? This will set it back to In Progress and resume tracking.', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16)),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), 
+            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16))
+          ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold, foregroundColor: Colors.white),
-            child: const Text('Reopen Trip'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGold, 
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
+            ),
+            child: const Text('REOPEN', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -381,234 +357,49 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       await tripService.reopenDailySession(sessionId, widget.tripId);
       ref.invalidate(tripDetailsProvider(widget.tripId));
 
-      // --- ADD THIS BLOCK TO START TRACKING ON REOPEN ---
       try {
         await _startLiveTracking(sessionId);
       } catch (e) {
-        debugPrint('Could not immediately start tracking: $e');
-      }
-      // --------------------------------------------------
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Trip reopened successfully.'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        debugPrint('Tracking resume delayed: $e');
       }
     } catch (e) {
-      if (mounted) _showError(e.toString());
+      debugPrint('Error reopening trip: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
   Future<void> _handleEditTrip(TripModel trip) async {
-    final nameController = TextEditingController(text: trip.tripName);
-    final searchController = TextEditingController();
-    
-    // Retrieve students initially attached to this trip manifest
     final manifestAsync = ref.read(tripManifestProvider(trip.tripId));
-    final List<Map<String, String>> currentRoster = [];
-    
-    if (manifestAsync.hasValue) {
-      for (var student in manifestAsync.value!) {
-        currentRoster.add({
-          'id': student.studentId,
-          'name': student.name,
-          'school_name': student.schoolName,
-        });
-      }
-    }
+    final initialRoster = manifestAsync.value?.map((s) => {
+      'id': s.studentId,
+      'name': s.name,
+      'school_name': s.schoolName,
+    }).toList() ?? [];
 
-    final result = await showGeneralDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      barrierLabel: 'Edit Trip',
-      pageBuilder: (context, anim1, anim2) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            bool isSearching = false;
-
-            Future<void> addStudent() async {
-              final query = searchController.text.trim().toUpperCase();
-              if (query.isEmpty) return;
-              if (currentRoster.any((s) => s['id'] == query)) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Student already in roster.')),
-                );
-                return;
-              }
-
-              setDialogState(() => isSearching = true);
-              try {
-                final firestore = ref.read(firestoreProvider);
-                final doc = await firestore.collection('students').doc(query).get();
-                if (doc.exists && doc.data() != null) {
-                  final data = doc.data()!;
-                  setDialogState(() {
-                    currentRoster.add({
-                      'id': query,
-                      'name': data['name'] ?? '',
-                      'school_name': data['school_name'] ?? '',
-                    });
-                    searchController.clear();
-                  });
-                } else {
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Student ID not found.')),
-                    );
-                  }
-                }
-              } catch (e) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error searching student: $e')),
-                  );
-                }
-              } finally {
-                setDialogState(() => isSearching = false);
-              }
-            }
-
-            return Scaffold(
-              backgroundColor: AppTheme.background,
-              appBar: AppBar(
-                title: const Text('Edit Trip Details'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Cancel', style: TextStyle(color: Colors.white)),
-                  ),
-                  ElevatedButton(
-                    onPressed: () {
-                      if (nameController.text.trim().isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please enter a trip name.')),
-                        );
-                        return;
-                      }
-                      if (currentRoster.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Please add at least one student.')),
-                        );
-                        return;
-                      }
-                      Navigator.of(context).pop(true);
-                    },
-                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryGold),
-                    child: const Text('Save'),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-              ),
-              body: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    TextField(
-                      controller: nameController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Trip Name',
-                        prefixIcon: Icon(Icons.directions_bus_outlined),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: searchController,
-                            textCapitalization: TextCapitalization.characters,
-                            decoration: const InputDecoration(
-                              labelText: 'Add Student by ID',
-                              prefixIcon: Icon(Icons.person_add_outlined),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        SizedBox(
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: isSearching ? null : addStudent,
-                            style: ElevatedButton.styleFrom(
-                              minimumSize: const Size(80, 56), // Override double.infinity to prevent layout crashes in Row
-                            ),
-                            child: isSearching
-                                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                : const Text('Add'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'ROSTER (${currentRoster.length} Students)',
-                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textMuted, fontSize: 12),
-                    ),
-                    const SizedBox(height: 10),
-                    Expanded(
-                      child: currentRoster.isEmpty
-                          ? const Center(child: Text('No students linked.', style: TextStyle(color: AppTheme.textSecondary)))
-                          : ListView.builder(
-                              itemCount: currentRoster.length,
-                              itemBuilder: (context, index) {
-                                final s = currentRoster[index];
-                                return Card(
-                                  color: AppTheme.surface,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                    side: const BorderSide(color: AppTheme.border),
-                                  ),
-                                  margin: const EdgeInsets.only(bottom: 8),
-                                  child: ListTile(
-                                    title: Text(s['name'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    subtitle: Text('ID: ${s['id']} • ${s['school_name'] ?? ''}'),
-                                    trailing: IconButton(
-                                      icon: const Icon(Icons.delete_outline_rounded, color: AppTheme.errorRed),
-                                      onPressed: () {
-                                        setDialogState(() {
-                                          currentRoster.removeAt(index);
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (context) => _EditTripScreen(
+          trip: trip,
+          initialRoster: initialRoster,
+        ),
+      ),
     );
 
-    if (result == true) {
+    if (result != null) {
       setState(() => _isLoading = true);
       try {
-        final newStudentIds = currentRoster.map((s) => s['id']!).toList();
-        await ref.read(tripServiceProvider).updateTrip(trip.tripId, nameController.text.trim(), newStudentIds);
+        final newName = result['name'] as String;
+        final newType = result['type'] as String;
+        final newStudentIds = (result['roster'] as List<dynamic>).cast<String>();
+        
+        await ref.read(tripServiceProvider).updateTrip(trip.tripId, newName, newStudentIds);
+        await ref.read(firestoreProvider).collection('trips').doc(trip.tripId).update({'trip_type': newType});
+        
         ref.invalidate(tripDetailsProvider(widget.tripId));
         ref.invalidate(tripManifestProvider(widget.tripId));
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Trip details updated successfully.'),
-              backgroundColor: AppTheme.successGreen,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
       } catch (e) {
-        if (mounted) _showError(e.toString());
+        debugPrint('Error updating trip: $e');
       } finally {
         if (mounted) setState(() => _isLoading = false);
       }
@@ -616,38 +407,25 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   Future<void> _handleScannedStudent(String studentId, String sessionId) async {
-    // 1. Get current manifest to validate if student is part of the trip
     final manifestAsync = ref.read(tripManifestProvider(widget.tripId));
-    if (!manifestAsync.hasValue) {
-      _showError("Roster manifest is still loading. Please try again.");
-      return;
-    }
+    if (!manifestAsync.hasValue) return;
 
     final manifest = manifestAsync.value!;
     final manifestStudent = manifest.where((s) => s.studentId == studentId).firstOrNull;
 
     if (manifestStudent == null) {
-      // Student NOT in the active trip
       if (mounted) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.background,
-            title: const Text(
-              'Error',
-              style: TextStyle(
-                color: AppTheme.errorRed,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            content: Text(
-              'Error: Student $studentId is not part of this trip.',
-              style: const TextStyle(color: AppTheme.textPrimary),
-            ),
+            backgroundColor: AppTheme.surfaceCard,
+            title: const Text('Invalid Student', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 24)),
+            content: Text('Student ID $studentId is NOT assigned to this route.', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
             actions: [
-              TextButton(
+              ElevatedButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('OK'),
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed, foregroundColor: Colors.white),
+                child: const Text('DISMISS', style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           ),
@@ -656,19 +434,13 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       return;
     }
 
-    // 2. Read the trip details to know the trip type (morning vs afternoon)
     final tripAsync = ref.read(tripDetailsProvider(widget.tripId));
-    if (!tripAsync.hasValue) {
-      _showError("Trip details are still loading. Please try again.");
-      return;
-    }
+    if (!tripAsync.hasValue) return;
     final trip = tripAsync.value!;
 
-    // 3. Read current status from attendance map
     final attendanceMap = ref.read(sessionAttendanceProvider(sessionId)).value ?? const {};
     final currentStatus = attendanceMap[studentId] ?? manifestStudent.status;
 
-    // 4. State Machine check
     final isMorning = trip.tripType.toLowerCase() == 'morning';
     String nextStatus;
 
@@ -682,22 +454,14 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              backgroundColor: AppTheme.background,
-              title: const Text(
-                'Scan Error',
-                style: TextStyle(
-                  color: AppTheme.errorRed,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Text(
-                'Student ${manifestStudent.name} is already at school.',
-                style: const TextStyle(color: AppTheme.textPrimary),
-              ),
+              backgroundColor: AppTheme.surfaceCard,
+              title: const Text('Scan Error', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 24)),
+              content: Text('${manifestStudent.name} is already marked as At School.', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
               actions: [
-                TextButton(
+                ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.textPrimary, foregroundColor: Colors.white),
+                  child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -715,22 +479,14 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           showDialog(
             context: context,
             builder: (context) => AlertDialog(
-              backgroundColor: AppTheme.background,
-              title: const Text(
-                'Scan Error',
-                style: TextStyle(
-                  color: AppTheme.errorRed,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              content: Text(
-                'Student ${manifestStudent.name} is already at home.',
-                style: const TextStyle(color: AppTheme.textPrimary),
-              ),
+              backgroundColor: AppTheme.surfaceCard,
+              title: const Text('Scan Error', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 24)),
+              content: Text('${manifestStudent.name} is already marked as At Home.', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
               actions: [
-                TextButton(
+                ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('OK'),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.textPrimary, foregroundColor: Colors.white),
+                  child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -740,51 +496,29 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       }
     }
 
-    // 5. Show clean, centered AlertDialog popup feedback immediately
     if (mounted) {
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
-          backgroundColor: AppTheme.background,
-          title: const Text(
-            'Status Updated',
-            style: TextStyle(
-              color: AppTheme.successGreen,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: Text(
-            'Student ${manifestStudent.name} ($studentId) is now $nextStatus.',
-            style: const TextStyle(color: AppTheme.textPrimary),
-          ),
+          backgroundColor: AppTheme.surfaceCard,
+          title: const Text('Status Updated', style: TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.bold, fontSize: 24)),
+          content: Text('${manifestStudent.name} is now $nextStatus.', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
           actions: [
-            TextButton(
+            ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.successGreen, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
+              child: const Text('CONTINUE', style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ],
         ),
       );
     }
 
-    // 6. Execute the Firebase update to commit this new status to the database
     try {
       await ref.read(tripServiceProvider).processQrScan(studentId, sessionId);
     } catch (e) {
-      if (mounted) {
-        _showError(e.toString());
-      }
+      debugPrint('Error processing scan: $e');
     }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: AppTheme.errorRed,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
   }
 
   @override
@@ -799,19 +533,13 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     return PopScope(
       canPop: !isTripActive,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop && isTripActive) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('You must end the active trip before leaving this screen.'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
+        // Silent block if they try to exit while active
       },
       child: Scaffold(
         backgroundColor: AppTheme.background,
         appBar: AppBar(
-          title: Text(isTripActive ? 'Active Trip' : 'Trip Details'),
+          title: Text(isTripActive ? 'ACTIVE ROUTE' : 'Route Details', style: const TextStyle(fontWeight: FontWeight.w900)),
+          backgroundColor: isTripActive ? AppTheme.surfaceCard : AppTheme.background,
           leading: isTripActive
               ? null
               : IconButton(
@@ -823,7 +551,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
             if (!isTripActive)
               tripAsync.when(
                 data: (trip) => IconButton(
-                  icon: const Icon(Icons.edit_rounded, color: AppTheme.primaryGold),
+                  icon: const Icon(Icons.edit_note_rounded, size: 28, color: AppTheme.textPrimary),
                   onPressed: () => _handleEditTrip(trip),
                 ),
                 loading: () => const SizedBox.shrink(),
@@ -835,7 +563,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           data: (session) {
             return SafeArea(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
                 child: _buildActionButtons(session),
               ),
             );
@@ -847,7 +575,6 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           data: (trip) {
             return sessionAsync.when(
               data: (session) {
-                // Reactive listeners for marker repainting
                 ref.listen(tripManifestProvider(widget.tripId), (prev, next) {
                   final manifest = next.value ?? [];
                   final attendanceMap = session != null ? ref.read(sessionAttendanceProvider(session.sessionId)).value ?? {} : <String, String>{};
@@ -869,7 +596,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                     physics: const BouncingScrollPhysics(),
                     slivers: [
                       SliverPadding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                         sliver: SliverList(
                           delegate: SliverChildListDelegate([
                             _buildTripDetailsCard(theme, trip, session),
@@ -881,7 +608,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                 ),
                             const SizedBox(height: 24),
                             _buildRosterHeader(theme, ref.watch(tripManifestProvider(widget.tripId))),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
                             ref.watch(tripManifestProvider(widget.tripId)).when(
                                   data: (manifest) {
                                     if (manifest.isEmpty) return _buildEmptyRosterCard(theme);
@@ -897,7 +624,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                   loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppTheme.primaryGold))),
                                   error: (err, _) => _buildErrorState(theme, err.toString()),
                                 ),
-                            const SizedBox(height: 100),
+                            const SizedBox(height: 40), 
                           ]),
                         ),
                       ),
@@ -907,7 +634,6 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
                 return Stack(
                   children: [
-                    // 1. Fullscreen Google Map
                     if (_currentPosition == null)
                       Container(
                         color: AppTheme.background,
@@ -915,15 +641,13 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold),
-                              ),
+                              const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold)),
                               const SizedBox(height: 16),
                               Text(
                                 'Acquiring secure GPS lock...',
-                                style: theme.textTheme.bodyMedium?.copyWith(
-                                  color: AppTheme.textSecondary,
-                                  fontWeight: FontWeight.w600,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  color: AppTheme.textPrimary,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ).animate().fade(duration: 400.ms).slideY(begin: 0.1),
                             ],
@@ -932,7 +656,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                       )
                     else
                       GoogleMap(
-                        padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.18 + 20), // Lift logo above modal and FAB
+                        padding: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.25), 
                         initialCameraPosition: CameraPosition(
                           target: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
                           zoom: 16,
@@ -947,165 +671,105 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                         compassEnabled: false,
                       ),
 
-                    // 2. Map Controls (Zoom & Recenter)
                     Positioned(
                       top: 16,
                       right: 16,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          FloatingActionButton.extended(
-                            heroTag: 'recenter_fab',
-                            backgroundColor: AppTheme.surface,
-                            foregroundColor: AppTheme.primaryGold,
-                            onPressed: () {
-                              if (_currentPosition != null && _mapController != null) {
-                                _mapController!.animateCamera(CameraUpdate.newLatLng(LatLng(_currentPosition!.latitude, _currentPosition!.longitude)));
-                              }
-                            },
-                            icon: const Icon(Icons.my_location_rounded, size: 20),
-                            label: const Text('Recenter', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          ),
-                          const SizedBox(height: 16),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.85),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.04),
-                                      blurRadius: 16,
-                                      offset: const Offset(0, 4),
-                                    )
-                                  ],
-                                ),
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.add_rounded, color: AppTheme.textPrimary),
-                                      onPressed: () => _mapController?.animateCamera(CameraUpdate.zoomIn()),
-                                    ),
-                                    Container(height: 1, width: 30, color: AppTheme.border),
-                                    IconButton(
-                                      icon: const Icon(Icons.remove_rounded, color: AppTheme.textPrimary),
-                                      onPressed: () => _mapController?.animateCamera(CameraUpdate.zoomOut()),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
+                      child: FloatingActionButton(
+                        heroTag: 'recenter_fab',
+                        backgroundColor: AppTheme.surfaceCard,
+                        foregroundColor: AppTheme.primaryGoldDark,
+                        onPressed: () {
+                          if (_currentPosition != null && _mapController != null) {
+                            _mapController!.animateCamera(CameraUpdate.newLatLng(LatLng(_currentPosition!.latitude, _currentPosition!.longitude)));
+                          }
+                        },
+                        child: const Icon(Icons.my_location_rounded, size: 28),
                       ),
                     ),
 
-                    // 3. Proximity Action Banner
                     AnimatedPositioned(
-                      duration: const Duration(milliseconds: 400),
+                      duration: const Duration(milliseconds: 300),
                       curve: Curves.easeOutCubic,
-                      top: _approachingStudentId != null ? 16 : -200,
+                      top: _approachingStudentId != null ? 16 : -300,
                       left: 16,
-                      right: 72, // Room for the re-center FAB
+                      right: 88, 
                       child: _approachingStudentId != null
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withValues(alpha: 0.85),
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(alpha: 0.04),
-                                        blurRadius: 24,
-                                        offset: const Offset(0, 8),
-                                      ),
-                                    ],
-                                    border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.3), width: 1),
-                                  ),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                          ? Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: AppTheme.surfaceCard,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppTheme.primaryGold, width: 0.5), 
+                                boxShadow: [
+                                  BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 20, offset: const Offset(0, 10)),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              'Approaching $_approachingStudentName',
-                                              style: theme.textTheme.titleMedium?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                color: AppTheme.textPrimary,
-                                              ),
-                                            ),
-                                          ),
-                                          IconButton(
-                                            padding: EdgeInsets.zero,
-                                            constraints: const BoxConstraints(),
-                                            icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted),
-                                            onPressed: () {
-                                              setState(() => _approachingStudentId = null);
-                                            },
-                                          ),
-                                        ],
+                                      const Text(
+                                        'ACTION REQUIRED',
+                                        style: TextStyle(color: AppTheme.primaryGoldDark, fontWeight: FontWeight.w900, letterSpacing: 1.2),
                                       ),
-                                      const SizedBox(height: 12),
-                                      ElevatedButton(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppTheme.primaryGold,
-                                          foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(vertical: 16),
-                                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                        ),
-                                        onPressed: () async {
-                                          final studentId = _approachingStudentId!;
-                                          final nextStatus = _approachingNextStatus!;
-                                          setState(() => _approachingStudentId = null);
-                                          try {
-                                            await ref.read(tripServiceProvider).manualAttendanceOverride(session.sessionId, studentId, nextStatus);
-                                          } catch (e) {
-                                            if (mounted) _showError(e.toString());
-                                          }
-                                        },
-                                        child: Text(
-                                          _approachingStatusAction ?? '',
-                                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                        ),
+                                      IconButton(
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                        icon: const Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 28),
+                                        onPressed: () => setState(() => _approachingStudentId = null),
                                       ),
                                     ],
                                   ),
-                                ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'Approaching ${_approachingStudentName?.toUpperCase()}',
+                                    style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: AppTheme.textPrimary),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primaryGold,
+                                      foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 16),
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    ),
+                                    onPressed: () async {
+                                      final studentId = _approachingStudentId!;
+                                      final nextStatus = _approachingNextStatus!;
+                                      setState(() => _approachingStudentId = null);
+                                      try {
+                                        await ref.read(tripServiceProvider).manualAttendanceOverride(session.sessionId, studentId, nextStatus);
+                                      } catch (e) {
+                                        debugPrint('Override Error: $e');
+                                      }
+                                    },
+                                    child: Text(
+                                      _approachingStatusAction ?? '',
+                                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                                    ),
+                                  ),
+                                ],
                               ),
                             )
                           : const SizedBox.shrink(),
                     ),
 
-                    // 4. Draggable Roster Bottom Sheet
                     DraggableScrollableSheet(
-                      initialChildSize: 0.4,
+                      initialChildSize: 0.35,
                       minChildSize: 0.15,
                       maxChildSize: 0.85,
                       snap: true,
-                      snapSizes: const [0.15, 0.4, 0.85],
+                      snapSizes: const [0.15, 0.35, 0.85],
                       builder: (context, scrollController) {
                         return Container(
                           decoration: BoxDecoration(
                             color: AppTheme.background,
                             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
                             boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, -5),
-                              )
+                              BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 16, offset: const Offset(0, -5))
                             ],
                           ),
                           child: CustomScrollView(
@@ -1113,43 +777,38 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                             physics: const ClampingScrollPhysics(),
                             slivers: [
                               SliverToBoxAdapter(
-                                child: Center(
-                                  child: Container(
-                                    margin: const EdgeInsets.only(top: 12, bottom: 16),
-                                    width: 40,
-                                    height: 4,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.border,
-                                      borderRadius: BorderRadius.circular(2),
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      width: 48,
+                                      height: 6,
+                                      decoration: BoxDecoration(color: AppTheme.primaryGold.withValues(alpha: 0.5), borderRadius: BorderRadius.circular(3)),
                                     ),
-                                  ),
+                                    const SizedBox(height: 8),
+                                    const Text('SWIPE UP FOR FULL ROSTER', style: TextStyle(color: AppTheme.textMuted, fontWeight: FontWeight.w800, fontSize: 12)),
+                                    const SizedBox(height: 8),
+                                  ],
                                 ),
                               ),
                               SliverPadding(
-                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
                                 sliver: SliverList(
                                   delegate: SliverChildListDelegate([
                                     _buildTripDetailsCard(theme, trip, session),
                                     const SizedBox(height: 16),
-
                                     ref.watch(tripManifestProvider(widget.tripId)).when(
                                           data: (manifest) => _buildSchoolsSummary(theme, manifest),
                                           loading: () => const SizedBox.shrink(),
                                           error: (err, stack) => const SizedBox.shrink(),
                                         ),
                                     const SizedBox(height: 24),
-
                                     _buildRosterHeader(theme, ref.watch(tripManifestProvider(widget.tripId))),
-                                    const SizedBox(height: 16),
-
+                                    const SizedBox(height: 12),
                                     ref.watch(tripManifestProvider(widget.tripId)).when(
                                           data: (manifest) {
-                                            if (manifest.isEmpty) {
-                                              return _buildEmptyRosterCard(theme);
-                                            }
-
+                                            if (manifest.isEmpty) return _buildEmptyRosterCard(theme);
                                             final attendanceMap = ref.watch(sessionAttendanceProvider(session.sessionId)).asData?.value ?? const {};
-
                                             return Column(
                                               children: manifest.asMap().entries.map((entry) {
                                                 return _buildStudentRow(theme, entry.value, entry.key, session, attendanceMap, trip.tripType);
@@ -1159,7 +818,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                           loading: () => const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator(color: AppTheme.primaryGold))),
                                           error: (err, _) => _buildErrorState(theme, err.toString()),
                                         ),
-                                    const SizedBox(height: 100), // Padding for scrolling past FABs
+                                    const SizedBox(height: 24), 
                                   ]),
                                 ),
                               ),
@@ -1178,155 +837,131 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           loading: () => const Center(child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryGold))),
           error: (err, _) => _buildErrorState(theme, err.toString()),
         ),
-        floatingActionButton: sessionAsync.when(
-          data: (session) {
-            if (session != null && session.status == 'in_progress') {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 16.0),
-                child: FloatingActionButton(
-                  backgroundColor: AppTheme.primaryGold,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  onPressed: () async {
-                    final scannedId = await Navigator.of(context).push<String>(
-                      MaterialPageRoute(
-                        builder: (context) => QRScannerScreen(sessionId: session.sessionId),
-                      ),
-                    );
-                    if (scannedId != null && scannedId.isNotEmpty) {
-                      _handleScannedStudent(scannedId, session.sessionId);
-                    }
-                  },
-                  child: const Icon(Icons.qr_code_scanner_rounded, size: 36),
-                ),
-              );
-            }
-            return null;
-          },
-          loading: () => null,
-          error: (error, _) => null,
-        ),
-        floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
     );
   }
 
-  // ─── 1. Trip Details Card ────────────────────────────
   Widget _buildTripDetailsCard(ThemeData theme, TripModel trip, DailySessionModel? session) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 0.5),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 20, offset: const Offset(0, 8))],
+        color: AppTheme.surfaceCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.primaryGold, width: 0.5), 
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            trip.tripName.toUpperCase(),
+            style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, fontSize: 22, color: AppTheme.textPrimary),
+          ),
+          const SizedBox(height: 12),
+          const Divider(color: AppTheme.primaryGold, thickness: 0.5, height: 1),
+          const SizedBox(height: 12),
           Row(
             children: [
+              Icon(
+                trip.tripType.toLowerCase() == 'morning' ? Icons.wb_sunny_rounded : Icons.nights_stay_rounded, 
+                color: AppTheme.primaryGold, 
+                size: 28
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  trip.tripName,
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  trip.tripType.toLowerCase() == 'morning' ? 'MORNING PICK-UP' : 'AFTERNOON DROP-OFF',
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppTheme.textSecondary),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          const Divider(color: AppTheme.border, height: 1),
-          const SizedBox(height: 12),
-          _buildInfoRow(
-            theme,
-            trip.tripType.toLowerCase() == 'morning'
-                ? Icons.login_rounded
-                : Icons.logout_rounded,
-            'Type',
-            trip.tripType.toLowerCase() == 'morning'
-                ? 'Morning Pick-Up'
-                : 'Afternoon Drop-Off',
-          ),
         ],
       ),
-    ).animate().fade(duration: 250.ms).slideY(begin: 0.05, duration: 250.ms, curve: Curves.easeOutQuad);
+    );
   }
 
   Widget _buildActionButtons(DailySessionModel? session) {
-    if (session == null || session.status == 'not_started') {
-      return SizedBox(
-        width: double.infinity,
-        height: 54,
-        child: ElevatedButton.icon(
-          onPressed: _isLoading ? null : _handleStartTrip,
-          icon: _isLoading
-              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Icon(Icons.play_arrow_rounded),
-          label: const Text('START TRIP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryGold,
-            foregroundColor: Colors.white,
-          ),
-        ),
-      );
-    } else if (session.status == 'in_progress') {
-      return SizedBox(
-        width: double.infinity,
-        height: 54,
-        child: ElevatedButton.icon(
-          onPressed: _isLoading ? null : () => _handleEndTrip(session.sessionId),
-          icon: const Icon(Icons.stop_rounded),
-          label: const Text('END TRIP'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFFB71C1C), // Deep Red
-            foregroundColor: Colors.white,
-          ),
-        ),
-      );
-    } else {
-      // completed
-      return SizedBox(
-        width: double.infinity,
-        height: 56,
-        child: ElevatedButton.icon(
-          onPressed: _isLoading ? null : () => _handleReopenTrip(session.sessionId),
-          icon: _isLoading
-              ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-              : const Icon(Icons.refresh_rounded),
-          label: const Text('REDO TRIP', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryGold,
-            foregroundColor: Colors.white,
-          ),
-        ),
-      );
-    }
-  }
+    final isSessionActive = session != null && session.status == 'in_progress';
 
-  Widget _buildInfoRow(ThemeData theme, IconData icon, String label, String value) {
-    return Row(
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Icon(icon, color: AppTheme.primaryGold, size: 20),
-        const SizedBox(width: 10),
-        Text(
-          '$label: ',
-          style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+        if (isSessionActive) ...[
+          SizedBox(
+            height: 64,
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                final scannedId = await Navigator.of(context).push<String>(
+                  MaterialPageRoute(builder: (context) => QRScannerScreen(sessionId: session.sessionId)),
+                );
+                if (scannedId != null && scannedId.isNotEmpty) {
+                  _handleScannedStudent(scannedId, session.sessionId);
+                }
+              },
+              icon: const Icon(Icons.qr_code_scanner_rounded, size: 32),
+              label: const Text('SCAN ID CARD', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGoldDark,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
           ),
-        ),
+          const SizedBox(height: 12),
+        ],
+
+        if (session == null || session.status == 'not_started') ...[
+          SizedBox(
+            height: 64, 
+            child: ElevatedButton.icon(
+              onPressed: _isLoading ? null : _handleStartTrip,
+              icon: _isLoading
+                  ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
+                  : const Icon(Icons.play_arrow_rounded, size: 32),
+              label: const Text('START ROUTE', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGold, 
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
+        ] else if (session.status == 'in_progress') ...[
+          SizedBox(
+            height: 64,
+            child: ElevatedButton.icon(
+              onPressed: _isLoading ? null : () => _handleEndTrip(session.sessionId),
+              icon: const Icon(Icons.stop_rounded, size: 32),
+              label: const Text('END TRIP', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.errorRed,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
+        ] else ...[
+          SizedBox(
+            height: 64,
+            child: ElevatedButton.icon(
+              onPressed: _isLoading ? null : () => _handleReopenTrip(session.sessionId),
+              icon: _isLoading
+                  ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 3, color: Colors.white))
+                  : const Icon(Icons.refresh_rounded, size: 32),
+              label: const Text('REDO TRIP', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.textPrimary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+            ),
+          ),
+        ]
       ],
     );
   }
 
-
-
-  // ─── 3. Target Schools Summary ─────────────────────────
   Widget _buildSchoolsSummary(ThemeData theme, List<TripManifestModel> manifest) {
     final schoolNames = manifest
         .map((m) => m.schoolName)
@@ -1339,64 +974,63 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.primaryGold.withValues(alpha: 0.08),
+        color: AppTheme.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.2)),
+        border: Border.all(color: AppTheme.primaryGold, width: 0.5),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.school_rounded, color: AppTheme.primaryGold, size: 22),
-          const SizedBox(width: 10),
+          const Icon(Icons.school_rounded, color: AppTheme.primaryGold, size: 28),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Destinations',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: AppTheme.primaryGold,
-                    fontWeight: FontWeight.bold,
+                  'DESTINATION SCHOOLS',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: AppTheme.textMuted,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   schoolNames.join(', '),
-                  style: theme.textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800, color: AppTheme.textPrimary),
                 ),
               ],
             ),
           ),
         ],
       ),
-    ).animate().fade(delay: 250.ms).slideY(begin: 0.03);
+    );
   }
 
-  // ─── 4. Roster Header ─────────────────────────────────
   Widget _buildRosterHeader(ThemeData theme, AsyncValue<List<TripManifestModel>> manifestAsync) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Student Roster',
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          'ROSTER',
+          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, fontSize: 20),
         ),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: AppTheme.primaryGold.withValues(alpha: 0.12),
+            color: AppTheme.primaryGold.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(12),
           ),
           child: manifestAsync.when(
             data: (manifest) => Text(
               '${manifest.length} Students',
-              style: theme.textTheme.labelLarge?.copyWith(
-                color: AppTheme.primaryGold,
-                fontWeight: FontWeight.bold,
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: AppTheme.primaryGoldDark,
+                fontWeight: FontWeight.w900,
               ),
             ),
-            loading: () => const Text('...'),
-            error: (error, _) => const Text('Error'),
+            loading: () => const Text('...', style: TextStyle(fontWeight: FontWeight.bold)),
+            error: (error, _) => const Text('Error', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ),
       ],
@@ -1407,7 +1041,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
+        backgroundColor: AppTheme.surfaceCard,
         title: Text(
           status == 'In Van'
               ? 'Board Student'
@@ -1416,26 +1050,30 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   : status == 'At Home'
                       ? 'Offboard Student (At Home)'
                       : 'Mark Student Absent',
-          style: const TextStyle(color: AppTheme.textPrimary),
+          style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 22),
         ),
         content: Text(
           'Are you sure you want to mark this student as '
           '${status == 'In Van' ? 'boarded (in the van)' : status == 'At School' ? 'offboarded (at school)' : status == 'At Home' ? 'offboarded (at home)' : 'absent'}?',
-          style: const TextStyle(color: AppTheme.textSecondary),
+          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false), 
+            child: const Text('CANCEL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))
+          ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: status == 'In Van'
-                  ? AppTheme.primaryGold
+                  ? AppTheme.primaryGoldDark
                   : (status == 'At School' || status == 'At Home')
                       ? AppTheme.successGreen
                       : AppTheme.errorRed,
               foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
             ),
-            child: const Text('Confirm'),
+            child: const Text('CONFIRM', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -1445,99 +1083,100 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     try {
       await ref.read(tripServiceProvider).manualAttendanceOverride(sessionId, studentId, status);
     } catch (e) {
-      if (mounted) _showError(e.toString());
+      debugPrint('Override Error: $e');
     }
   }
 
-  // ─── 5. Student Roster Row ────────────────────────────
   Widget _buildStudentRow(ThemeData theme, TripManifestModel student, int index, DailySessionModel? session, Map<String, String> attendanceMap, String tripType) {
     final status = attendanceMap[student.studentId] ?? student.status;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: AppTheme.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.5), width: 0.5), 
       ),
       child: Row(
         children: [
-          SizedBox(
-            width: 24,
-            child: Text(
-              '${student.stopOrder}',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textMuted,
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(color: AppTheme.primaryGold.withValues(alpha: 0.15), shape: BoxShape.circle),
+            child: Center(
+              child: Text(
+                '${student.stopOrder}',
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.primaryGoldDark),
               ),
-              textAlign: TextAlign.center,
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  student.name,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+                  student.name.toUpperCase(),
+                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.textPrimary, letterSpacing: -0.2),
                 ),
+                const SizedBox(height: 4),
                 if (student.schoolName.isNotEmpty)
                   Text(
                     student.schoolName,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textMuted,
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600, fontSize: 13),
                   ),
               ],
             ),
           ),
           const SizedBox(width: 8),
+          
           _buildStatusChip(theme, status),
+          
           if (session != null && session.status == 'in_progress') ...[
-            const SizedBox(width: 4),
-            PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert_rounded, color: AppTheme.textSecondary),
-              color: AppTheme.surface,
-              onSelected: (newStatus) {
-                _handleManualOverride(session.sessionId, student.studentId, newStatus);
-              },
-              itemBuilder: (context) {
-                final isMorning = tripType.toLowerCase() == 'morning';
-                return [
-                  const PopupMenuItem(
-                    value: 'In Van',
-                    child: Text('In Van', style: TextStyle(color: AppTheme.textPrimary)),
-                  ),
-                  if (isMorning)
+            const SizedBox(width: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGold.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8)
+              ),
+              child: PopupMenuButton<String>(
+                icon: const Icon(Icons.edit_location_alt_rounded, color: AppTheme.primaryGoldDark, size: 28),
+                color: AppTheme.surfaceCard,
+                tooltip: "Update Status",
+                onSelected: (newStatus) {
+                  _handleManualOverride(session.sessionId, student.studentId, newStatus);
+                },
+                itemBuilder: (context) {
+                  final isMorning = tripType.toLowerCase() == 'morning';
+                  return [
                     const PopupMenuItem(
-                      value: 'At School',
-                      child: Text('At School', style: TextStyle(color: AppTheme.textPrimary)),
-                    )
-                  else
-                    const PopupMenuItem(
-                      value: 'At Home',
-                      child: Text('At Home', style: TextStyle(color: AppTheme.textPrimary)),
+                      value: 'In Van',
+                      child: Text('Board (In Van)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
-                  const PopupMenuItem(
-                    value: 'Absent',
-                    child: Text('Absent', style: TextStyle(color: AppTheme.textPrimary)),
-                  ),
-                ];
-              },
+                    if (isMorning)
+                      const PopupMenuItem(
+                        value: 'At School',
+                        child: Text('Drop (At School)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      )
+                    else
+                      const PopupMenuItem(
+                        value: 'At Home',
+                        child: Text('Drop (At Home)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    const PopupMenuItem(
+                      value: 'Absent',
+                      child: Text('Mark Absent', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                  ];
+                },
+              ),
             ),
           ],
         ],
       ),
     );
   }
-
-
 
   Widget _buildStatusChip(ThemeData theme, String status) {
     Color chipColor;
@@ -1546,43 +1185,45 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
     switch (status.toLowerCase()) {
       case 'in van':
-        chipColor = AppTheme.primaryGold.withValues(alpha: 0.15);
-        textColor = AppTheme.primaryGold;
-        label = 'In Van';
+        chipColor = AppTheme.warningOrange.withValues(alpha: 0.15);
+        textColor = AppTheme.warningOrange;
+        label = 'IN VAN';
         break;
       case 'at school':
-        chipColor = AppTheme.successGreen.withValues(alpha: 0.15);
-        textColor = AppTheme.successGreen;
-        label = 'At School';
+        chipColor = AppTheme.primaryGoldDark.withValues(alpha: 0.15);
+        textColor = AppTheme.primaryGoldDark;
+        label = 'AT SCHOOL';
         break;
       case 'at home':
-        chipColor = Colors.blue.withValues(alpha: 0.15);
-        textColor = Colors.blue;
-        label = 'At Home';
+        chipColor = AppTheme.successGreen.withValues(alpha: 0.15);
+        textColor = AppTheme.successGreen;
+        label = 'AT HOME';
         break;
       case 'absent':
         chipColor = AppTheme.errorRed.withValues(alpha: 0.15);
         textColor = AppTheme.errorRed;
-        label = 'Absent';
+        label = 'ABSENT';
         break;
       default:
         chipColor = AppTheme.border;
         textColor = AppTheme.textSecondary;
-        label = status;
+        label = status.toUpperCase();
         break;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: chipColor,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
-        style: theme.textTheme.labelMedium?.copyWith(
+        style: TextStyle(
           color: textColor,
-          fontWeight: FontWeight.bold,
+          fontWeight: FontWeight.w900,
+          fontSize: 12,
+          letterSpacing: 0.5,
         ),
       ),
     );
@@ -1592,14 +1233,14 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: AppTheme.surface,
+        color: AppTheme.surfaceCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.border),
+        border: Border.all(color: AppTheme.border, width: 0.5),
       ),
-      child: Center(
+      child: const Center(
         child: Text(
-          'No students assigned to this trip yet.',
-          style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted),
+          'NO STUDENTS ASSIGNED',
+          style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w900, fontSize: 16),
         ),
       ),
     );
@@ -1612,17 +1253,14 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, color: AppTheme.errorRed, size: 48),
+            const Icon(Icons.error_outline_rounded, color: AppTheme.errorRed, size: 64),
             const SizedBox(height: 16),
-            Text(
-              'Error loading details',
-              style: theme.textTheme.titleMedium?.copyWith(
-                color: AppTheme.errorRed,
-                fontWeight: FontWeight.bold,
-              ),
+            const Text(
+              'ERROR LOADING ROUTE',
+              style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w900, fontSize: 20),
             ),
             const SizedBox(height: 8),
-            Text(error, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+            Text(error, style: theme.textTheme.bodyLarge, textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -1630,4 +1268,385 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 }
 
+// ───────────────────────────────────────────────────────────────────────
+// DEDICATED EDIT SCREEN 
+// ───────────────────────────────────────────────────────────────────────
+class _EditTripScreen extends StatefulWidget {
+  final TripModel trip;
+  final List<Map<String, String>> initialRoster;
 
+  const _EditTripScreen({required this.trip, required this.initialRoster});
+
+  @override
+  State<_EditTripScreen> createState() => _EditTripScreenState();
+}
+
+class _EditTripScreenState extends State<_EditTripScreen> {
+  late final TextEditingController _nameController;
+  final _searchController = TextEditingController();
+  late List<Map<String, String>> _currentRoster;
+  late String _tripType;
+  bool _isSearching = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.trip.tripName);
+    _tripType = widget.trip.tripType.isNotEmpty ? widget.trip.tripType : 'Morning';
+    _currentRoster = List.from(widget.initialRoster);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _addStudent() async {
+    final query = _searchController.text.trim().toUpperCase();
+    if (query.isEmpty) return;
+    
+    if (_currentRoster.any((s) => s['id'] == query)) return;
+
+    setState(() => _isSearching = true);
+    
+    try {
+      final firestore = ProviderScope.containerOf(context).read(firestoreProvider);
+      final doc = await firestore.collection('students').doc(query).get();
+      
+      if (doc.exists && doc.data() != null) {
+        final data = doc.data()!;
+        setState(() {
+          _currentRoster.add({
+            'id': query,
+            'name': data['name'] ?? '',
+            'school_name': data['school_name'] ?? '',
+          });
+          _searchController.clear();
+        });
+      } 
+    } catch (e) {
+      debugPrint('Search Error: $e');
+    } finally {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  void _handleSave() {
+    if (_nameController.text.trim().isEmpty || _currentRoster.isEmpty) return;
+    Navigator.of(context).pop({
+      'name': _nameController.text.trim(),
+      'type': _tripType,
+      'roster': _currentRoster.map((s) => s['id']!).toList(),
+    });
+  }
+
+  Widget _buildTypeToggle(String title, IconData icon, String value) {
+    final isSelected = _tripType == value;
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _tripType = value;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? AppTheme.primaryGold : AppTheme.surfaceCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? AppTheme.primaryGold : AppTheme.border,
+            width: 2,
+          ),
+          boxShadow: isSelected
+              ? [BoxShadow(color: AppTheme.primaryGold.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))]
+              : [],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              size: 32,
+              color: isSelected ? Colors.white : AppTheme.textSecondary,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: isSelected ? Colors.white : AppTheme.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      appBar: AppBar(
+        title: const Text('Edit Route Details', style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppTheme.background,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SizedBox(
+            height: 56,
+            child: ElevatedButton(
+              onPressed: _handleSave,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryGold,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              ),
+              child: const Text('SAVE CHANGES', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Colors.white)),
+            ),
+          ),
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // --- SECTION 1: Trip Details ---
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceCard,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Step 1: Route Details',
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        
+                        TextField(
+                          controller: _nameController,
+                          textCapitalization: TextCapitalization.words,
+                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                          decoration: const InputDecoration(
+                            labelText: 'Route Name',
+                            prefixIcon: Icon(Icons.directions_bus_outlined, size: 28),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        Text(
+                          'Shift Type',
+                          style: theme.textTheme.labelMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        
+                        Row(
+                          children: [
+                            Expanded(child: _buildTypeToggle('Morning', Icons.wb_sunny_rounded, 'Morning')),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildTypeToggle('Afternoon', Icons.nights_stay_rounded, 'Afternoon')),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // --- SECTION 2: Student Roster ---
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceCard,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Step 2: Edit Roster',
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: AppTheme.background,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppTheme.border),
+                              ),
+                              child: Text(
+                                'Count: ${_currentRoster.length}',
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _searchController,
+                                textCapitalization: TextCapitalization.characters,
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                                decoration: const InputDecoration(
+                                  labelText: 'Student ID',
+                                  hintText: 'SP1005',
+                                  prefixIcon: Icon(Icons.badge_rounded, size: 24),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            SizedBox(
+                              height: 56,
+                              width: 90, 
+                              child: ElevatedButton(
+                                onPressed: _isSearching ? null : _addStudent,
+                                style: ElevatedButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  backgroundColor: AppTheme.textPrimary,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                                child: _isSearching 
+                                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                                  : const Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.person_add_rounded, size: 24),
+                                        Text('ADD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                      ],
+                                    ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        
+                        const SizedBox(height: 24),
+
+                        if (_currentRoster.isEmpty)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: AppTheme.background,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppTheme.border, style: BorderStyle.solid),
+                            ),
+                            child: Column(
+                              children: [
+                                const Icon(Icons.people_outline_rounded, size: 48, color: AppTheme.border),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No students linked.\nEnter an ID above and press ADD.',
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted, fontWeight: FontWeight.w500),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          ListView.separated(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: _currentRoster.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 12),
+                            itemBuilder: (context, index) {
+                              final s = _currentRoster[index];
+                              return Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.background,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: AppTheme.border),
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: AppTheme.primaryGold.withValues(alpha: 0.15),
+                                      child: Text(
+                                        '${index + 1}',
+                                        style: const TextStyle(color: AppTheme.primaryGoldDark, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            s['name'] ?? '', 
+                                            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.textPrimary),
+                                          ),
+                                          Text(
+                                            'ID: ${s['id']}',
+                                            style: const TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.w600),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_rounded, size: 28),
+                                      color: AppTheme.errorRed.withValues(alpha: 0.8),
+                                      onPressed: () {
+                                        setState(() {
+                                          _currentRoster.removeAt(index);
+                                        });
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
