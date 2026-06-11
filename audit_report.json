@@ -1,0 +1,552 @@
+﻿[
+    {
+        "Path":  "lib\\firebase_options.dart",
+        "Size":  2851,
+        "ImportCount":  2,
+        "Imports":  "package:firebase_core/firebase_core.dart, package:flutter/foundation.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  false
+    },
+    {
+        "Path":  "lib\\main.dart",
+        "Size":  1056,
+        "ImportCount":  6,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:firebase_core/firebase_core.dart, firebase_options.dart, core/theme/app_theme.dart, features/onboarding/presentation/splash_screen.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\core\\services\\auth_service.dart",
+        "Size":  10437,
+        "ImportCount":  6,
+        "Imports":  "package:firebase_auth/firebase_auth.dart, package:cloud_firestore/cloud_firestore.dart, package:flutter/foundation.dart, package:flutter_riverpod/flutter_riverpod.dart, package:shared_preferences/shared_preferences.dart, ../../features/auth/data/user_model.dart",
+        "ProviderCount":  4,
+        "Providers":  "final firebaseAuthProvider = Provider\u003cFirebaseAuth\u003e((ref) { | final firestoreProvider = Provider\u003cFirebaseFirestore\u003e((ref) { | final authServiceProvider = Provider\u003cAuthService\u003e((ref) { | final authStateChangesProvider = StreamProvider\u003cUser?\u003e((ref) {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\core\\services\\history_service.dart",
+        "Size":  2649,
+        "ImportCount":  5,
+        "Imports":  "package:cloud_firestore/cloud_firestore.dart, package:flutter_riverpod/flutter_riverpod.dart, ../../features/trips/data/daily_session_model.dart, ../../features/students/data/student_ride_log_model.dart, auth_service.dart",
+        "ProviderCount":  1,
+        "Providers":  "final historyServiceProvider = Provider\u003cHistoryService\u003e((ref) {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  false
+    },
+    {
+        "Path":  "lib\\core\\services\\map_service.dart",
+        "Size":  1669,
+        "ImportCount":  3,
+        "Imports":  "dart:async, package:cloud_firestore/cloud_firestore.dart, package:geolocator/geolocator.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  false
+    },
+    {
+        "Path":  "lib\\core\\services\\mqtt_service.dart",
+        "Size":  4131,
+        "ImportCount":  7,
+        "Imports":  "dart:async, dart:io, dart:convert, package:flutter/services.dart, package:mqtt_client/mqtt_client.dart, package:mqtt_client/mqtt_server_client.dart, package:flutter/foundation.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  false
+    },
+    {
+        "Path":  "lib\\core\\services\\sync_queue_service.dart",
+        "Size":  4980,
+        "ImportCount":  7,
+        "Imports":  "dart:async, package:flutter/foundation.dart, package:flutter_riverpod/flutter_riverpod.dart, package:sqflite/sqflite.dart, package:path/path.dart, package:connectivity_plus/connectivity_plus.dart, ../../features/trips/data/trip_service.dart",
+        "ProviderCount":  1,
+        "Providers":  "final syncQueueServiceProvider = Provider\u003cSyncQueueService\u003e((ref) {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  false
+    },
+    {
+        "Path":  "lib\\core\\services\\test_mqtt_service.dart",
+        "Size":  1861,
+        "ImportCount":  5,
+        "Imports":  "dart:io, package:flutter/services.dart, package:mqtt_client/mqtt_client.dart, package:mqtt_client/mqtt_server_client.dart, package:flutter/foundation.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  false
+    },
+    {
+        "Path":  "lib\\core\\theme\\app_theme.dart",
+        "Size":  6650,
+        "ImportCount":  1,
+        "Imports":  "package:flutter/material.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\core\\utils\\snackbar_utils.dart",
+        "Size":  2238,
+        "ImportCount":  2,
+        "Imports":  "package:flutter/material.dart, ../theme/app_theme.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\core\\widgets\\illustrations.dart",
+        "Size":  16814,
+        "ImportCount":  3,
+        "Imports":  "package:flutter/material.dart, dart:math, ../theme/app_theme.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\core\\widgets\\shimmer_loading.dart",
+        "Size":  3407,
+        "ImportCount":  3,
+        "Imports":  "package:flutter/material.dart, package:shimmer/shimmer.dart, ../theme/app_theme.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\data\\admin_service.dart",
+        "Size":  2528,
+        "ImportCount":  5,
+        "Imports":  "package:flutter_riverpod/flutter_riverpod.dart, ../../../core/services/auth_service.dart, ../../auth/data/user_model.dart, ../../trips/data/daily_session_model.dart, ../../students/data/student_model.dart",
+        "ProviderCount":  5,
+        "Providers":  "final adminServiceProvider = Provider\u003cAdminService\u003e((ref) { | final adminStatsProvider = StreamProvider\u003cMap\u003cString, int\u003e\u003e((ref) { | final adminLiveTripsProvider = StreamProvider\u003cList\u003cDailySessionModel\u003e\u003e((ref) { | final adminUsersProvider = StreamProvider\u003cList\u003cUserModel\u003e\u003e((ref) { | final adminStudentsProvider = StreamProvider\u003cList\u003cStudentModel\u003e\u003e((ref) {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\data\\audit_service.dart",
+        "Size":  7981,
+        "ImportCount":  6,
+        "Imports":  "package:cloud_firestore/cloud_firestore.dart, package:firebase_auth/firebase_auth.dart, package:flutter/foundation.dart, package:flutter_riverpod/flutter_riverpod.dart, ../../../core/services/auth_service.dart, ../../trips/data/daily_session_model.dart",
+        "ProviderCount":  1,
+        "Providers":  "final auditServiceProvider = Provider\u003cAuditService\u003e((ref) {",
+        "HasImmutable":  true,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\data\\school_model.dart",
+        "Size":  1640,
+        "ImportCount":  2,
+        "Imports":  "package:flutter/foundation.dart, package:cloud_firestore/cloud_firestore.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  true,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\data\\school_service.dart",
+        "Size":  1584,
+        "ImportCount":  3,
+        "Imports":  "package:flutter_riverpod/flutter_riverpod.dart, package:cloud_firestore/cloud_firestore.dart, school_model.dart",
+        "ProviderCount":  3,
+        "Providers":  "final schoolServiceProvider = Provider((ref) =\u003e SchoolService()); | final schoolsStreamProvider = StreamProvider\u003cList\u003cSchoolModel\u003e\u003e((ref) { | final activeSchoolsProvider = Provider\u003cAsyncValue\u003cList\u003cSchoolModel\u003e\u003e\u003e((ref) {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  false
+    },
+    {
+        "Path":  "lib\\features\\admin\\presentation\\admin_dashboard_screen.dart",
+        "Size":  7535,
+        "ImportCount":  8,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart, tabs/admin_overview_tab.dart, tabs/admin_users_tab.dart, tabs/admin_trips_tab.dart, tabs/admin_reports_tab.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\presentation\\admin_driver_detail_screen.dart",
+        "Size":  9210,
+        "ImportCount":  9,
+        "Imports":  "package:cloud_firestore/cloud_firestore.dart, package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:intl/intl.dart, ../../../core/theme/app_theme.dart, ../../auth/data/user_model.dart, ../../trips/data/trip_model.dart, admin_dashboard_screen.dart, admin_trip_history_screen.dart",
+        "ProviderCount":  1,
+        "Providers":  "final driverTripsProvider = FutureProvider.family\u003cList\u003cTripModel\u003e, String\u003e((ref, driverUid) async {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\presentation\\admin_edit_school_screen.dart",
+        "Size":  7828,
+        "ImportCount":  8,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:google_maps_flutter/google_maps_flutter.dart, package:cloud_firestore/cloud_firestore.dart, ../../../core/theme/app_theme.dart, ../data/school_service.dart, ../data/school_model.dart, admin_dashboard_screen.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\presentation\\admin_parent_detail_screen.dart",
+        "Size":  9055,
+        "ImportCount":  9,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:cloud_firestore/cloud_firestore.dart, package:intl/intl.dart, ../../../core/theme/app_theme.dart, ../../auth/data/user_model.dart, ../../students/data/student_model.dart, ../../profile/presentation/student_detail_screen.dart, admin_dashboard_screen.dart",
+        "ProviderCount":  1,
+        "Providers":  "final parentChildrenProvider = FutureProvider.family\u003cList\u003cStudentModel\u003e, String\u003e((ref, parentId) async {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\presentation\\admin_schools_screen.dart",
+        "Size":  5419,
+        "ImportCount":  7,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, ../../../core/theme/app_theme.dart, ../data/school_service.dart, ../data/school_model.dart, admin_dashboard_screen.dart, admin_edit_school_screen.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\presentation\\admin_trip_history_screen.dart",
+        "Size":  10308,
+        "ImportCount":  8,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:cloud_firestore/cloud_firestore.dart, package:intl/intl.dart, ../../../core/theme/app_theme.dart, ../../trips/data/trip_model.dart, ../../trips/data/daily_session_model.dart, admin_dashboard_screen.dart",
+        "ProviderCount":  1,
+        "Providers":  "final tripHistoryProvider = FutureProvider.family\u003cList\u003cDailySessionModel\u003e, String\u003e((ref, tripId) async {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\presentation\\tabs\\admin_overview_tab.dart",
+        "Size":  13619,
+        "ImportCount":  7,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, ../../data/admin_service.dart, ../../../../core/theme/app_theme.dart, ../admin_dashboard_screen.dart, ../admin_schools_screen.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\presentation\\tabs\\admin_reports_tab.dart",
+        "Size":  18195,
+        "ImportCount":  10,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, package:cloud_firestore/cloud_firestore.dart, ../../data/admin_service.dart, ../../services/pdf_report_service.dart, ../../../students/data/student_model.dart, ../../../students/data/student_ride_log_model.dart, ../../../../core/theme/app_theme.dart, ../admin_dashboard_screen.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\presentation\\tabs\\admin_trips_tab.dart",
+        "Size":  16203,
+        "ImportCount":  8,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, package:cloud_firestore/cloud_firestore.dart, ../../data/admin_service.dart, ../../../trips/data/daily_session_model.dart, ../../../../core/theme/app_theme.dart, ../admin_dashboard_screen.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\presentation\\tabs\\admin_users_tab.dart",
+        "Size":  27025,
+        "ImportCount":  11,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, ../../data/admin_service.dart, ../../data/audit_service.dart, ../../../auth/data/user_model.dart, ../../../trips/data/daily_session_model.dart, ../../../../core/theme/app_theme.dart, ../admin_dashboard_screen.dart, ../admin_driver_detail_screen.dart, ../admin_parent_detail_screen.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\admin\\services\\pdf_report_service.dart",
+        "Size":  7732,
+        "ImportCount":  7,
+        "Imports":  "package:flutter/material.dart, package:intl/intl.dart, package:pdf/pdf.dart, package:pdf/widgets.dart, package:printing/printing.dart, ../../students/data/student_model.dart, ../../students/data/student_ride_log_model.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  false
+    },
+    {
+        "Path":  "lib\\features\\auth\\data\\user_model.dart",
+        "Size":  5718,
+        "ImportCount":  2,
+        "Imports":  "package:flutter/foundation.dart, package:cloud_firestore/cloud_firestore.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  true,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\auth\\presentation\\auth_gate.dart",
+        "Size":  13963,
+        "ImportCount":  9,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart, package:connectivity_plus/connectivity_plus.dart, ../../students/presentation/parent_dashboard.dart, ../../trips/presentation/driver_dashboard.dart, login_screen.dart, ../../admin/presentation/admin_dashboard_screen.dart",
+        "ProviderCount":  1,
+        "Providers":  "final userProfileProvider = FutureProvider.family\u003cMap\u003cString, String\u003e, String\u003e((ref, uid) async {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\auth\\presentation\\login_screen.dart",
+        "Size":  16049,
+        "ImportCount":  7,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_svg/flutter_svg.dart, package:flutter_animate/flutter_animate.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart, sign_up_screen.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\auth\\presentation\\sign_up_screen.dart",
+        "Size":  20806,
+        "ImportCount":  6,
+        "Imports":  "package:flutter_svg/flutter_svg.dart, package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\map\\presentation\\driver_map_screen.dart",
+        "Size":  1753,
+        "ImportCount":  7,
+        "Imports":  "dart:async, package:firebase_auth/firebase_auth.dart, package:flutter/material.dart, package:geolocator/geolocator.dart, package:latlong2/latlong.dart, ../../../core/services/map_service.dart, shared_map_widget.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\map\\presentation\\parent_map_screen.dart",
+        "Size":  1494,
+        "ImportCount":  5,
+        "Imports":  "dart:async, package:cloud_firestore/cloud_firestore.dart, package:flutter/material.dart, package:latlong2/latlong.dart, shared_map_widget.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\map\\presentation\\shared_map_widget.dart",
+        "Size":  1626,
+        "ImportCount":  3,
+        "Imports":  "package:flutter/material.dart, package:flutter_map/flutter_map.dart, package:latlong2/latlong.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\onboarding\\presentation\\onboarding_screen.dart",
+        "Size":  6085,
+        "ImportCount":  5,
+        "Imports":  "package:flutter/material.dart, package:shared_preferences/shared_preferences.dart, package:smooth_page_indicator/smooth_page_indicator.dart, ../../../core/theme/app_theme.dart, ../../auth/presentation/auth_gate.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\onboarding\\presentation\\splash_screen.dart",
+        "Size":  1981,
+        "ImportCount":  6,
+        "Imports":  "package:flutter_svg/flutter_svg.dart, package:flutter/material.dart, package:flutter_animate/flutter_animate.dart, package:shared_preferences/shared_preferences.dart, ../../auth/presentation/auth_gate.dart, onboarding_screen.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\profile\\presentation\\driver_profile_screen.dart",
+        "Size":  31035,
+        "ImportCount":  5,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\profile\\presentation\\parent_profile_screen.dart",
+        "Size":  20996,
+        "ImportCount":  9,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart, ../../students/data/student_model.dart, ../../students/presentation/add_student_screen.dart, student_detail_screen.dart, ../../../core/widgets/shimmer_loading.dart",
+        "ProviderCount":  1,
+        "Providers":  "final profileStudentsProvider = StreamProvider\u003cList\u003cStudentModel\u003e\u003e((ref) {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\profile\\presentation\\student_detail_screen.dart",
+        "Size":  20940,
+        "ImportCount":  10,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, package:qr_flutter/qr_flutter.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart, ../../students/data/student_model.dart, ../../students/presentation/add_student_screen.dart, ../../trips/data/trip_service.dart, ../../students/presentation/student_history_screen.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\students\\data\\student_model.dart",
+        "Size":  3485,
+        "ImportCount":  2,
+        "Imports":  "package:cloud_firestore/cloud_firestore.dart, package:flutter/foundation.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  true,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\students\\data\\student_ride_log_model.dart",
+        "Size":  3075,
+        "ImportCount":  2,
+        "Imports":  "package:flutter/foundation.dart, package:cloud_firestore/cloud_firestore.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  true,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\students\\presentation\\add_student_screen.dart",
+        "Size":  26888,
+        "ImportCount":  10,
+        "Imports":  "package:cloud_firestore/cloud_firestore.dart, package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:geolocator/geolocator.dart, package:flutter_animate/flutter_animate.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart, ../data/student_model.dart, ../../admin/data/school_service.dart, ../../admin/data/school_model.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\students\\presentation\\parent_dashboard.dart",
+        "Size":  32781,
+        "ImportCount":  11,
+        "Imports":  "package:flutter_svg/flutter_svg.dart, package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, package:safe_pick/features/students/presentation/parent_live_tracking_screen.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart, ../data/student_model.dart, ../../profile/presentation/parent_profile_screen.dart, ../../../core/widgets/shimmer_loading.dart, ../../trips/data/trip_service.dart",
+        "ProviderCount":  1,
+        "Providers":  "final parentStudentsProvider = StreamProvider\u003cList\u003cStudentModel\u003e\u003e((ref) {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\students\\presentation\\parent_live_tracking_screen.dart",
+        "Size":  9789,
+        "ImportCount":  8,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:google_maps_flutter/google_maps_flutter.dart, package:geolocator/geolocator.dart, package:safe_pick/features/students/data/student_model.dart, ../../../core/theme/app_theme.dart, ../../../core/services/mqtt_service.dart, ../../trips/presentation/utils/marker_generator.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\students\\presentation\\student_history_screen.dart",
+        "Size":  10494,
+        "ImportCount":  7,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:intl/intl.dart, ../../../core/services/history_service.dart, ../../../core/theme/app_theme.dart, ../../students/data/student_model.dart, ../../students/data/student_ride_log_model.dart",
+        "ProviderCount":  1,
+        "Providers":  "final studentHistoryProvider = FutureProvider.family\u003cList\u003cStudentRideLogModel\u003e, String\u003e((ref, studentId) async {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\trips\\data\\attendance_model.dart",
+        "Size":  1657,
+        "ImportCount":  2,
+        "Imports":  "package:flutter/foundation.dart, package:cloud_firestore/cloud_firestore.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  true,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\trips\\data\\daily_session_model.dart",
+        "Size":  3679,
+        "ImportCount":  2,
+        "Imports":  "package:flutter/foundation.dart, package:cloud_firestore/cloud_firestore.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  true,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\trips\\data\\trip_manifest_model.dart",
+        "Size":  2269,
+        "ImportCount":  2,
+        "Imports":  "package:flutter/foundation.dart, package:cloud_firestore/cloud_firestore.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  true,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\trips\\data\\trip_model.dart",
+        "Size":  2916,
+        "ImportCount":  2,
+        "Imports":  "package:flutter/foundation.dart, package:cloud_firestore/cloud_firestore.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  true,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\trips\\data\\trip_service.dart",
+        "Size":  22912,
+        "ImportCount":  7,
+        "Imports":  "package:cloud_firestore/cloud_firestore.dart, package:firebase_auth/firebase_auth.dart, package:flutter_riverpod/flutter_riverpod.dart, ../../../core/services/auth_service.dart, trip_manifest_model.dart, ../../students/data/student_ride_log_model.dart, daily_session_model.dart",
+        "ProviderCount":  4,
+        "Providers":  "final tripServiceProvider = Provider\u003cTripService\u003e((ref) { | final tripManifestProvider = StreamProvider.family\u003cList\u003cTripManifestModel\u003e, String\u003e((ref, tripId) { | final activeSessionProvider = StreamProvider.family\u003cDailySessionModel?, String\u003e((ref, tripId) { | final sessionAttendanceProvider = StreamProvider.family\u003cMap\u003cString, String\u003e, String\u003e((ref, sessionId) {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  false
+    },
+    {
+        "Path":  "lib\\features\\trips\\presentation\\create_trip_screen.dart",
+        "Size":  22061,
+        "ImportCount":  8,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart, ../../students/data/student_model.dart, ../data/trip_model.dart, ../data/trip_manifest_model.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\trips\\presentation\\driver_dashboard.dart",
+        "Size":  18318,
+        "ImportCount":  11,
+        "Imports":  "package:flutter_svg/flutter_svg.dart, package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, ../../../core/services/auth_service.dart, ../../../core/theme/app_theme.dart, ../data/trip_model.dart, trip_detail_screen.dart, create_trip_screen.dart, ../../profile/presentation/driver_profile_screen.dart, ../../../core/widgets/shimmer_loading.dart",
+        "ProviderCount":  1,
+        "Providers":  "final driverTripsProvider = StreamProvider\u003cList\u003cTripModel\u003e\u003e((ref) {",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\trips\\presentation\\qr_scanner_screen.dart",
+        "Size":  8093,
+        "ImportCount":  5,
+        "Imports":  "package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:mobile_scanner/mobile_scanner.dart, package:flutter/services.dart, ../../../core/theme/app_theme.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\trips\\presentation\\trip_detail_screen.dart",
+        "Size":  71749,
+        "ImportCount":  15,
+        "Imports":  "dart:async, package:flutter/material.dart, package:flutter_riverpod/flutter_riverpod.dart, package:flutter_animate/flutter_animate.dart, package:safe_pick/core/services/mqtt_service.dart, ../../../core/theme/app_theme.dart, ../data/trip_model.dart, ../data/trip_service.dart, ../data/trip_manifest_model.dart, ../data/daily_session_model.dart, qr_scanner_screen.dart, ../../../core/services/auth_service.dart, package:geolocator/geolocator.dart, package:google_maps_flutter/google_maps_flutter.dart, utils/marker_generator.dart",
+        "ProviderCount":  2,
+        "Providers":  "final tripDetailsProvider = FutureProvider.family\u003cTripModel, String\u003e((ref, tripId) async { | final firestore = ProviderScope.containerOf(context).read(firestoreProvider);",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    },
+    {
+        "Path":  "lib\\features\\trips\\presentation\\utils\\marker_generator.dart",
+        "Size":  6353,
+        "ImportCount":  5,
+        "Imports":  "dart:typed_data, dart:ui, package:flutter/material.dart, package:google_maps_flutter/google_maps_flutter.dart, ../../../../core/theme/app_theme.dart",
+        "ProviderCount":  0,
+        "Providers":  "",
+        "HasImmutable":  false,
+        "HasConstConstructor":  true
+    }
+]

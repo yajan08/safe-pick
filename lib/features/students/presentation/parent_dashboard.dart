@@ -8,7 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
 import '../../profile/presentation/parent_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
-import '../../trips/data/trip_service.dart';
+import '../../trips/domain/trip_service.dart';
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
 final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {

@@ -135,10 +135,7 @@ class AuditService {
       targetType: 'user',
       performedBy: _currentUid,
       timestamp: DateTime.now(),
-      details: {
-        'previous_status': currentStatus,
-        'new_status': newStatus,
-      },
+      details: {'previous_status': currentStatus, 'new_status': newStatus},
     );
     batch.set(logRef, entry.toJson());
 
@@ -212,10 +209,7 @@ class AuditService {
         .get();
 
     return snapshot.docs
-        .map((doc) => DailySessionModel.fromJson(
-              doc.data(),
-              doc.id,
-            ))
+        .map((doc) => DailySessionModel.fromJson(doc.data(), doc.id))
         .toList();
   }
 }

@@ -6,7 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:safe_pick/core/services/mqtt_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/trip_model.dart';
-import '../data/trip_service.dart';
+import '../domain/trip_service.dart';
 import '../data/trip_manifest_model.dart';
 import '../data/daily_session_model.dart';
 import 'qr_scanner_screen.dart';

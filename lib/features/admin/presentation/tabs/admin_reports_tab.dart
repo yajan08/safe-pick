@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../data/admin_service.dart';
-import '../../services/pdf_report_service.dart';
+import '../../domain/admin_service.dart';
+import '../../domain/pdf_report_service.dart';
 import '../../../students/data/student_model.dart';
 import '../../../students/data/student_ride_log_model.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -26,21 +26,39 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
   List<StudentModel> _filterStudents(List<StudentModel> students) {
     if (_searchQuery.isEmpty) return students;
     final q = _searchQuery.toLowerCase();
-    return students.where((s) => s.name.toLowerCase().contains(q) || s.studentId.toLowerCase().contains(q)).toList();
+    return students
+        .where(
+          (s) =>
+              s.name.toLowerCase().contains(q) ||
+              s.studentId.toLowerCase().contains(q),
+        )
+        .toList();
   }
 
   Future<void> _loadRideLogs(String studentId) async {
     setState(() => _isLoadingLogs = true);
     try {
       final snap = await FirebaseFirestore.instance
-          .collection('students').doc(studentId)
+          .collection('students')
+          .doc(studentId)
           .collection('ride_history')
           .orderBy('date', descending: true)
           .limit(50)
           .get();
-      setState(() => _logs = snap.docs.map((d) => StudentRideLogModel.fromJson(d.data(), d.id)).toList());
+      setState(
+        () => _logs = snap.docs
+            .map((d) => StudentRideLogModel.fromJson(d.data(), d.id))
+            .toList(),
+      );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), behavior: SnackBarBehavior.floating));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoadingLogs = false);
     }
@@ -50,9 +68,20 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
     if (_selectedStudent == null || _isGeneratingPdf) return;
     setState(() => _isGeneratingPdf = true);
     try {
-      await PdfReportService.generateStudentReport(context, _selectedStudent!, _logs);
+      await PdfReportService.generateStudentReport(
+        context,
+        _selectedStudent!,
+        _logs,
+      );
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('PDF Error: $e'), behavior: SnackBarBehavior.floating));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('PDF Error: $e'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isGeneratingPdf = false);
     }
@@ -62,7 +91,9 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
     if (_selectedStudent == null) return;
     final totalTrips = _selectedStudent!.stats['total_trips'] ?? _logs.length;
     final absences = _logs.where((l) => l.status == 'Absent').length;
-    final rate = _logs.isNotEmpty ? ((_logs.length - absences) / _logs.length * 100).toStringAsFixed(1) : 'N/A';
+    final rate = _logs.isNotEmpty
+        ? ((_logs.length - absences) / _logs.length * 100).toStringAsFixed(1)
+        : 'N/A';
 
     showDialog(
       context: context,
@@ -74,7 +105,16 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
           children: [
             Icon(Icons.analytics_rounded, color: kAdminNavy, size: 20),
             SizedBox(width: 10),
-            Expanded(child: Text('Student Report', style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, letterSpacing: -0.2))),
+            Expanded(
+              child: Text(
+                'Student Report',
+                style: TextStyle(
+                  fontSize: 16.5,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.2,
+                ),
+              ),
+            ),
           ],
         ),
         content: Column(
@@ -83,19 +123,39 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
           children: [
             _ReportLine(label: 'Student', value: _selectedStudent!.name),
             _ReportLine(label: 'ID', value: _selectedStudent!.studentId),
-            _ReportLine(label: 'School', value: _selectedStudent!.schoolName.isNotEmpty ? _selectedStudent!.schoolName : '—'),
-            _ReportLine(label: 'Grade', value: _selectedStudent!.grade.isNotEmpty ? _selectedStudent!.grade : '—'),
+            _ReportLine(
+              label: 'School',
+              value: _selectedStudent!.schoolName.isNotEmpty
+                  ? _selectedStudent!.schoolName
+                  : '—',
+            ),
+            _ReportLine(
+              label: 'Grade',
+              value: _selectedStudent!.grade.isNotEmpty
+                  ? _selectedStudent!.grade
+                  : '—',
+            ),
             Divider(height: 24, color: AppTheme.border.withValues(alpha: 0.25)),
             _ReportLine(label: 'Total Trips', value: '$totalTrips'),
             _ReportLine(label: 'Attendance Rate', value: '$rate%'),
             _ReportLine(label: 'Total Absences', value: '$absences'),
-            _ReportLine(label: 'Current Status', value: _selectedStudent!.currentStatus),
+            _ReportLine(
+              label: 'Current Status',
+              value: _selectedStudent!.currentStatus,
+            ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context), 
-            child: const Text('Close', style: TextStyle(color: kAdminNavy, fontWeight: FontWeight.w600, fontSize: 13.5)),
+            onPressed: () => Navigator.pop(context),
+            child: const Text(
+              'Close',
+              style: TextStyle(
+                color: kAdminNavy,
+                fontWeight: FontWeight.w600,
+                fontSize: 13.5,
+              ),
+            ),
           ),
         ],
       ),
@@ -117,14 +177,38 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
             style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
             decoration: InputDecoration(
               hintText: 'Search students by name or ID…',
-              hintStyle: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.5), fontSize: 13.5, fontWeight: FontWeight.w400),
-              prefixIcon: Icon(Icons.search_rounded, color: AppTheme.textMuted.withValues(alpha: 0.6), size: 20),
-              filled: true, 
+              hintStyle: TextStyle(
+                color: AppTheme.textMuted.withValues(alpha: 0.5),
+                fontSize: 13.5,
+                fontWeight: FontWeight.w400,
+              ),
+              prefixIcon: Icon(
+                Icons.search_rounded,
+                color: AppTheme.textMuted.withValues(alpha: 0.6),
+                size: 20,
+              ),
+              filled: true,
               fillColor: AppTheme.surface,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.25))),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: AppTheme.border.withValues(alpha: 0.25))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: kAdminNavy, width: 1.5)),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 12,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppTheme.border.withValues(alpha: 0.25),
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(
+                  color: AppTheme.border.withValues(alpha: 0.25),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: kAdminNavy, width: 1.5),
+              ),
             ),
           ),
         ),
@@ -135,13 +219,23 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
               if (students.isEmpty) {
                 return Center(
                   child: Column(
-                    mainAxisSize: MainAxisSize.min, 
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.school_outlined, size: 44, color: AppTheme.textMuted.withValues(alpha: 0.3)),
+                      Icon(
+                        Icons.school_outlined,
+                        size: 44,
+                        color: AppTheme.textMuted.withValues(alpha: 0.3),
+                      ),
                       const SizedBox(height: 12),
                       Text(
-                        _searchQuery.isNotEmpty ? 'No students match.' : 'No students available.', 
-                        style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500),
+                        _searchQuery.isNotEmpty
+                            ? 'No students match.'
+                            : 'No students available.',
+                        style: TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ],
                   ),
@@ -153,17 +247,33 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
                 itemBuilder: (ctx, i) {
                   final s = students[i];
                   return _StudentTile(
-                    student: s, 
-                    onTap: () {
-                      setState(() => _selectedStudent = s);
-                      _loadRideLogs(s.studentId);
-                    },
-                  ).animate().fade(delay: Duration(milliseconds: 20 * i.clamp(0, 12))).slideX(begin: 0.015);
+                        student: s,
+                        onTap: () {
+                          setState(() => _selectedStudent = s);
+                          _loadRideLogs(s.studentId);
+                        },
+                      )
+                      .animate()
+                      .fade(delay: Duration(milliseconds: 20 * i.clamp(0, 12)))
+                      .slideX(begin: 0.015);
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator(color: kAdminNavy, strokeWidth: 2.5)),
-            error: (e, _) => Center(child: Text('Error: $e', style: const TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w500))),
+            loading: () => const Center(
+              child: CircularProgressIndicator(
+                color: kAdminNavy,
+                strokeWidth: 2.5,
+              ),
+            ),
+            error: (e, _) => Center(
+              child: Text(
+                'Error: $e',
+                style: const TextStyle(
+                  color: AppTheme.errorRed,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
           ),
         ),
       ],
@@ -181,30 +291,62 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.arrow_back_rounded, size: 22), 
-                    onPressed: () => setState(() { _selectedStudent = null; _logs.clear(); }),
+                    icon: const Icon(Icons.arrow_back_rounded, size: 22),
+                    onPressed: () => setState(() {
+                      _selectedStudent = null;
+                      _logs.clear();
+                    }),
                   ),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start, 
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_selectedStudent!.name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15.5, letterSpacing: -0.2)),
+                        Text(
+                          _selectedStudent!.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15.5,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
                         const SizedBox(height: 1),
                         Text(
-                          '${_selectedStudent!.studentId} • ${_selectedStudent!.schoolName}', 
-                          style: TextStyle(color: AppTheme.textMuted, fontSize: 11.5, fontWeight: FontWeight.w400),
+                          '${_selectedStudent!.studentId} • ${_selectedStudent!.schoolName}',
+                          style: TextStyle(
+                            color: AppTheme.textMuted,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                       ],
                     ),
                   ),
                   OutlinedButton.icon(
                     onPressed: _showReport,
-                    icon: const Icon(Icons.summarize_rounded, size: 15, color: kAdminNavy),
-                    label: const Text('Stats', style: TextStyle(color: kAdminNavy, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                    icon: const Icon(
+                      Icons.summarize_rounded,
+                      size: 15,
+                      color: kAdminNavy,
+                    ),
+                    label: const Text(
+                      'Stats',
+                      style: TextStyle(
+                        color: kAdminNavy,
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: kAdminNavy.withValues(alpha: 0.25)),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      side: BorderSide(
+                        color: kAdminNavy.withValues(alpha: 0.25),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
@@ -217,23 +359,47 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
             // Timeline
             Expanded(
               child: _isLoadingLogs
-                  ? const Center(child: CircularProgressIndicator(color: kAdminNavy, strokeWidth: 2.5))
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: kAdminNavy,
+                        strokeWidth: 2.5,
+                      ),
+                    )
                   : _logs.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min, 
-                            children: [
-                              Icon(Icons.history_rounded, size: 44, color: AppTheme.textMuted.withValues(alpha: 0.3)),
-                              const SizedBox(height: 12),
-                              Text('No ride history found.', style: TextStyle(color: AppTheme.textMuted, fontSize: 13, fontWeight: FontWeight.w500)),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.history_rounded,
+                            size: 44,
+                            color: AppTheme.textMuted.withValues(alpha: 0.3),
                           ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(24, 8, 24, 84), // extra bottom for FAB
-                          itemCount: _logs.length,
-                          itemBuilder: (_, i) => _TimelineNode(log: _logs[i], isLast: i == _logs.length - 1),
-                        ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No ride history found.',
+                            style: TextStyle(
+                              color: AppTheme.textMuted,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        24,
+                        8,
+                        24,
+                        84,
+                      ), // extra bottom for FAB
+                      itemCount: _logs.length,
+                      itemBuilder: (_, i) => _TimelineNode(
+                        log: _logs[i],
+                        isLast: i == _logs.length - 1,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -250,11 +416,22 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
               foregroundColor: Colors.white,
               elevation: 2,
               icon: _isGeneratingPdf
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.picture_as_pdf_rounded, size: 18),
               label: Text(
-                _isGeneratingPdf ? 'Generating…' : 'Download PDF', 
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: -0.1),
+                _isGeneratingPdf ? 'Generating…' : 'Download PDF',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.1,
+                ),
               ),
             ).animate().fade().slideY(begin: 0.2),
           ),
@@ -274,10 +451,14 @@ class _StudentTile extends StatelessWidget {
 
   Color get _statusColor {
     switch (student.currentStatus) {
-      case 'In Van': return AppTheme.warningOrange;
-      case 'At School': return kAdminNavy;
-      case 'Absent': return AppTheme.errorRed;
-      default: return AppTheme.successGreen;
+      case 'In Van':
+        return AppTheme.warningOrange;
+      case 'At School':
+        return kAdminNavy;
+      case 'Absent':
+        return AppTheme.errorRed;
+      default:
+        return AppTheme.successGreen;
     }
   }
 
@@ -286,26 +467,45 @@ class _StudentTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: AppTheme.surface, 
+        color: AppTheme.surface,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.015), blurRadius: 10, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.015),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
         border: Border.all(color: AppTheme.border.withValues(alpha: 0.25)),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         leading: CircleAvatar(
-          radius: 18, 
-          backgroundColor: _statusColor.withValues(alpha: 0.08), 
+          radius: 18,
+          backgroundColor: _statusColor.withValues(alpha: 0.08),
           child: Icon(Icons.school_rounded, color: _statusColor, size: 18),
         ),
-        title: Text(student.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14.5, letterSpacing: -0.1)),
-        subtitle: Text(
-          '${student.studentId} • ${student.currentStatus}', 
-          style: TextStyle(color: AppTheme.textMuted, fontSize: 12, fontWeight: FontWeight.w400),
+        title: Text(
+          student.name,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 14.5,
+            letterSpacing: -0.1,
+          ),
         ),
-        trailing: Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted.withValues(alpha: 0.4), size: 20),
+        subtitle: Text(
+          '${student.studentId} • ${student.currentStatus}',
+          style: TextStyle(
+            color: AppTheme.textMuted,
+            fontSize: 12,
+            fontWeight: FontWeight.w400,
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right_rounded,
+          color: AppTheme.textMuted.withValues(alpha: 0.4),
+          size: 20,
+        ),
         onTap: onTap,
       ),
     );
@@ -319,28 +519,47 @@ class _TimelineNode extends StatelessWidget {
 
   Color get _dotColor {
     switch (log.status) {
-      case 'Absent': return AppTheme.warningOrange;
-      case 'At School': return kAdminNavy;
-      case 'At Home': return AppTheme.successGreen;
-      default: return AppTheme.textMuted.withValues(alpha: 0.5);
+      case 'Absent':
+        return AppTheme.warningOrange;
+      case 'At School':
+        return kAdminNavy;
+      case 'At Home':
+        return AppTheme.successGreen;
+      default:
+        return AppTheme.textMuted.withValues(alpha: 0.5);
     }
   }
 
-  String _fmtTime(DateTime? dt) => dt != null ? '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}' : 'N/A';
+  String _fmtTime(DateTime? dt) => dt != null
+      ? '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}'
+      : 'N/A';
 
   @override
   Widget build(BuildContext context) {
     return IntrinsicHeight(
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start, 
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 20, 
+            width: 20,
             child: Column(
               children: [
                 const SizedBox(height: 4),
-                Container(width: 10, height: 10, decoration: BoxDecoration(color: _dotColor, shape: BoxShape.circle)),
-                if (!isLast) Expanded(child: Container(width: 1.5, color: AppTheme.border.withValues(alpha: 0.3))),
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: _dotColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                if (!isLast)
+                  Expanded(
+                    child: Container(
+                      width: 1.5,
+                      color: AppTheme.border.withValues(alpha: 0.3),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -349,33 +568,68 @@ class _TimelineNode extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.only(bottom: 20),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start, 
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(log.date, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5)),
+                      Text(
+                        log.date,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13.5,
+                        ),
+                      ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(color: _dotColor.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(4)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 6,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _dotColor.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
                         child: Text(
-                          log.status.toUpperCase(), 
-                          style: TextStyle(color: _dotColor, fontSize: 9, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+                          log.status.toUpperCase(),
+                          style: TextStyle(
+                            color: _dotColor,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 3),
-                  Text('${log.tripName} • ${log.driverName}', style: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.9), fontSize: 12.5, fontWeight: FontWeight.w500)),
+                  Text(
+                    '${log.tripName} • ${log.driverName}',
+                    style: TextStyle(
+                      color: AppTheme.textMuted.withValues(alpha: 0.9),
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
                   const SizedBox(height: 2),
                   Text(
                     'Boarded: ${_fmtTime(log.boardedAt)}   •   Alighted: ${_fmtTime(log.alightedAt)}',
-                    style: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.6), fontSize: 11, fontWeight: FontWeight.w400),
+                    style: TextStyle(
+                      color: AppTheme.textMuted.withValues(alpha: 0.6),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w400,
+                    ),
                   ),
                   if (log.vehicleNumber.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(top: 2), 
-                      child: Text('Vehicle: ${log.vehicleNumber}', style: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.6), fontSize: 11, fontWeight: FontWeight.w400)),
+                      padding: const EdgeInsets.only(top: 2),
+                      child: Text(
+                        'Vehicle: ${log.vehicleNumber}',
+                        style: TextStyle(
+                          color: AppTheme.textMuted.withValues(alpha: 0.6),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
                     ),
                 ],
               ),
@@ -397,14 +651,24 @@ class _ReportLine extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween, 
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: AppTheme.textMuted, fontSize: 12.5, fontWeight: FontWeight.w400)),
+          Text(
+            label,
+            style: TextStyle(
+              color: AppTheme.textMuted,
+              fontSize: 12.5,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
           Flexible(
             child: Text(
-              value, 
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12.5), 
-              overflow: TextOverflow.ellipsis, 
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 12.5,
+              ),
+              overflow: TextOverflow.ellipsis,
               textAlign: TextAlign.end,
             ),
           ),

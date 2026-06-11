@@ -29,12 +29,16 @@ class PdfReportService {
 
     // Pre-compute metrics
     final totalTrips = history.length;
-    final nonAbsentCount =
-        history.where((log) => log.status.toLowerCase() != 'absent').length;
-    final attendanceRate =
-        totalTrips > 0 ? (nonAbsentCount / totalTrips * 100) : 0.0;
+    final nonAbsentCount = history
+        .where((log) => log.status.toLowerCase() != 'absent')
+        .length;
+    final attendanceRate = totalTrips > 0
+        ? (nonAbsentCount / totalTrips * 100)
+        : 0.0;
     final totalAbsences = totalTrips - nonAbsentCount;
-    final generatedOn = DateFormat('dd MMM yyyy, hh:mm a').format(DateTime.now());
+    final generatedOn = DateFormat(
+      'dd MMM yyyy, hh:mm a',
+    ).format(DateTime.now());
 
     // Date / time formatters
     final dateFmt = DateFormat('dd MMM yyyy');
@@ -65,10 +69,7 @@ class PdfReportService {
           // ── Ride history table ────────────────────────────────────────
           pw.Text(
             'Ride History',
-            style: pw.TextStyle(
-              fontSize: 14,
-              fontWeight: pw.FontWeight.bold,
-            ),
+            style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold),
           ),
           pw.SizedBox(height: 8),
           _buildDataTable(history, dateFmt, timeFmt),
@@ -140,10 +141,7 @@ class PdfReportService {
               color: PdfColors.grey700,
             ),
           ),
-          pw.TextSpan(
-            text: value,
-            style: const pw.TextStyle(fontSize: 10),
-          ),
+          pw.TextSpan(text: value, style: const pw.TextStyle(fontSize: 10)),
         ],
       ),
     );
@@ -188,7 +186,14 @@ class PdfReportService {
       headerStyle: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
       cellStyle: const pw.TextStyle(fontSize: 9),
       cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      headers: ['Date', 'Trip Name', 'Driver', 'Boarded At', 'Alighted At', 'Status'],
+      headers: [
+        'Date',
+        'Trip Name',
+        'Driver',
+        'Boarded At',
+        'Alighted At',
+        'Status',
+      ],
       data: history.map((log) {
         // Parse the date string; fall back to the raw value on failure.
         String formattedDate;

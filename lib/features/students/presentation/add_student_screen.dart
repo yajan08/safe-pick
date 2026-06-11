@@ -6,6 +6,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
+import '../../admin/data/school_service.dart';
+import '../../admin/data/school_model.dart';
 
 class AddStudentScreen extends ConsumerStatefulWidget {
   final StudentModel? student;
@@ -20,8 +22,10 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _nameController;
   late final TextEditingController _gradeController;
-  late final TextEditingController _schoolNameController;
   late final TextEditingController _noteController;
+  
+  String? _selectedSchoolId;
+  String? _selectedSchoolName;
   
   bool _fetchingLocation = false;
   bool _isSubmitting = false;
@@ -32,8 +36,11 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.student?.name ?? '');
     _gradeController = TextEditingController(text: widget.student?.grade ?? '');
-    _schoolNameController = TextEditingController(text: widget.student?.schoolName ?? '');
     _noteController = TextEditingController(text: widget.student?.note ?? '');
+    
+    // Set initial school data
+    _selectedSchoolId = widget.student?.schoolId;
+    _selectedSchoolName = widget.student?.schoolName;
     _capturedLocation = widget.student?.homeLocation;
   }
 
@@ -41,7 +48,7 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
   void dispose() {
     _nameController.dispose();
     _gradeController.dispose();
-    _schoolNameController.dispose();
+    _noteController.dispose();
     _noteController.dispose();
     super.dispose();
   }
@@ -123,6 +130,17 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       return;
     }
 
+    if (_selectedSchoolId == null || _selectedSchoolId!.isEmpty || _selectedSchoolId == 'sch_default_01') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a valid school from the list.'),
+          backgroundColor: AppTheme.warningOrange,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
     });
@@ -144,10 +162,10 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       final studentData = StudentModel(
         studentId: studentId,
         parentUid: currentUser.uid,
-        schoolId: isEditing ? widget.student!.schoolId : 'sch_default_01',
+        schoolId: _selectedSchoolId ?? '',
         name: _nameController.text.trim(),
         grade: _gradeController.text.trim(),
-        schoolName: _schoolNameController.text.trim(),
+        schoolName: _selectedSchoolName ?? '',
         note: _noteController.text.trim(),
         homeLocation: _capturedLocation,
         status: isEditing ? widget.student!.status : 'active',
@@ -291,17 +309,51 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                           ).animate().fade(delay: 100.ms),
                           const SizedBox(height: 16),
 
-                          // School Name Field
-                          TextFormField(
-                            controller: _schoolNameController,
-                            textCapitalization: TextCapitalization.words,
-                            textInputAction: TextInputAction.next,
-                            decoration: const InputDecoration(
-                              labelText: 'School Name',
-                              hintText: 'e.g. Springfield Elementary',
-                              prefixIcon: Icon(Icons.account_balance_outlined, size: 20),
-                            ),
-                          ).animate().fade(delay: 150.ms),
+                          // School Picker
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'School',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.textMuted.withValues(alpha: 0.8),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              InkWell(
+                                onTap: _showSchoolPicker,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.background,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.account_balance_outlined, size: 20, color: AppTheme.primaryGold),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Text(
+                                          _selectedSchoolName != null && _selectedSchoolName!.isNotEmpty
+                                              ? _selectedSchoolName!
+                                              : 'Select School',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: _selectedSchoolName != null && _selectedSchoolName!.isNotEmpty ? FontWeight.w600 : FontWeight.w500,
+                                            color: _selectedSchoolName != null && _selectedSchoolName!.isNotEmpty ? AppTheme.textPrimary : AppTheme.textMuted,
+                                          ),
+                                        ),
+                                      ),
+                                      const Icon(Icons.arrow_drop_down_rounded, color: AppTheme.textMuted),
+                                    ],
+                                  ),
+                                ),
+                              ).animate().fade(delay: 150.ms),
+                            ],
+                          ),
                           const SizedBox(height: 16),
 
                           // Note Field
@@ -473,4 +525,118 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       ),
     );
   }
+
+  void _showSchoolPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => const _SchoolPickerSheet(),
+    ).then((selectedSchool) {
+      if (selectedSchool is SchoolModel) {
+        setState(() {
+          _selectedSchoolId = selectedSchool.schoolId;
+          _selectedSchoolName = selectedSchool.name;
+        });
+      }
+    });
+  }
 }
+
+class _SchoolPickerSheet extends ConsumerStatefulWidget {
+  const _SchoolPickerSheet();
+
+  @override
+  ConsumerState<_SchoolPickerSheet> createState() => _SchoolPickerSheetState();
+}
+
+class _SchoolPickerSheetState extends ConsumerState<_SchoolPickerSheet> {
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final schoolsAsync = ref.watch(activeSchoolsStreamProvider);
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.75,
+      decoration: const BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        children: [
+          // Drag handle & Title
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            child: Column(
+              children: [
+                Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: AppTheme.border, borderRadius: BorderRadius.circular(2)),
+                ),
+                const SizedBox(height: 16),
+                const Text('Select School', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          ),
+          
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: TextField(
+              onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
+              decoration: InputDecoration(
+                hintText: 'Search active schools...',
+                prefixIcon: const Icon(Icons.search_rounded),
+                filled: true,
+                fillColor: AppTheme.background,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ),
+
+          // List
+          Expanded(
+            child: schoolsAsync.when(
+              data: (allSchools) {
+                final schools = allSchools.where((s) => s.name.toLowerCase().contains(_searchQuery)).toList();
+                
+                if (schools.isEmpty) {
+                  return Center(
+                    child: Text('No schools found.', style: TextStyle(color: AppTheme.textMuted, fontSize: 14)),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
+                  itemCount: schools.length,
+                  separatorBuilder: (_, __) => Divider(color: AppTheme.border.withValues(alpha: 0.3), height: 1),
+                  itemBuilder: (context, index) {
+                    final school = schools[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(color: AppTheme.primaryGold.withValues(alpha: 0.1), shape: BoxShape.circle),
+                        child: const Icon(Icons.school_rounded, color: AppTheme.primaryGold, size: 18),
+                      ),
+                      title: Text(school.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                      subtitle: Text(
+                        '${school.location.latitude.toStringAsFixed(3)}, ${school.location.longitude.toStringAsFixed(3)}',
+                        style: TextStyle(color: AppTheme.textMuted, fontSize: 12),
+                      ),
+                      onTap: () => Navigator.of(context).pop(school),
+                    );
+                  },
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Error: $e')),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

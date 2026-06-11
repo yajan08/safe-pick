@@ -6,7 +6,8 @@ import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../students/data/student_model.dart';
 import '../../students/presentation/add_student_screen.dart';
-import '../../trips/data/trip_service.dart';
+import '../../trips/domain/trip_service.dart';
+import '../../students/presentation/student_history_screen.dart';
 
 /// Screen showing full student details with QR code for the parent.
 class StudentDetailScreen extends ConsumerStatefulWidget {
@@ -535,6 +536,26 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
             child: const Text(
               'Edit Details',
               style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.2),
+            ),
+          ),
+          const SizedBox(height: 8),
+          OutlinedButton(
+            onPressed: _isLoading ? null : () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => StudentHistoryScreen(student: widget.student),
+                ),
+              );
+            },
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.primaryGold,
+              side: const BorderSide(color: AppTheme.primaryGold),
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+            child: const Text(
+              'View Trip History',
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(height: 8),

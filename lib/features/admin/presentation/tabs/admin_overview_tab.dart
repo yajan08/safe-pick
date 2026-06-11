@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../data/admin_service.dart';
+import '../../domain/admin_service.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../admin_dashboard_screen.dart';
+import '../admin_schools_screen.dart';
 
 class AdminOverviewTab extends ConsumerWidget {
   const AdminOverviewTab({super.key});
@@ -76,6 +77,53 @@ class AdminOverviewTab extends ConsumerWidget {
               child: Center(child: CircularProgressIndicator(color: kAdminNavy, strokeWidth: 2.5)),
             ),
             error: (e, _) => _ErrorCard(message: 'Could not load stats: $e'),
+          ),
+
+          const SizedBox(height: 28),
+
+          // ── School Management ─────────────────────────────────────────────
+          const Text(
+            'School Management',
+            style: TextStyle(fontSize: 16.5, fontWeight: FontWeight.w700, color: kAdminNavy, letterSpacing: -0.2),
+          ),
+          const SizedBox(height: 12),
+          InkWell(
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(builder: (_) => const AdminSchoolsScreen()));
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.015), blurRadius: 10, offset: const Offset(0, 4)),
+                ],
+                border: Border.all(color: AppTheme.border.withValues(alpha: 0.25)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: kAdminNavy.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.domain_rounded, color: kAdminNavy, size: 22),
+                  ),
+                  const SizedBox(width: 16),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Manage Schools & Map', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        SizedBox(height: 2),
+                        Text('Add, edit, or remove school locations.', style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.chevron_right_rounded, color: AppTheme.textMuted.withValues(alpha: 0.5)),
+                ],
+              ),
+            ),
           ),
 
           const SizedBox(height: 28),

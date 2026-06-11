@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../../features/trips/data/trip_service.dart';
+import 'trip_service.dart';
 
 /// Provider for SyncQueueService
 final syncQueueServiceProvider = Provider<SyncQueueService>((ref) {

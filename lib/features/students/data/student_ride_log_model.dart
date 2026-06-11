@@ -5,7 +5,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class StudentRideLogModel {
   final String logId;
   final String sessionId;
+  final String tripId;
   final String tripName;
+  final String tripType;
   final String driverName;
   final String vehicleNumber;
   final String date;
@@ -16,7 +18,9 @@ class StudentRideLogModel {
   const StudentRideLogModel({
     required this.logId,
     required this.sessionId,
+    required this.tripId,
     required this.tripName,
+    required this.tripType,
     required this.driverName,
     required this.vehicleNumber,
     required this.date,
@@ -40,7 +44,9 @@ class StudentRideLogModel {
     return StudentRideLogModel(
       logId: id,
       sessionId: json['session_id'] as String? ?? '',
+      tripId: json['trip_id'] as String? ?? '',
       tripName: json['trip_name'] as String? ?? '',
+      tripType: json['trip_type'] as String? ?? 'Morning',
       driverName: json['driver_name'] as String? ?? '',
       vehicleNumber: json['vehicle_number'] as String? ?? '',
       date: json['date'] as String? ?? '',
@@ -53,7 +59,9 @@ class StudentRideLogModel {
   Map<String, dynamic> toJson() {
     return {
       'session_id': sessionId,
+      'trip_id': tripId,
       'trip_name': tripName,
+      'trip_type': tripType,
       'driver_name': driverName,
       'vehicle_number': vehicleNumber,
       'date': date,
@@ -66,7 +74,9 @@ class StudentRideLogModel {
   StudentRideLogModel copyWith({
     String? logId,
     String? sessionId,
+    String? tripId,
     String? tripName,
+    String? tripType,
     String? driverName,
     String? vehicleNumber,
     String? date,
@@ -77,7 +87,9 @@ class StudentRideLogModel {
     return StudentRideLogModel(
       logId: logId ?? this.logId,
       sessionId: sessionId ?? this.sessionId,
+      tripId: tripId ?? this.tripId,
       tripName: tripName ?? this.tripName,
+      tripType: tripType ?? this.tripType,
       driverName: driverName ?? this.driverName,
       vehicleNumber: vehicleNumber ?? this.vehicleNumber,
       date: date ?? this.date,

@@ -5,6 +5,7 @@ import 'firebase_options.dart';
 import 'core/theme/app_theme.dart';
 import 'features/onboarding/presentation/splash_screen.dart';
 
+
 void main() async {
   // Ensure Flutter engine bindings are initialized prior to Firebase boots
   WidgetsFlutterBinding.ensureInitialized();

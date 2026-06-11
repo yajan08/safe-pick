@@ -2,9 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/auth_service.dart';
-import 'trip_manifest_model.dart';
+import '../data/trip_manifest_model.dart';
 import '../../students/data/student_ride_log_model.dart';
-import 'daily_session_model.dart';
+import '../data/daily_session_model.dart';
 
 /// Riverpod provider for the [TripService] instance.
 final tripServiceProvider = Provider<TripService>((ref) {
@@ -122,24 +122,9 @@ class TripService {
       final now = DateTime.now();
       final dateString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
 
-      final sessionData = {
-        'session_id': sessionId,
-        'trip_id': tripId,
-        'driver_uid': currentUser.uid,
-        'date': dateString,
-        'status': 'in_progress',
-        'mqtt_topic_id': sessionId,
-      };
+      final initialStatuses = <String, String>{};
 
-      final batch = _firestore.batch();
-      batch.set(docRef, sessionData);
-      
-      // Update trip template status
-      batch.update(_firestore.collection('trips').doc(tripId), {
-        'status': 'active',
-      });
-
-      // Initialize attendance records from manifest
+      // Initialize attendance records from manifest and populate initialStatuses
       final manifestDocs = await _firestore.collection('trips').doc(tripId).collection('trip_manifest').get();
       for (var manifestDoc in manifestDocs.docs) {
         final studentId = manifestDoc.id;
@@ -159,6 +144,34 @@ class TripService {
             studentInitialStatus = 'At School';
           }
         }
+        
+        initialStatuses[studentId] = studentInitialStatus;
+      }
+
+      final sessionData = {
+        'session_id': sessionId,
+        'trip_id': tripId,
+        'driver_uid': currentUser.uid,
+        'date': dateString,
+        'status': 'in_progress',
+        'mqtt_topic_id': sessionId,
+        'start_time': Timestamp.fromDate(now),
+        'initial_statuses': initialStatuses,
+        'is_redo': false,
+      };
+
+      final batch = _firestore.batch();
+      batch.set(docRef, sessionData);
+      
+      // Update trip template status
+      batch.update(_firestore.collection('trips').doc(tripId), {
+        'status': 'active',
+      });
+
+      // Initialize attendance records from manifest
+      for (var manifestDoc in manifestDocs.docs) {
+        final studentId = manifestDoc.id;
+        final studentInitialStatus = initialStatuses[studentId]!;
 
         final attendanceRef = docRef.collection('attendance').doc(studentId);
         batch.set(attendanceRef, {
@@ -175,6 +188,87 @@ class TripService {
       return sessionId;
     } catch (e) {
       throw 'Failed to start trip: $e';
+    }
+  }
+
+  Future<String> startRedoDailySession(String tripId, String previousSessionId) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        throw 'User must be authenticated to start a session.';
+      }
+
+      final tripSnap = await _firestore.collection('trips').doc(tripId).get();
+      if (!tripSnap.exists) {
+        throw 'Trip template not found.';
+      }
+      final tripType = tripSnap.data()?['trip_type'] as String? ?? 'Morning';
+      final isMorning = tripType.toLowerCase() == 'morning';
+
+      final docRef = _firestore.collection('daily_sessions').doc();
+      final sessionId = docRef.id;
+
+      final now = DateTime.now();
+      final dateString = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+
+      final initialStatuses = <String, String>{};
+      final manifestDocs = await _firestore.collection('trips').doc(tripId).collection('trip_manifest').get();
+      for (var manifestDoc in manifestDocs.docs) {
+        final studentId = manifestDoc.id;
+        final studentDoc = await _firestore.collection('students').doc(studentId).get();
+        final studentStatus = studentDoc.data()?['current_status'] as String? ?? 'At Home';
+
+        String studentInitialStatus;
+        if (isMorning) {
+          studentInitialStatus = 'At Home';
+        } else {
+          if (studentStatus == 'At Home') {
+            studentInitialStatus = 'Absent';
+          } else {
+            studentInitialStatus = 'At School';
+          }
+        }
+        initialStatuses[studentId] = studentInitialStatus;
+      }
+
+      final sessionData = {
+        'session_id': sessionId,
+        'trip_id': tripId,
+        'driver_uid': currentUser.uid,
+        'date': dateString,
+        'status': 'in_progress',
+        'mqtt_topic_id': sessionId,
+        'start_time': Timestamp.fromDate(now),
+        'initial_statuses': initialStatuses,
+        'is_redo': true,
+        'previous_session_id': previousSessionId,
+      };
+
+      final batch = _firestore.batch();
+      batch.set(docRef, sessionData);
+      
+      batch.update(_firestore.collection('trips').doc(tripId), {
+        'status': 'active',
+      });
+
+      for (var manifestDoc in manifestDocs.docs) {
+        final studentId = manifestDoc.id;
+        final studentInitialStatus = initialStatuses[studentId]!;
+
+        final attendanceRef = docRef.collection('attendance').doc(studentId);
+        batch.set(attendanceRef, {
+          'status': studentInitialStatus,
+        });
+
+        batch.update(_firestore.collection('students').doc(studentId), {
+          'current_status': studentInitialStatus,
+        });
+      }
+
+      await batch.commit();
+      return sessionId;
+    } catch (e) {
+      throw 'Failed to start redo trip: $e';
     }
   }
 
@@ -204,6 +298,8 @@ class TripService {
     final batch = _firestore.batch();
     final sessionRef = _firestore.collection('daily_sessions').doc(sessionId);
 
+    final finalStatuses = <String, String>{};
+
     // 2. Fetch all attendance records for this session and clean up "In Van"
     final attendanceDocs = await sessionRef.collection('attendance').get();
     for (var doc in attendanceDocs.docs) {
@@ -211,10 +307,13 @@ class TripService {
       if (currentStatus == 'In Van') {
         // Auto-update student accidentally left in van
         batch.update(doc.reference, {'status': autoUpdateStatus});
+        finalStatuses[doc.id] = autoUpdateStatus;
         // Sync to global student record
         batch.update(_firestore.collection('students').doc(doc.id), {
           'current_status': autoUpdateStatus,
         });
+      } else {
+        finalStatuses[doc.id] = currentStatus;
       }
     }
 
@@ -222,6 +321,7 @@ class TripService {
     batch.update(sessionRef, {
       'status': 'completed',
       'end_time': Timestamp.fromDate(DateTime.now()),
+      'final_statuses': finalStatuses,
     });
     batch.update(_firestore.collection('trips').doc(tripId), {
       'status': 'completed',
@@ -302,7 +402,9 @@ class TripService {
     final rideLog = StudentRideLogModel(
       logId: sessionId,
       sessionId: sessionId,
+      tripId: tripId,
       tripName: tripName,
+      tripType: tripType,
       driverName: driverName,
       vehicleNumber: vehicleNumber,
       date: dateString,
@@ -340,6 +442,7 @@ class TripService {
     // Fetch details for ride log
     final tripSnap = await _firestore.collection('trips').doc(tripId).get();
     final tripName = tripSnap.data()?['trip_name'] as String? ?? 'Unknown Trip';
+    final tripType = tripSnap.data()?['trip_type'] as String? ?? 'Morning';
 
     final driverSnap = await _firestore.collection('users').doc(driverUid).get();
     final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
@@ -365,7 +468,9 @@ class TripService {
     final rideLog = StudentRideLogModel(
       logId: sessionId,
       sessionId: sessionId,
+      tripId: tripId,
       tripName: tripName,
+      tripType: tripType,
       driverName: driverName,
       vehicleNumber: vehicleNumber,
       date: dateString,

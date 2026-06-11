@@ -16,7 +16,8 @@ class AdminDashboardScreen extends ConsumerStatefulWidget {
   const AdminDashboardScreen({super.key});
 
   @override
-  ConsumerState<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
+  ConsumerState<AdminDashboardScreen> createState() =>
+      _AdminDashboardScreenState();
 }
 
 class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
@@ -55,19 +56,85 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             icon: const Icon(Icons.logout_rounded, color: kAdminNavy, size: 22),
             tooltip: 'Sign Out',
             onPressed: () async {
-              final messenger = ScaffoldMessenger.of(context);
-              try {
-                await ref.read(authServiceProvider).signOut();
-              } catch (e) {
-                if (mounted) {
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text(e.toString()), 
-                      behavior: SnackBarBehavior.floating,
-                      backgroundColor: AppTheme.errorRed,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  backgroundColor: AppTheme.background,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                    side: BorderSide(
+                      color: kAdminNavy.withValues(alpha: 0.3),
+                      width: 1,
                     ),
-                  );
+                  ),
+                  title: const Text(
+                    'Sign Out',
+                    style: TextStyle(
+                      color: kAdminNavy,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  content: const Text(
+                    'Are you sure you want to sign out of the Admin Console?',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                  actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.textSecondary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.errorRed,
+                        foregroundColor: AppTheme.background,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text(
+                        'Sign Out',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+
+              if (confirm == true) {
+                final messenger = ScaffoldMessenger.of(context);
+                try {
+                  await ref.read(authServiceProvider).signOut();
+                } catch (e) {
+                  if (mounted) {
+                    messenger.showSnackBar(
+                      SnackBar(
+                        content: Text(e.toString()),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: AppTheme.errorRed,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    );
+                  }
                 }
               }
             },
@@ -77,16 +144,16 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
       ),
       // IndexedStack keeps tab states alive, preventing full-screen flicker
       body: SafeArea(
-        child: IndexedStack(
-          index: _currentIndex,
-          children: _tabs,
-        ),
+        child: IndexedStack(index: _currentIndex, children: _tabs),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: AppTheme.surface,
           border: Border(
-            top: BorderSide(color: AppTheme.border.withValues(alpha: 0.3), width: 1),
+            top: BorderSide(
+              color: AppTheme.border.withValues(alpha: 0.3),
+              width: 1,
+            ),
           ),
           boxShadow: [
             BoxShadow(
@@ -98,7 +165,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
         ),
         child: NavigationBar(
           selectedIndex: _currentIndex,
-          onDestinationSelected: (index) => setState(() => _currentIndex = index),
+          onDestinationSelected: (index) =>
+              setState(() => _currentIndex = index),
           backgroundColor: Colors.transparent,
           elevation: 0,
           shadowColor: Colors.transparent,
@@ -118,22 +186,37 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           destinations: [
             NavigationDestination(
               icon: Icon(Icons.dashboard_outlined, color: AppTheme.textMuted),
-              selectedIcon: const Icon(Icons.dashboard_rounded, color: kAdminNavy),
+              selectedIcon: const Icon(
+                Icons.dashboard_rounded,
+                color: kAdminNavy,
+              ),
               label: 'Overview',
             ),
             NavigationDestination(
-              icon: Icon(Icons.people_outline_rounded, color: AppTheme.textMuted),
+              icon: Icon(
+                Icons.people_outline_rounded,
+                color: AppTheme.textMuted,
+              ),
               selectedIcon: const Icon(Icons.people_rounded, color: kAdminNavy),
               label: 'Users',
             ),
             NavigationDestination(
-              icon: Icon(Icons.directions_bus_outlined, color: AppTheme.textMuted),
-              selectedIcon: const Icon(Icons.directions_bus_rounded, color: kAdminNavy),
+              icon: Icon(
+                Icons.directions_bus_outlined,
+                color: AppTheme.textMuted,
+              ),
+              selectedIcon: const Icon(
+                Icons.directions_bus_rounded,
+                color: kAdminNavy,
+              ),
               label: 'Trips',
             ),
             NavigationDestination(
               icon: Icon(Icons.analytics_outlined, color: AppTheme.textMuted),
-              selectedIcon: const Icon(Icons.analytics_rounded, color: kAdminNavy),
+              selectedIcon: const Icon(
+                Icons.analytics_rounded,
+                color: kAdminNavy,
+              ),
               label: 'Reports',
             ),
           ],
