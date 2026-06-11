@@ -494,6 +494,80 @@ class TripService {
     await batch.commit();
   }
 
+  /// Bulk action to drop off all students currently "In Van" at the school.
+  Future<void> dropOffAllStudentsAtSchool(String sessionId) async {
+    final sessionRef = _firestore.collection('daily_sessions').doc(sessionId);
+    
+    final sessionSnap = await sessionRef.get();
+    if (!sessionSnap.exists) throw 'Active trip session not found.';
+
+    final tripId = sessionSnap.data()?['trip_id'] as String? ?? '';
+    final dateString = sessionSnap.data()?['date'] as String? ?? '';
+    final driverUid = sessionSnap.data()?['driver_uid'] as String? ?? '';
+
+    // Fetch details for ride log
+    final tripSnap = await _firestore.collection('trips').doc(tripId).get();
+    final tripName = tripSnap.data()?['trip_name'] as String? ?? 'Unknown Trip';
+    final tripType = tripSnap.data()?['trip_type'] as String? ?? 'Morning';
+
+    final driverSnap = await _firestore.collection('users').doc(driverUid).get();
+    final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
+    final vehicleNumber = _resolveDriverVehicleNumber(driverSnap.data());
+
+    final batch = _firestore.batch();
+    final now = Timestamp.fromDate(DateTime.now());
+    final status = 'At School';
+
+    final attendanceDocs = await sessionRef.collection('attendance').get();
+    int count = 0;
+
+    for (var doc in attendanceDocs.docs) {
+      final currentStatus = doc.data()['status'] as String? ?? '';
+      if (currentStatus == 'In Van') {
+        final studentId = doc.id;
+        final attendanceRef = sessionRef.collection('attendance').doc(studentId);
+
+        final updateData = <String, dynamic>{
+          'status': status,
+          'alighted_at': now,
+        };
+
+        batch.update(attendanceRef, updateData);
+
+        // Ride History
+        final rideHistoryRef = _firestore.collection('students').doc(studentId).collection('ride_history').doc(sessionId);
+        
+        final rideLog = StudentRideLogModel(
+          logId: sessionId,
+          sessionId: sessionId,
+          tripId: tripId,
+          tripName: tripName,
+          tripType: tripType,
+          driverName: driverName,
+          vehicleNumber: vehicleNumber,
+          date: dateString,
+          alightedAt: now.toDate(),
+          status: status,
+        );
+        
+        batch.set(rideHistoryRef, rideLog.toJson(), SetOptions(merge: true));
+
+        // Sync to global student record and increment stats
+        final globalUpdate = <String, dynamic>{
+          'current_status': status,
+          'stats.total_trips': FieldValue.increment(1),
+        };
+        
+        batch.update(_firestore.collection('students').doc(studentId), globalUpdate);
+        count++;
+      }
+    }
+
+    if (count > 0) {
+      await batch.commit();
+    }
+  }
+
   /// Returns the active session ID for a student, regardless of their attendance status.
   /// The parent can track the van as long as the session is in_progress.
   Future<String?> getActiveSessionIdForStudent(String studentId) async {

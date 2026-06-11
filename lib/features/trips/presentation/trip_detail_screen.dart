@@ -14,6 +14,8 @@ import '../../../core/services/auth_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'utils/marker_generator.dart';
+import '../../admin/data/school_service.dart';
+import '../../admin/data/school_model.dart';
 
 /// Future provider to fetch details of a specific trip.
 final tripDetailsProvider = FutureProvider.family<TripModel, String>((ref, tripId) async {
@@ -59,6 +61,9 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   BitmapDescriptor? _driverVanMarker;
   final Map<String, BitmapDescriptor> _studentMarkerCache = {};
   final Map<String, String> _studentStatusCache = {};
+
+  final Map<String, BitmapDescriptor> _schoolMarkerCache = {};
+  List<SchoolModel> _currentSchools = [];
 
   @override
   void initState() {
@@ -115,6 +120,21 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     }
   }
 
+  Future<void> _updateSchoolMarkers(List<SchoolModel> schools, List<TripManifestModel> manifest) async {
+    bool changed = false;
+    _currentSchools = schools;
+    for (var school in schools) {
+      if (!_schoolMarkerCache.containsKey(school.schoolId)) {
+        final markerIcon = await MarkerGenerator.createSchoolMarker(school.name);
+        _schoolMarkerCache[school.schoolId] = markerIcon;
+        changed = true;
+      }
+    }
+    if (changed || _currentPosition != null) {
+      _buildMarkers(manifest);
+    }
+  }
+
   void _buildMarkers(List<TripManifestModel> manifest) {
     final Set<Marker> newMarkers = {};
     if (_currentPosition != null && _driverVanMarker != null) {
@@ -138,6 +158,17 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       }
     }
     
+    for (var school in _currentSchools) {
+      if (_schoolMarkerCache.containsKey(school.schoolId)) {
+        newMarkers.add(Marker(
+          markerId: MarkerId('school_${school.schoolId}'),
+          position: LatLng(school.location.latitude, school.location.longitude),
+          icon: _schoolMarkerCache[school.schoolId]!,
+          zIndexInt: 50,
+        ));
+      }
+    }
+    
     if (mounted) {
       setState(() {
         _markers = newMarkers;
@@ -147,8 +178,31 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
   // ─── LIVE TRACKING ENGINE ────────────────────────────
   
-  void _checkGeofences(Position currentPos, List<TripManifestModel> manifest, String sessionId, String tripType) {
+  void _checkGeofences(Position currentPos, List<TripManifestModel> manifest, String sessionId, String tripType, List<SchoolModel> schools) {
     if (_approachingStudentId != null) return; 
+
+    final isMorning = tripType.toLowerCase() == 'morning';
+    
+    if (isMorning) {
+      for (var school in schools) {
+        final distance = Geolocator.distanceBetween(
+          currentPos.latitude, currentPos.longitude,
+          school.location.latitude, school.location.longitude,
+        );
+
+        if (distance <= 50.0) {
+          if (mounted) {
+            setState(() {
+              _approachingStudentId = 'SCHOOL_${school.schoolId}';
+              _approachingStudentName = school.name;
+              _approachingStatusAction = 'DROP OFF ALL STUDENTS IN VAN';
+              _approachingNextStatus = 'DROP_ALL';
+            });
+          }
+          return;
+        }
+      }
+    }
 
     for (var student in manifest) {
       if (student.homeLocation == null) continue;
@@ -226,7 +280,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         final sessionAsync = ref.read(activeSessionProvider(widget.tripId));
         final tripAsync = ref.read(tripDetailsProvider(widget.tripId));
         if (sessionAsync.hasValue && tripAsync.hasValue && sessionAsync.value != null) {
-          _checkGeofences(position, manifestAsync.value!, sessionAsync.value!.sessionId, tripAsync.value!.tripType);
+          _checkGeofences(position, manifestAsync.value!, sessionAsync.value!.sessionId, tripAsync.value!.tripType, _currentSchools);
         }
       }
     });
@@ -526,6 +580,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     final theme = Theme.of(context);
     final tripAsync = ref.watch(tripDetailsProvider(widget.tripId));
     final sessionAsync = ref.watch(activeSessionProvider(widget.tripId));
+    final schoolsAsync = ref.watch(activeSchoolsStreamProvider);
 
     final session = sessionAsync.asData?.value;
     final isTripActive = session?.status == 'in_progress';
@@ -575,10 +630,14 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
           data: (trip) {
             return sessionAsync.when(
               data: (session) {
+                final allSchools = schoolsAsync.value ?? [];
+                final tripSchools = allSchools.where((s) => trip.schoolIds.contains(s.schoolId)).toList();
+                
                 ref.listen(tripManifestProvider(widget.tripId), (prev, next) {
                   final manifest = next.value ?? [];
                   final attendanceMap = session != null ? ref.read(sessionAttendanceProvider(session.sessionId)).value ?? {} : <String, String>{};
                   _updateStudentMarkers(manifest, attendanceMap, trip.tripType);
+                  _updateSchoolMarkers(tripSchools, manifest);
                 });
 
                 if (session != null) {
@@ -586,6 +645,14 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                     final attendanceMap = next.value ?? {};
                     final manifest = ref.read(tripManifestProvider(widget.tripId)).value ?? [];
                     _updateStudentMarkers(manifest, attendanceMap, trip.tripType);
+                  });
+                }
+                
+                // Initialize school markers if not yet initialized
+                if (_currentSchools.isEmpty && tripSchools.isNotEmpty) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    final manifest = ref.read(tripManifestProvider(widget.tripId)).value ?? [];
+                    _updateSchoolMarkers(tripSchools, manifest);
                   });
                 }
 
@@ -741,7 +808,11 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                                       final nextStatus = _approachingNextStatus!;
                                       setState(() => _approachingStudentId = null);
                                       try {
-                                        await ref.read(tripServiceProvider).manualAttendanceOverride(session.sessionId, studentId, nextStatus);
+                                        if (nextStatus == 'DROP_ALL') {
+                                          await ref.read(tripServiceProvider).dropOffAllStudentsAtSchool(session.sessionId);
+                                        } else {
+                                          await ref.read(tripServiceProvider).manualAttendanceOverride(session.sessionId, studentId, nextStatus);
+                                        }
                                       } catch (e) {
                                         debugPrint('Override Error: $e');
                                       }

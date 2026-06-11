@@ -23,55 +23,87 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
   bool _isLoading = false;
 
   Future<void> _handleRemove() async {
+    final TextEditingController controller = TextEditingController();
+    bool canDelete = false;
+
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1),
-        ),
-        title: const Text(
-          'Remove Student',
-          style: TextStyle(
-            color: AppTheme.errorRed,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-        ),
-        content: Text(
-          'Are you sure you want to remove ${widget.student.name}? This will permanently delete their active profile.',
-          style: const TextStyle(
-            color: AppTheme.textSecondary,
-            height: 1.4,
-          ),
-        ),
-        actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.textSecondary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorRed,
-              foregroundColor: AppTheme.background,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.background,
               elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(24),
+                side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1),
               ),
-            ),
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+              title: const Text(
+                'Remove Child',
+                style: TextStyle(
+                  color: AppTheme.errorRed,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Are you sure you want to remove ${widget.student.name}? This will permanently delete their active profile, but their trip history will remain intact.',
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      hintText: 'Delete',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        canDelete = val == 'Delete';
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.all(16),
+              actionsAlignment: MainAxisAlignment.end,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.textSecondary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: canDelete ? AppTheme.errorRed : AppTheme.errorRed.withValues(alpha: 0.3),
+                    foregroundColor: AppTheme.background,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: canDelete ? () => Navigator.pop(context, true) : null,
+                  child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            );
+          }
+        );
+      },
     );
 
     if (confirm == true) {
@@ -157,6 +189,11 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
               );
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, size: 22, color: AppTheme.errorRed),
+            tooltip: 'Remove Child',
+            onPressed: _isLoading ? null : () => _handleRemove(),
+          ),
           const SizedBox(width: 8),
         ],
       ),
@@ -178,6 +215,28 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
 
                         _buildDetailsCard(theme),
                         const SizedBox(height: 20),
+                        
+                        OutlinedButton.icon(
+                          onPressed: _isLoading ? null : () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => StudentHistoryScreen(student: widget.student),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.history_rounded),
+                          label: const Text(
+                            'View Trip History',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppTheme.primaryGold,
+                            side: const BorderSide(color: AppTheme.primaryGold),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
 
                         _buildLocationCard(theme),
                         
@@ -189,9 +248,6 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                     ),
                   ),
                 ),
-
-                // ── Sticky Bottom Action Bar ──
-                _buildStickyActionButtons(theme),
               ],
             ),
       ),
@@ -498,81 +554,5 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
     ).animate().fade(delay: 300.ms, duration: 400.ms).slideY(begin: 0.02, curve: Curves.easeOutCubic);
   }
 
-  Widget _buildStickyActionButtons(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
-      decoration: BoxDecoration(
-        color: AppTheme.background,
-        border: Border(
-          top: BorderSide(color: AppTheme.border.withValues(alpha: 0.3), width: 1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ElevatedButton(
-            onPressed: _isLoading ? null : () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => AddStudentScreen(student: widget.student),
-                ),
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGold,
-              foregroundColor: AppTheme.background,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text(
-              'Edit Details',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.2),
-            ),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton(
-            onPressed: _isLoading ? null : () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => StudentHistoryScreen(student: widget.student),
-                ),
-              );
-            },
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppTheme.primaryGold,
-              side: const BorderSide(color: AppTheme.primaryGold),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text(
-              'View Trip History',
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _isLoading ? null : () => _handleRemove(),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.errorRed,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            ),
-            child: const Text(
-              'Remove Student',
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-            ),
-          ),
-        ],
-      ),
-    ).animate().fade(delay: 400.ms, duration: 400.ms).slideY(begin: 0.05, curve: Curves.easeOutCubic);
-  }
+
 }

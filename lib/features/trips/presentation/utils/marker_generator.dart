@@ -170,4 +170,97 @@ class MarkerGenerator {
 
     return Colors.grey;
   }
+
+  /// Generates a school marker with a school icon and a text pill containing its name.
+  static Future<BitmapDescriptor> createSchoolMarker(String name) async {
+    final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+    final Canvas canvas = Canvas(pictureRecorder);
+
+    const double iconSize = 48.0; // Slightly larger for school
+    const double fontSize = 14.0;
+    const double paddingX = 12.0;
+    const double paddingY = 6.0;
+
+    // Use short name for pill
+    final shortName = name.length > 15 ? '${name.substring(0, 15)}...' : name;
+
+    TextPainter textPainter = TextPainter(textDirection: TextDirection.ltr);
+    textPainter.text = TextSpan(
+      text: shortName,
+      style: const TextStyle(
+        fontSize: fontSize,
+        fontWeight: FontWeight.bold,
+        color: Colors.white,
+        fontFamily: 'Inter',
+      ),
+    );
+    textPainter.layout();
+
+    final double textWidth = textPainter.width;
+    final double textHeight = textPainter.height;
+
+    final double pillWidth = textWidth + (paddingX * 2);
+    final double pillHeight = textHeight + (paddingY * 2);
+
+    final double canvasWidth = pillWidth > iconSize ? pillWidth : iconSize;
+    final double canvasHeight = pillHeight + iconSize + 8.0;
+
+    // 1. Draw Text Pill (Dark Navy background)
+    final Paint pillPaint = Paint()..color = const Color(0xFF1E293B); // kAdminNavy
+    final RRect pillRect = RRect.fromLTRBR(
+      (canvasWidth - pillWidth) / 2,
+      0,
+      ((canvasWidth - pillWidth) / 2) + pillWidth,
+      pillHeight,
+      Radius.circular(pillHeight / 2),
+    );
+
+    canvas.drawShadow(Path()..addRRect(pillRect), Colors.black, 4.0, true);
+    canvas.drawRRect(pillRect, pillPaint);
+
+    textPainter.paint(
+      canvas,
+      Offset(
+        ((canvasWidth - pillWidth) / 2) + paddingX,
+        paddingY,
+      ),
+    );
+
+    // 2. Draw Marker Pin
+    final double iconTopY = pillHeight + 8.0;
+    final Paint pinPaint = Paint()..color = Colors.white;
+    final Offset pinCenter = Offset(canvasWidth / 2, iconTopY + (iconSize / 2));
+    
+    canvas.drawShadow(
+      Path()..addOval(Rect.fromCircle(center: pinCenter, radius: iconSize / 2)),
+      Colors.black, 4.0, true,
+    );
+    canvas.drawCircle(pinCenter, iconSize / 2, pinPaint);
+
+    final Paint innerPinPaint = Paint()..color = const Color(0xFF1E293B); // Deep navy
+    canvas.drawCircle(pinCenter, (iconSize / 2) - 4, innerPinPaint);
+
+    TextPainter iconPainter = TextPainter(textDirection: TextDirection.ltr);
+    iconPainter.text = TextSpan(
+      text: String.fromCharCode(Icons.school_rounded.codePoint),
+      style: TextStyle(
+        fontSize: iconSize * 0.55,
+        fontFamily: Icons.school_rounded.fontFamily,
+        package: Icons.school_rounded.fontPackage,
+        color: AppTheme.primaryGold, // Gold icon on navy background
+      ),
+    );
+    iconPainter.layout();
+    iconPainter.paint(
+      canvas,
+      Offset(
+        (canvasWidth - iconPainter.width) / 2,
+        iconTopY + (iconSize - iconPainter.height) / 2,
+      ),
+    );
+
+    final ui.Image image = await pictureRecorder.endRecording().toImage(canvasWidth.toInt(), canvasHeight.toInt());
+    final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
+  }
 }

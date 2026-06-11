@@ -19,18 +19,142 @@ final driverTripsProvider = FutureProvider.family<List<TripModel>, String>((ref,
   return snap.docs.map((doc) => TripModel.fromJson(doc.data(), doc.id)).toList();
 });
 
-class AdminDriverDetailScreen extends ConsumerWidget {
+class AdminDriverDetailScreen extends ConsumerStatefulWidget {
   final UserModel driver;
 
   const AdminDriverDetailScreen({super.key, required this.driver});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminDriverDetailScreen> createState() => _AdminDriverDetailScreenState();
+}
+
+class _AdminDriverDetailScreenState extends ConsumerState<AdminDriverDetailScreen> {
+  bool _isLoading = false;
+
+  Future<void> _handleRemove() async {
+    final TextEditingController controller = TextEditingController();
+    bool canDelete = false;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.background,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1),
+              ),
+              title: const Text(
+                'Remove Driver',
+                style: TextStyle(
+                  color: AppTheme.errorRed,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Are you sure you want to remove ${widget.driver.name}? This will permanently delete their active profile, but their trip history will remain intact.',
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      hintText: 'Delete',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        canDelete = val == 'Delete';
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.all(16),
+              actionsAlignment: MainAxisAlignment.end,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.textSecondary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: canDelete ? AppTheme.errorRed : AppTheme.errorRed.withValues(alpha: 0.3),
+                    foregroundColor: AppTheme.background,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: canDelete ? () => Navigator.pop(context, true) : null,
+                  child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(widget.driver.uid).delete();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Driver removed successfully'),
+              backgroundColor: AppTheme.successGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to remove: $e'),
+              backgroundColor: AppTheme.errorRed,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final tripsAsync = ref.watch(driverTripsProvider(driver.uid));
+    final tripsAsync = ref.watch(driverTripsProvider(widget.driver.uid));
     
     final formatter = DateFormat('MMM d, yyyy');
-    final isInactive = driver.status == 'suspended' || driver.status == 'inactive';
+    final isInactive = widget.driver.status == 'suspended' || widget.driver.status == 'inactive';
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -49,6 +173,14 @@ class AdminDriverDetailScreen extends ConsumerWidget {
             color: kAdminNavy,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, size: 22, color: AppTheme.errorRed),
+            tooltip: 'Remove Driver',
+            onPressed: _isLoading ? null : () => _handleRemove(),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -76,7 +208,7 @@ class AdminDriverDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    driver.name,
+                    widget.driver.name,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary,
@@ -100,16 +232,16 @@ class AdminDriverDetailScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  _buildDetailRow(theme, Icons.phone_rounded, 'Phone', driver.phone.isNotEmpty ? driver.phone : 'N/A'),
+                  _buildDetailRow(theme, Icons.phone_rounded, 'Phone', widget.driver.phone.isNotEmpty ? widget.driver.phone : 'N/A'),
                   Divider(color: AppTheme.border.withValues(alpha: 0.3), height: 24),
                   _buildDetailRow(
                     theme, 
                     Icons.calendar_today_rounded, 
                     'Joined', 
-                    formatter.format(driver.createdAt!)
+                    formatter.format(widget.driver.createdAt!)
                   ),
                   Divider(color: AppTheme.border.withValues(alpha: 0.3), height: 24),
-                  _buildDetailRow(theme, Icons.badge_rounded, 'UID', driver.uid),
+                  _buildDetailRow(theme, Icons.badge_rounded, 'UID', widget.driver.uid),
                 ],
               ),
             ),

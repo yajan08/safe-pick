@@ -8,6 +8,7 @@ import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
 import '../../admin/data/school_service.dart';
 import '../../admin/data/school_model.dart';
+import '../../../core/utils/toast_utils.dart';
 
 class AddStudentScreen extends ConsumerStatefulWidget {
   final StudentModel? student;
@@ -87,23 +88,11 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('GPS coordinates captured successfully!'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ToastUtils.showToast(context, 'GPS coordinates captured successfully!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.toString()),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ToastUtils.showToast(context, e.toString(), isError: true);
       }
     } finally {
       if (mounted) {
@@ -120,24 +109,12 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     }
 
     if (_capturedLocation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please set the home location using current GPS coordinates.'),
-          backgroundColor: AppTheme.errorRed,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastUtils.showToast(context, 'Please set the home location using current GPS coordinates.', isError: true);
       return;
     }
 
     if (_selectedSchoolId == null || _selectedSchoolId!.isEmpty || _selectedSchoolId == 'sch_default_01') {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a valid school from the list.'),
-          backgroundColor: AppTheme.warningOrange,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      ToastUtils.showToast(context, 'Please select a valid school from the list.', isError: true);
       return;
     }
 
@@ -183,24 +160,12 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(isEditing ? 'Student ${studentData.name} updated!' : 'Student ${studentData.name} registered! ID: $studentId'),
-            backgroundColor: AppTheme.successGreen,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ToastUtils.showToast(context, isEditing ? 'Student ${studentData.name} updated!' : 'Student ${studentData.name} registered! ID: $studentId');
         Navigator.of(context).pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save student: $e'),
-            backgroundColor: AppTheme.errorRed,
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        ToastUtils.showToast(context, 'Failed to save student: $e', isError: true);
       }
     } finally {
       if (mounted) {
@@ -598,8 +563,16 @@ class _SchoolPickerSheetState extends ConsumerState<_SchoolPickerSheet> {
 
           // List
           Expanded(
-            child: schoolsAsync.when(
-              data: (allSchools) {
+            child: Builder(
+              builder: (context) {
+                if (schoolsAsync.isLoading && !schoolsAsync.hasValue) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (schoolsAsync.hasError && !schoolsAsync.hasValue) {
+                  return Center(child: Text('Error: ${schoolsAsync.error}'));
+                }
+                
+                final allSchools = schoolsAsync.value ?? [];
                 final schools = allSchools.where((s) => s.name.toLowerCase().contains(_searchQuery)).toList();
                 
                 if (schools.isEmpty) {
@@ -631,8 +604,6 @@ class _SchoolPickerSheetState extends ConsumerState<_SchoolPickerSheet> {
                   },
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
             ),
           ),
         ],

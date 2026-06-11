@@ -21,19 +21,143 @@ final parentChildrenProvider =
           .toList();
     });
 
-class AdminParentDetailScreen extends ConsumerWidget {
+class AdminParentDetailScreen extends ConsumerStatefulWidget {
   final UserModel parent;
 
   const AdminParentDetailScreen({super.key, required this.parent});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AdminParentDetailScreen> createState() => _AdminParentDetailScreenState();
+}
+
+class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScreen> {
+  bool _isLoading = false;
+
+  Future<void> _handleRemove() async {
+    final TextEditingController controller = TextEditingController();
+    bool canDelete = false;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.background,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1),
+              ),
+              title: const Text(
+                'Remove Parent',
+                style: TextStyle(
+                  color: AppTheme.errorRed,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Are you sure you want to remove ${widget.parent.name}? This will permanently delete their active profile. Their children will remain in the database unless removed separately.',
+                    style: const TextStyle(
+                      color: AppTheme.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      hintText: 'Delete',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        canDelete = val == 'Delete';
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.all(16),
+              actionsAlignment: MainAxisAlignment.end,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.textSecondary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: canDelete ? AppTheme.errorRed : AppTheme.errorRed.withValues(alpha: 0.3),
+                    foregroundColor: AppTheme.background,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: canDelete ? () => Navigator.pop(context, true) : null,
+                  child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+
+    if (confirm == true) {
+      setState(() => _isLoading = true);
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(widget.parent.uid).delete();
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Parent removed successfully'),
+              backgroundColor: AppTheme.successGreen,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to remove: $e'),
+              backgroundColor: AppTheme.errorRed,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          );
+        }
+      } finally {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final childrenAsync = ref.watch(parentChildrenProvider(parent.uid));
+    final childrenAsync = ref.watch(parentChildrenProvider(widget.parent.uid));
 
     final formatter = DateFormat('MMM d, yyyy');
     final isInactive =
-        parent.status == 'suspended' || parent.status == 'inactive';
+        widget.parent.status == 'suspended' || widget.parent.status == 'inactive';
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -52,6 +176,14 @@ class AdminParentDetailScreen extends ConsumerWidget {
             color: kAdminNavy,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline_rounded, size: 22, color: AppTheme.errorRed),
+            tooltip: 'Remove Parent',
+            onPressed: _isLoading ? null : () => _handleRemove(),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -89,7 +221,7 @@ class AdminParentDetailScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    parent.name,
+                    widget.parent.name,
                     style: theme.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppTheme.textPrimary,
@@ -124,7 +256,7 @@ class AdminParentDetailScreen extends ConsumerWidget {
                     theme,
                     Icons.phone_rounded,
                     'Phone',
-                    parent.phone.isNotEmpty ? parent.phone : 'N/A',
+                    widget.parent.phone.isNotEmpty ? widget.parent.phone : 'N/A',
                   ),
                   Divider(
                     color: AppTheme.border.withValues(alpha: 0.3),
@@ -134,7 +266,7 @@ class AdminParentDetailScreen extends ConsumerWidget {
                     theme,
                     Icons.calendar_today_rounded,
                     'Joined',
-                    formatter.format(parent.createdAt!),
+                    formatter.format(widget.parent.createdAt!),
                   ),
                   Divider(
                     color: AppTheme.border.withValues(alpha: 0.3),
@@ -144,7 +276,7 @@ class AdminParentDetailScreen extends ConsumerWidget {
                     theme,
                     Icons.badge_rounded,
                     'UID',
-                    parent.uid,
+                    widget.parent.uid,
                   ),
                 ],
               ),
