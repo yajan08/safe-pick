@@ -83,7 +83,8 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       height: 1.4,
                     ),
                   ),
-                  actionsPadding: const EdgeInsets.only(right: 16, bottom: 16),
+                  actionsPadding: const EdgeInsets.all(16),
+                  actionsAlignment: MainAxisAlignment.end,
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context, false),

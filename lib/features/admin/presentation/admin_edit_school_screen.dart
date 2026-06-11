@@ -25,9 +25,8 @@ class _AdminEditSchoolScreenState extends ConsumerState<AdminEditSchoolScreen> {
   LatLng? _selectedLocation;
   GoogleMapController? _mapController;
 
-  // Default to a central location if creating new (e.g., city center).
-  // Adjust this to the app's default region.
-  static const LatLng _defaultLocation = LatLng(37.7749, -122.4194); // SF as fallback
+  // Default to Pune, Maharashtra, India
+  static const LatLng _defaultLocation = LatLng(18.5204, 73.8567);
 
   @override
   void initState() {
