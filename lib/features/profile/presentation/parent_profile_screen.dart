@@ -107,64 +107,113 @@ class ParentProfileScreen extends ConsumerWidget {
   }
 
   Future<void> _handleDeleteAccount(BuildContext context, WidgetRef ref) async {
-    final confirm = await showDialog<bool>(
+    final passwordController = TextEditingController();
+    final confirmController = TextEditingController();
+    bool canDelete = false;
+
+    final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1),
-        ),
-        title: const Text(
-          'Delete Account',
-          style: TextStyle(
-            color: AppTheme.errorRed,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-        ),
-        content: const Text(
-          'Are you absolutely sure you want to permanently delete your account and all associated active student profiles? This action cannot be undone.',
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-            height: 1.5,
-          ),
-        ),
-        actionsPadding: const EdgeInsets.only(right: 20, bottom: 20, left: 20),
-        actionsAlignment: MainAxisAlignment.end,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.textPrimary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-            child: const Text('Cancel'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorRed,
-              foregroundColor: Colors.white,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.background,
               elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(24),
+                side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1),
               ),
-            ),
-            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+              title: const Text(
+                'Delete Account',
+                style: TextStyle(
+                  color: AppTheme.errorRed,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Are you absolutely sure you want to permanently delete your account and all associated active student profiles? This action cannot be undone.',
+                    style: TextStyle(
+                      color: AppTheme.textSecondary,
+                      height: 1.5,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: InputDecoration(
+                      labelText: 'Current Password',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onChanged: (_) {
+                      setState(() {
+                        canDelete = confirmController.text == 'Delete' && passwordController.text.isNotEmpty;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: confirmController,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: InputDecoration(
+                      hintText: 'Delete',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        canDelete = val == 'Delete' && passwordController.text.isNotEmpty;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actionsPadding: const EdgeInsets.only(right: 20, bottom: 20, left: 20),
+              actionsAlignment: MainAxisAlignment.end,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(null),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.textPrimary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  onPressed: canDelete ? () => Navigator.of(context).pop(passwordController.text) : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: canDelete ? AppTheme.errorRed : AppTheme.errorRed.withValues(alpha: 0.3),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+              ],
+            );
+          }
+        );
+      },
     );
 
-    if (confirm != true) return;
+    if (result == null || result.isEmpty) return;
 
     try {
-      await ref.read(authServiceProvider).deleteParentAccount();
+      await ref.read(authServiceProvider).deleteParentAccount(result);
       if (context.mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }

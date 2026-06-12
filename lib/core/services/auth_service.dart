@@ -183,9 +183,18 @@ class AuthService {
   }
 
   /// Deletes a driver account and their user document. Past daily_sessions remain intact.
-  Future<void> deleteDriverAccount() async {
+  Future<void> deleteDriverAccount(String password) async {
     final user = _auth.currentUser;
     if (user == null) throw 'Not logged in';
+    if (user.email == null) throw 'Email not found for re-authentication';
+
+    try {
+      final credential = EmailAuthProvider.credential(email: user.email!, password: password);
+      await user.reauthenticateWithCredential(credential);
+    } catch (e) {
+      throw 'Authentication failed. Please verify your current password.';
+    }
+
     try {
       final batch = _firestore.batch();
       batch.delete(_firestore.collection('users').doc(user.uid));
@@ -193,9 +202,6 @@ class AuthService {
       await user.delete();
       await batch.commit();
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'requires-recent-login') {
-        throw 'Security restriction: Please log out and log back in before deleting your account.';
-      }
       throw _handleAuthException(e);
     } catch (e) {
       throw 'Failed to delete account. Please try again.';
@@ -203,9 +209,18 @@ class AuthService {
   }
 
   /// Deletes a parent account and cascading active students. Past ride_history remains intact.
-  Future<void> deleteParentAccount() async {
+  Future<void> deleteParentAccount(String password) async {
     final user = _auth.currentUser;
     if (user == null) throw 'Not logged in';
+    if (user.email == null) throw 'Email not found for re-authentication';
+
+    try {
+      final credential = EmailAuthProvider.credential(email: user.email!, password: password);
+      await user.reauthenticateWithCredential(credential);
+    } catch (e) {
+      throw 'Authentication failed. Please verify your current password.';
+    }
+
     try {
       final batch = _firestore.batch();
       
@@ -223,9 +238,6 @@ class AuthService {
       
       await batch.commit();
     } on FirebaseAuthException catch (e) {
-      if (e.code == 'requires-recent-login') {
-        throw 'Security restriction: Please log out and log back in before deleting your account.';
-      }
       throw _handleAuthException(e);
     } catch (e) {
       throw 'Failed to delete account. Please try again.';

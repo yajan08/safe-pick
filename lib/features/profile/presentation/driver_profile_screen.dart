@@ -221,45 +221,92 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   }
 
   Future<void> _handleDeleteAccount() async {
-    final confirm = await showDialog<bool>(
+    final passwordController = TextEditingController();
+    final confirmController = TextEditingController();
+    bool canDelete = false;
+
+    final result = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceCard,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: AppTheme.errorRed, width: 2),
-        ),
-        title: const Text(
-          'Delete Account',
-          style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w900, fontSize: 24),
-        ),
-        content: const Text(
-          'Are you absolutely sure you want to permanently delete your account and all associated active vehicle profiles? This action cannot be undone.',
-          style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('CANCEL', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontSize: 16)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorRed,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              minimumSize: const Size(0, 48),
-            ),
-            child: const Text('DELETE PERMANENTLY', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: AppTheme.surfaceCard,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+                side: const BorderSide(color: AppTheme.errorRed, width: 2),
+              ),
+              title: const Text(
+                'Delete Account',
+                style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w900, fontSize: 24),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Are you absolutely sure you want to permanently delete your account and all associated active vehicle profiles? This action cannot be undone.',
+                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                      labelText: 'Current Password',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) {
+                      setState(() {
+                        canDelete = confirmController.text == 'Delete' && passwordController.text.isNotEmpty;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Type "Delete" to confirm:', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: confirmController,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                      hintText: 'Delete',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        canDelete = val == 'Delete' && passwordController.text.isNotEmpty;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(null),
+                  child: const Text('CANCEL', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontSize: 16)),
+                ),
+                ElevatedButton(
+                  onPressed: canDelete ? () => Navigator.of(context).pop(passwordController.text) : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: canDelete ? AppTheme.errorRed : AppTheme.errorRed.withValues(alpha: 0.3),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    minimumSize: const Size(0, 48),
+                  ),
+                  child: const Text('DELETE PERMANENTLY', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ],
+            );
+          }
+        );
+      },
     );
 
-    if (confirm != true) return;
+    if (result == null || result.isEmpty) return;
 
     try {
-      await ref.read(authServiceProvider).deleteDriverAccount();
+      await ref.read(authServiceProvider).deleteDriverAccount(result);
       if (mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }

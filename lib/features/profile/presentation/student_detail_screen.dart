@@ -58,18 +58,18 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text('Type "Remove" to confirm:', style: TextStyle(fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: controller,
                     decoration: InputDecoration(
-                      hintText: 'Delete',
+                      hintText: 'Remove',
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                     ),
                     onChanged: (val) {
                       setState(() {
-                        canDelete = val == 'Delete';
+                        canDelete = val == 'Remove';
                       });
                     },
                   ),
