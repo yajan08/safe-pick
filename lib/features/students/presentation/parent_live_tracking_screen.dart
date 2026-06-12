@@ -6,6 +6,7 @@ import 'package:safe_pick/features/students/data/student_model.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/mqtt_service.dart';
 import '../../trips/presentation/utils/marker_generator.dart';
+import '../../../core/services/auth_service.dart';
 
 class ParentLiveTrackingScreen extends ConsumerStatefulWidget {
   final StudentModel student;
@@ -45,7 +46,27 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
   }
   
   Future<void> _initMarkers() async {
-    _vanMarker = await MarkerGenerator.createDriverVanMarker();
+    String? vehicleNumber;
+    try {
+      final firestore = ref.read(firestoreProvider);
+      final sessionDoc = await firestore.collection('daily_sessions').doc(widget.sessionId).get();
+      if (sessionDoc.exists) {
+        vehicleNumber = sessionDoc.data()?['vehicle_number'] as String?;
+        if (vehicleNumber == null || vehicleNumber.isEmpty) {
+          final driverUid = sessionDoc.data()?['driver_uid'] as String?;
+          if (driverUid != null) {
+            final driverDoc = await firestore.collection('users').doc(driverUid).get();
+            if (driverDoc.exists) {
+              vehicleNumber = driverDoc.data()?['vehicle_number'] as String?;
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching vehicle number for marker: $e');
+    }
+
+    _vanMarker = await MarkerGenerator.createDriverVanMarker(vehicleNumber: vehicleNumber);
     if (widget.student.homeLocation != null) {
       _homeMarkerCache = await MarkerGenerator.createStudentMarker(widget.student.name, Colors.blue);
     }

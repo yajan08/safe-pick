@@ -100,7 +100,7 @@ class TripService {
 
   /// Creates a new document in the daily_sessions collection, starting a trip.
   /// Returns the generated session_id.
-  Future<String> startDailySession(String tripId) async {
+  Future<String> startDailySession(String tripId, {String? selectedVehicle}) async {
     try {
       final currentUser = _auth.currentUser;
       if (currentUser == null) {
@@ -158,6 +158,7 @@ class TripService {
         'start_time': Timestamp.fromDate(now),
         'initial_statuses': initialStatuses,
         'is_redo': false,
+        if (selectedVehicle != null) 'vehicle_number': selectedVehicle,
       };
 
       final batch = _firestore.batch();
@@ -191,7 +192,7 @@ class TripService {
     }
   }
 
-  Future<String> startRedoDailySession(String tripId, String previousSessionId) async {
+  Future<String> startRedoDailySession(String tripId, String previousSessionId, {String? selectedVehicle}) async {
     try {
       final currentUser = _auth.currentUser;
       if (currentUser == null) {
@@ -242,6 +243,7 @@ class TripService {
         'initial_statuses': initialStatuses,
         'is_redo': true,
         'previous_session_id': previousSessionId,
+        if (selectedVehicle != null) 'vehicle_number': selectedVehicle,
       };
 
       final batch = _firestore.batch();
@@ -352,7 +354,7 @@ class TripService {
     // Fetch driver details
     final driverSnap = await _firestore.collection('users').doc(driverUid).get();
     final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
-    final vehicleNumber = _resolveDriverVehicleNumber(driverSnap.data());
+    final vehicleNumber = sessionSnap.data()?['vehicle_number'] as String? ?? _resolveDriverVehicleNumber(driverSnap.data());
 
     // Fetch current attendance
     final attendanceSnap = await attendanceRef.get();
@@ -446,7 +448,7 @@ class TripService {
 
     final driverSnap = await _firestore.collection('users').doc(driverUid).get();
     final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
-    final vehicleNumber = _resolveDriverVehicleNumber(driverSnap.data());
+    final vehicleNumber = sessionSnap.data()?['vehicle_number'] as String? ?? _resolveDriverVehicleNumber(driverSnap.data());
 
     final batch = _firestore.batch();
     final now = Timestamp.fromDate(DateTime.now());
@@ -512,7 +514,7 @@ class TripService {
 
     final driverSnap = await _firestore.collection('users').doc(driverUid).get();
     final driverName = driverSnap.data()?['name'] as String? ?? 'Unknown Driver';
-    final vehicleNumber = _resolveDriverVehicleNumber(driverSnap.data());
+    final vehicleNumber = sessionSnap.data()?['vehicle_number'] as String? ?? _resolveDriverVehicleNumber(driverSnap.data());
 
     final batch = _firestore.batch();
     final now = Timestamp.fromDate(DateTime.now());

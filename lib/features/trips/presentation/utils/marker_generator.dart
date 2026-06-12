@@ -6,22 +6,74 @@ import '../../../../core/theme/app_theme.dart';
 
 class MarkerGenerator {
   /// Generates a distinct van marker (teardrop) indicating the driver's live position.
-  static Future<BitmapDescriptor> createDriverVanMarker() async {
+  static Future<BitmapDescriptor> createDriverVanMarker({String? vehicleNumber}) async {
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
-    const double size = 56.0; 
+    const double iconSize = 56.0; 
+
+    double canvasWidth = iconSize;
+    double canvasHeight = iconSize;
+    double iconTopY = 0.0;
+
+    TextPainter? pillTextPainter;
+    double pillWidth = 0.0;
+    double pillHeight = 0.0;
+    const double paddingX = 10.0;
+    const double paddingY = 4.0;
+
+    if (vehicleNumber != null && vehicleNumber.trim().isNotEmpty) {
+      pillTextPainter = TextPainter(textDirection: TextDirection.ltr);
+      pillTextPainter.text = TextSpan(
+        text: vehicleNumber.trim(),
+        style: const TextStyle(
+          fontSize: 14.0,
+          fontWeight: FontWeight.bold,
+          color: Colors.white,
+          fontFamily: 'Inter',
+        ),
+      );
+      pillTextPainter.layout();
+      
+      pillWidth = pillTextPainter.width + (paddingX * 2);
+      pillHeight = pillTextPainter.height + (paddingY * 2);
+      
+      canvasWidth = pillWidth > iconSize ? pillWidth : iconSize;
+      canvasHeight = iconSize + pillHeight + 6.0;
+      iconTopY = pillHeight + 6.0;
+    }
+
+    // Draw pill if exists
+    if (pillTextPainter != null) {
+      final Paint pillPaint = Paint()..color = const Color(0xFF1E293B);
+      final RRect pillRect = RRect.fromLTRBR(
+        (canvasWidth - pillWidth) / 2,
+        0,
+        ((canvasWidth - pillWidth) / 2) + pillWidth,
+        pillHeight,
+        Radius.circular(pillHeight / 2),
+      );
+      canvas.drawShadow(Path()..addRRect(pillRect), Colors.black, 3.0, true);
+      canvas.drawRRect(pillRect, pillPaint);
+      pillTextPainter.paint(
+        canvas,
+        Offset(
+          ((canvasWidth - pillWidth) / 2) + paddingX,
+          paddingY,
+        ),
+      );
+    }
 
     final Paint paint = Paint()..color = AppTheme.primaryGold;
     final Path teardropPath = Path();
     
-    final double radius = size / 2.8;
-    final Offset center = Offset(size / 2, radius + 2);
+    final double radius = iconSize / 2.8;
+    final Offset center = Offset(canvasWidth / 2, iconTopY + radius + 2);
     
     // Draw top arc
     teardropPath.addArc(Rect.fromCircle(center: center, radius: radius), 3.14159, 3.14159);
     // Draw bezier curves to bottom point
     teardropPath.moveTo(center.dx - radius, center.dy);
-    teardropPath.quadraticBezierTo(center.dx - radius, center.dy + radius * 1.2, center.dx, size - 2);
+    teardropPath.quadraticBezierTo(center.dx - radius, center.dy + radius * 1.2, center.dx, iconTopY + iconSize - 2);
     teardropPath.quadraticBezierTo(center.dx + radius, center.dy + radius * 1.2, center.dx + radius, center.dy);
     teardropPath.close();
 
@@ -53,7 +105,7 @@ class MarkerGenerator {
       ),
     );
 
-    final ui.Image image = await pictureRecorder.endRecording().toImage(size.toInt(), size.toInt());
+    final ui.Image image = await pictureRecorder.endRecording().toImage(canvasWidth.toInt(), canvasHeight.toInt());
     final ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
     return BitmapDescriptor.bytes(byteData!.buffer.asUint8List());
   }

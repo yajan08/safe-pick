@@ -316,10 +316,13 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   Future<void> _handleStartTrip() async {
+    final selectedVehicle = await _selectVehicle();
+    if (selectedVehicle == null) return; // User cancelled
+
     setState(() => _isLoading = true);
     try {
       final tripService = ref.read(tripServiceProvider);
-      await tripService.startDailySession(widget.tripId);
+      await tripService.startDailySession(widget.tripId, selectedVehicle: selectedVehicle);
       ref.invalidate(tripDetailsProvider(widget.tripId));
       
       try {
@@ -335,6 +338,77 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  Future<String?> _selectVehicle() async {
+    final firestore = ref.read(firestoreProvider);
+    final auth = ref.read(firebaseAuthProvider);
+    final uid = auth.currentUser?.uid;
+    if (uid == null) return ''; // fallback
+
+    final doc = await firestore.collection('users').doc(uid).get();
+    if (!doc.exists) return '';
+
+    final data = doc.data()!;
+    final primaryVehicle = data['vehicle_number'] as String?;
+    final rawVehicles = data['vehicle_numbers'];
+    
+    List<String> vehicles = [];
+    if (primaryVehicle != null && primaryVehicle.trim().isNotEmpty) {
+      vehicles.add(primaryVehicle.trim());
+    }
+    if (rawVehicles is List) {
+      for (var v in rawVehicles) {
+        final str = v.toString().trim();
+        if (str.isNotEmpty && !vehicles.contains(str)) {
+          vehicles.add(str);
+        }
+      }
+    }
+
+    if (vehicles.isEmpty) return '';
+    if (vehicles.length == 1) return vehicles.first;
+
+    // Show dialog
+    return await showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppTheme.surfaceCard,
+          title: const Text('Select Vehicle', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textPrimary, fontSize: 22)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: vehicles.length,
+              separatorBuilder: (_,__) => Divider(color: AppTheme.border.withValues(alpha: 0.5)),
+              itemBuilder: (context, index) {
+                final v = vehicles[index];
+                final isPrimary = v == primaryVehicle;
+                return ListTile(
+                  onTap: () => Navigator.of(context).pop(v),
+                  contentPadding: EdgeInsets.zero,
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: AppTheme.primaryGold.withValues(alpha: 0.1), shape: BoxShape.circle),
+                    child: const Icon(Icons.directions_car_rounded, color: AppTheme.primaryGold),
+                  ),
+                  title: Text(v, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: AppTheme.textPrimary)),
+                  subtitle: isPrimary ? const Text('Primary Vehicle', style: TextStyle(color: AppTheme.primaryGold, fontWeight: FontWeight.w700, fontSize: 13)) : null,
+                );
+              },
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('CANCEL', style: TextStyle(color: AppTheme.textMuted, fontWeight: FontWeight.bold)),
+            )
+          ],
+        );
+      }
+    );
   }
 
   Future<void> _handleEndTrip(String sessionId) async {
