@@ -248,8 +248,7 @@ class _StudentHistoryScreenState extends ConsumerState<StudentHistoryScreen> {
             colorScheme: theme.colorScheme.copyWith(
               primary: AppTheme.primaryGold,
               onPrimary: Colors.white,
-            ),
-            dialogBackgroundColor: AppTheme.surface,
+            ), dialogTheme: DialogThemeData(backgroundColor: AppTheme.surface),
           ),
           child: child!,
         );

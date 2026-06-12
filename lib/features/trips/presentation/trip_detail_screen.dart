@@ -371,6 +371,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
     // Show dialog
     return await showDialog<String>(
+      // ignore: use_build_context_synchronously
       context: context,
       barrierDismissible: false,
       builder: (context) {
@@ -382,7 +383,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
             child: ListView.separated(
               shrinkWrap: true,
               itemCount: vehicles.length,
-              separatorBuilder: (_,__) => Divider(color: AppTheme.border.withValues(alpha: 0.5)),
+              separatorBuilder: (_,_) => Divider(color: AppTheme.border.withValues(alpha: 0.5)),
               itemBuilder: (context, index) {
                 final v = vehicles[index];
                 final isPrimary = v == primaryVehicle;

@@ -369,7 +369,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedRole,
+                      initialValue: _selectedRole,
                       decoration: const InputDecoration(labelText: 'Role', prefixIcon: Icon(Icons.badge_outlined, size: 20)),
                       items: const [DropdownMenuItem(value: 'Parent', child: Text('Parent')), DropdownMenuItem(value: 'Driver', child: Text('Driver'))],
                       onChanged: (v) => setState(() => _selectedRole = v!),
@@ -378,7 +378,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
                   const SizedBox(width: 12),
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      value: _selectedGender,
+                      initialValue: _selectedGender,
                       decoration: const InputDecoration(labelText: 'Gender', prefixIcon: Icon(Icons.wc_rounded, size: 20)),
                       items: const [DropdownMenuItem(value: 'Male', child: Text('Male')), DropdownMenuItem(value: 'Female', child: Text('Female'))],
                       onChanged: (v) => setState(() => _selectedGender = v!),
@@ -562,7 +562,7 @@ class _TransportScenePainter extends CustomPainter {
         colors: [Color(0xFF475569), Color(0xFF334155)],
       ).createShader(Rect.fromLTWH(0, groundY, w * 2, h - groundY));
     canvas.drawRect(Rect.fromLTWH(0, groundY, w * 2, h - groundY), roadPaint);
-    canvas.drawRect(Rect.fromLTWH(0, groundY - 2, w * 2, 3), Paint()..color = const Color(0xFF1E293B).withOpacity(0.4));
+    canvas.drawRect(Rect.fromLTWH(0, groundY - 2, w * 2, 3), Paint()..color = const Color(0xFF1E293B).withValues(alpha: 0.4));
     
     final Paint dashPaint = Paint()..color = const Color(0xCCFACC15)..strokeWidth = 2 * scale..strokeCap = StrokeCap.round;
     double dashOffset = (progress * w * 3) % (45 * scale);
