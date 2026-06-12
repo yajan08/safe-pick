@@ -1,11 +1,12 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+
 import '../../../core/theme/app_theme.dart';
-import '../../trips/data/trip_model.dart';
 import '../../trips/data/daily_session_model.dart';
-import 'admin_dashboard_screen.dart' show kAdminNavy, kAdminNavyLight;
+import '../../trips/data/trip_model.dart';
+import 'admin_dashboard_screen.dart' show kAdminNavy;
 
 final tripHistoryProvider = FutureProvider.family<List<DailySessionModel>, String>((ref, tripId) async {
   final firestore = FirebaseFirestore.instance;

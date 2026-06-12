@@ -584,7 +584,7 @@ class _SchoolPickerSheetState extends ConsumerState<_SchoolPickerSheet> {
                 return ListView.separated(
                   padding: const EdgeInsets.fromLTRB(24, 8, 24, 32),
                   itemCount: schools.length,
-                  separatorBuilder: (_, __) => Divider(color: AppTheme.border.withValues(alpha: 0.3), height: 1),
+                  separatorBuilder: (_, _) => Divider(color: AppTheme.border.withValues(alpha: 0.3), height: 1),
                   itemBuilder: (context, index) {
                     final school = schools[index];
                     return ListTile(
@@ -610,4 +610,4 @@ class _SchoolPickerSheetState extends ConsumerState<_SchoolPickerSheet> {
       ),
     );
   }
-}
+}

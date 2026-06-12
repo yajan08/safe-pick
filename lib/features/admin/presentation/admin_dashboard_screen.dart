@@ -120,6 +120,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
               );
 
               if (confirm == true) {
+                // ignore: use_build_context_synchronously
                 final messenger = ScaffoldMessenger.of(context);
                 try {
                   await ref.read(authServiceProvider).signOut();

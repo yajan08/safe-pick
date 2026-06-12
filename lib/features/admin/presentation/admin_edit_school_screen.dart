@@ -97,7 +97,7 @@ class _AdminEditSchoolScreenState extends ConsumerState<AdminEditSchoolScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    Theme.of(context);
     final isEditing = widget.school != null;
 
     final initialCameraPosition = CameraPosition(
@@ -222,7 +222,7 @@ class _AdminEditSchoolScreenState extends ConsumerState<AdminEditSchoolScreen> {
                               onChanged: (val) => setState(() => _isActive = val),
                               title: const Text('Active School', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                               subtitle: const Text('Allow parents to select this school.', style: TextStyle(fontSize: 12)),
-                              activeColor: kAdminNavy,
+                              activeThumbColor: kAdminNavy,
                               contentPadding: EdgeInsets.zero,
                             ),
                             

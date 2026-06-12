@@ -238,7 +238,7 @@ class _AdminDriverDetailScreenState extends ConsumerState<AdminDriverDetailScree
                     theme, 
                     Icons.calendar_today_rounded, 
                     'Joined', 
-                    formatter.format(widget.driver.createdAt!)
+                    formatter.format(widget.driver.createdAt)
                   ),
                   Divider(color: AppTheme.border.withValues(alpha: 0.3), height: 24),
                   _buildDetailRow(theme, Icons.badge_rounded, 'UID', widget.driver.uid),

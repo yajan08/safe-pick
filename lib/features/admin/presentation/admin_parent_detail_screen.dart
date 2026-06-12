@@ -1,12 +1,13 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/user_model.dart';
-import '../../students/data/student_model.dart';
 import '../../profile/presentation/student_detail_screen.dart';
-import 'admin_dashboard_screen.dart' show kAdminNavy, kAdminNavyLight;
+import '../../students/data/student_model.dart';
+import 'admin_dashboard_screen.dart' show kAdminNavy;
 
 final parentChildrenProvider =
     FutureProvider.family<List<StudentModel>, String>((ref, parentId) async {
@@ -266,7 +267,7 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
                     theme,
                     Icons.calendar_today_rounded,
                     'Joined',
-                    formatter.format(widget.parent.createdAt!),
+                    formatter.format(widget.parent.createdAt),
                   ),
                   Divider(
                     color: AppTheme.border.withValues(alpha: 0.3),

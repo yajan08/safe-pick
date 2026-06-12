@@ -19,7 +19,7 @@ class _AdminSchoolsScreenState extends ConsumerState<AdminSchoolsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    Theme.of(context);
     final schoolsAsync = ref.watch(allSchoolsStreamProvider);
 
     return Scaffold(
