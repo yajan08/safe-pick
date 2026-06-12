@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:safe_pick/features/auth/presentation/auth_screen.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../students/presentation/parent_dashboard.dart';
 import '../../trips/presentation/driver_dashboard.dart';
-import 'login_screen.dart';
 import '../../admin/presentation/admin_dashboard_screen.dart';
 
 /// Future provider that fetches the user's profile data from Firestore using their UID.
@@ -29,7 +29,7 @@ class AuthGate extends ConsumerWidget {
     return authState.when(
       data: (user) {
         if (user == null) {
-          return const LoginScreen();
+          return const AuthScreen();
         }
         
         // User is logged in, now fetch their role from Firestore

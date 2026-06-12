@@ -50,7 +50,6 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
     _nameController.dispose();
     _gradeController.dispose();
     _noteController.dispose();
-    _noteController.dispose();
     super.dispose();
   }
 

@@ -21,7 +21,8 @@ class StudentHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _StudentHistoryScreenState extends ConsumerState<StudentHistoryScreen> {
-  DateTimeRange? _selectedDateRange;
+  DateTime? _startDate;
+  DateTime? _endDate;
 
   @override
   Widget build(BuildContext context) {
@@ -58,54 +59,58 @@ class _StudentHistoryScreenState extends ConsumerState<StudentHistoryScreen> {
           color: AppTheme.textPrimary,
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.date_range_rounded, size: 22, color: AppTheme.primaryGold),
-            tooltip: 'Filter by Date',
-            onPressed: () async {
-              final range = await showDateRangePicker(
-                context: context,
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now().add(const Duration(days: 1)),
-                initialDateRange: _selectedDateRange,
-                builder: (context, child) {
-                  return Theme(
-                    data: theme.copyWith(
-                      colorScheme: theme.colorScheme.copyWith(
-                        primary: AppTheme.primaryGold,
-                        onPrimary: Colors.white,
-                      ),
-                    ),
-                    child: child!,
-                  );
-                },
-              );
-              if (range != null) {
-                setState(() => _selectedDateRange = range);
-              }
-            },
-          ),
-          if (_selectedDateRange != null)
-            IconButton(
-              icon: const Icon(Icons.clear_rounded, size: 22, color: AppTheme.errorRed),
-              tooltip: 'Clear Filter',
-              onPressed: () => setState(() => _selectedDateRange = null),
-            ),
-          const SizedBox(width: 8),
-        ],
       ),
-      body: historyAsyncValue.when(
+      body: Column(
+        children: [
+          // Clear 2-part Date Selector
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.background,
+              border: Border(bottom: BorderSide(color: AppTheme.border.withValues(alpha: 0.3))),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildDateSelector(
+                    label: 'Start Date',
+                    selectedDate: _startDate,
+                    onTap: () => _pickDate(isStart: true),
+                    onClear: () => setState(() => _startDate = null),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _buildDateSelector(
+                    label: 'End Date',
+                    selectedDate: _endDate,
+                    onTap: () => _pickDate(isStart: false),
+                    onClear: () => setState(() => _endDate = null),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          Expanded(
+            child: historyAsyncValue.when(
         data: (logs) {
           // Local Filtering
           final filteredLogs = logs.where((log) {
-            if (_selectedDateRange == null) return true;
-            // Parse log date for comparison if boardedAt is not available
+            if (_startDate == null && _endDate == null) return true;
+            
             final logDate = log.boardedAt ?? log.alightedAt ?? DateTime.tryParse(log.date);
             if (logDate == null) return false;
 
-            final start = _selectedDateRange!.start;
-            final end = _selectedDateRange!.end.add(const Duration(days: 1)); // inclusive end day
-            return logDate.isAfter(start.subtract(const Duration(seconds: 1))) && logDate.isBefore(end);
+            if (_startDate != null) {
+              final start = DateTime(_startDate!.year, _startDate!.month, _startDate!.day);
+              if (logDate.isBefore(start)) return false;
+            }
+            if (_endDate != null) {
+              final end = DateTime(_endDate!.year, _endDate!.month, _endDate!.day, 23, 59, 59);
+              if (logDate.isAfter(end)) return false;
+            }
+            return true;
           }).toList();
 
           if (filteredLogs.isEmpty) {
@@ -116,7 +121,7 @@ class _StudentHistoryScreenState extends ConsumerState<StudentHistoryScreen> {
                   Icon(Icons.history_rounded, size: 64, color: AppTheme.textMuted.withValues(alpha: 0.3)),
                   const SizedBox(height: 16),
                   Text(
-                    _selectedDateRange == null ? 'No trip history available.' : 'No trips found in this date range.',
+                    (_startDate == null && _endDate == null) ? 'No trip history available.' : 'No trips found in this date range.',
                     style: theme.textTheme.bodyMedium?.copyWith(color: AppTheme.textMuted),
                   ),
                 ],
@@ -138,7 +143,128 @@ class _StudentHistoryScreenState extends ConsumerState<StudentHistoryScreen> {
         loading: () => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGold)),
         error: (e, st) => Center(child: Text('Failed to load history: $e')),
       ),
+          ),
+        ],
+      ),
     );
+  }
+
+  Widget _buildDateSelector({
+    required String label, 
+    required DateTime? selectedDate, 
+    required VoidCallback onTap,
+    required VoidCallback onClear,
+  }) {
+    final theme = Theme.of(context);
+    final hasDate = selectedDate != null;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.surfaceCard,
+          border: Border.all(
+            color: hasDate ? AppTheme.primaryGold.withValues(alpha: 0.5) : AppTheme.border.withValues(alpha: 0.5),
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryGold.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: const Icon(Icons.calendar_month_rounded, size: 16, color: AppTheme.primaryGold),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: AppTheme.textMuted,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    hasDate ? DateFormat('MMM d, yyyy').format(selectedDate) : 'Select',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: hasDate ? AppTheme.textPrimary : AppTheme.textSecondary,
+                      fontWeight: hasDate ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (hasDate)
+              GestureDetector(
+                onTap: onClear,
+                child: const Icon(Icons.close_rounded, size: 16, color: AppTheme.textMuted),
+              )
+            else
+              const Icon(Icons.arrow_drop_down_rounded, size: 18, color: AppTheme.textMuted),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickDate({required bool isStart}) async {
+    final theme = Theme.of(context);
+    
+    // Determine reasonable constraints
+    final initialDate = isStart 
+        ? (_startDate ?? DateTime.now()) 
+        : (_endDate ?? DateTime.now());
+        
+    final firstDate = isStart ? DateTime(2020) : (_startDate ?? DateTime(2020));
+    final lastDate = isStart ? (_endDate ?? DateTime.now().add(const Duration(days: 1))) : DateTime.now().add(const Duration(days: 1));
+
+    final date = await showDatePicker(
+      context: context,
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      initialDatePickerMode: DatePickerMode.day,
+      builder: (context, child) {
+        return Theme(
+          data: theme.copyWith(
+            colorScheme: theme.colorScheme.copyWith(
+              primary: AppTheme.primaryGold,
+              onPrimary: Colors.white,
+            ),
+            dialogBackgroundColor: AppTheme.surface,
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (date != null) {
+      setState(() {
+        if (isStart) {
+          _startDate = date;
+        } else {
+          _endDate = date;
+        }
+      });
+    }
   }
 
   Widget _buildHistoryCard(ThemeData theme, StudentRideLogModel log) {

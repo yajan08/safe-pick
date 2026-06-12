@@ -41,7 +41,6 @@ class ShimmerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: height,
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -62,9 +61,10 @@ class ShimmerCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           const ShimmerLoading(width: 140, height: 20, borderRadius: 10),
-          const Spacer(),
+          const SizedBox(height: 24),
           const ShimmerLoading(width: double.infinity, height: 14, borderRadius: 6),
           const SizedBox(height: 10),
           const ShimmerLoading(width: 180, height: 14, borderRadius: 6),

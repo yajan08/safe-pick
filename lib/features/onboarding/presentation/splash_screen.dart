@@ -1,8 +1,8 @@
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:safe_pick/features/auth/presentation/auth_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../auth/presentation/auth_gate.dart';
 import 'onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -32,7 +32,7 @@ class _SplashScreenState extends State<SplashScreen> {
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (context, animation, secondaryAnimation) =>
-            showOnboarding ? const OnboardingScreen() : const AuthGate(),
+            showOnboarding ? const OnboardingScreen() : const AuthScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           // Slowed down the route transition slightly for a calmer feel
           return FadeTransition(opacity: animation, child: child);
@@ -45,7 +45,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Colors.white,
       body: Center(
         child: Stack(
           alignment: Alignment.center,
