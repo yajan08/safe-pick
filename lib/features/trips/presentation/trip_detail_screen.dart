@@ -540,7 +540,52 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     }
   }
 
+  Future<bool> _isStudentParentSuspended(String studentId) async {
+    try {
+      final firestore = ref.read(firestoreProvider);
+      final studentDoc = await firestore.collection('students').doc(studentId).get();
+      if (!studentDoc.exists) return false;
+      
+      final parentUid = studentDoc.data()?['parent_uid'] as String?;
+      if (parentUid == null) return false;
+      
+      final parentDoc = await firestore.collection('users').doc(parentUid).get();
+      if (!parentDoc.exists) return false;
+      
+      final parentStatus = parentDoc.data()?['status'] as String?;
+      if (parentStatus == 'suspended' || parentStatus == 'inactive') {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint("Error checking parent status: $e");
+      return false;
+    }
+  }
+
   Future<void> _handleScannedStudent(String studentId, String sessionId) async {
+    final isSuspended = await _isStudentParentSuspended(studentId);
+    if (isSuspended) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.surfaceCard,
+            title: const Text('Access Revoked', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 24)),
+            content: const Text('Payment not done. Student access is revoked.', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed, foregroundColor: Colors.white),
+                child: const Text('DISMISS', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
     final manifestAsync = ref.read(tripManifestProvider(widget.tripId));
     if (!manifestAsync.hasValue) return;
 
@@ -1189,6 +1234,28 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   Future<void> _handleManualOverride(String sessionId, String studentId, String status) async {
+    final isSuspended = await _isStudentParentSuspended(studentId);
+    if (isSuspended) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppTheme.surfaceCard,
+            title: const Text('Access Revoked', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 24)),
+            content: const Text('Payment not done. Student cannot be managed.', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed, foregroundColor: Colors.white),
+                child: const Text('DISMISS', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
