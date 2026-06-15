@@ -240,46 +240,48 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                 'Delete Account',
                 style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w900, fontSize: 24),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Are you absolutely sure you want to permanently delete your account and all associated active vehicle profiles? This action cannot be undone.',
-                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: passwordController,
-                    obscureText: true,
-                    style: const TextStyle(color: AppTheme.textPrimary),
-                    decoration: const InputDecoration(
-                      labelText: 'Current Password',
-                      border: OutlineInputBorder(),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Are you absolutely sure you want to permanently delete your account and all associated active vehicle profiles? This action cannot be undone.',
+                      style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
                     ),
-                    onChanged: (_) {
-                      setState(() {
-                        canDelete = confirmController.text == 'Delete' && passwordController.text.isNotEmpty;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Type "Delete" to confirm:', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: confirmController,
-                    style: const TextStyle(color: AppTheme.textPrimary),
-                    decoration: const InputDecoration(
-                      hintText: 'Delete',
-                      border: OutlineInputBorder(),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: const InputDecoration(
+                        labelText: 'Current Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (_) {
+                        setState(() {
+                          canDelete = confirmController.text == 'Delete' && passwordController.text.isNotEmpty;
+                        });
+                      },
                     ),
-                    onChanged: (val) {
-                      setState(() {
-                        canDelete = val == 'Delete' && passwordController.text.isNotEmpty;
-                      });
-                    },
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    const Text('Type "Delete" to confirm:', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: confirmController,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: const InputDecoration(
+                        hintText: 'Delete',
+                        border: OutlineInputBorder(),
+                      ),
+                      onChanged: (val) {
+                        setState(() {
+                          canDelete = val == 'Delete' && passwordController.text.isNotEmpty;
+                        });
+                      },
+                    ),
+                  ],
+                ),
               ),
               actions: [
                 TextButton(

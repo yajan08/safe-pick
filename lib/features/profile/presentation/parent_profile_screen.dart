@@ -131,51 +131,53 @@ class ParentProfileScreen extends ConsumerWidget {
                   letterSpacing: -0.5,
                 ),
               ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Are you absolutely sure you want to permanently delete your account and all associated active student profiles? This action cannot be undone.',
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      height: 1.5,
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Are you absolutely sure you want to permanently delete your account and all associated active student profiles? This action cannot be undone.',
+                      style: TextStyle(
+                        color: AppTheme.textSecondary,
+                        height: 1.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: passwordController,
-                    obscureText: true,
-                    style: const TextStyle(color: AppTheme.textPrimary),
-                    decoration: InputDecoration(
-                      labelText: 'Current Password',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: true,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: InputDecoration(
+                        labelText: 'Current Password',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      onChanged: (_) {
+                        setState(() {
+                          canDelete = confirmController.text == 'Delete' && passwordController.text.isNotEmpty;
+                        });
+                      },
                     ),
-                    onChanged: (_) {
-                      setState(() {
-                        canDelete = confirmController.text == 'Delete' && passwordController.text.isNotEmpty;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: confirmController,
-                    style: const TextStyle(color: AppTheme.textPrimary),
-                    decoration: InputDecoration(
-                      hintText: 'Delete',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    const SizedBox(height: 16),
+                    const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: confirmController,
+                      style: const TextStyle(color: AppTheme.textPrimary),
+                      decoration: InputDecoration(
+                        hintText: 'Delete',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                      onChanged: (val) {
+                        setState(() {
+                          canDelete = val == 'Delete' && passwordController.text.isNotEmpty;
+                        });
+                      },
                     ),
-                    onChanged: (val) {
-                      setState(() {
-                        canDelete = val == 'Delete' && passwordController.text.isNotEmpty;
-                      });
-                    },
-                  ),
-                ],
+                  ],
+                ),
               ),
               actionsPadding: const EdgeInsets.only(right: 20, bottom: 20, left: 20),
               actionsAlignment: MainAxisAlignment.end,

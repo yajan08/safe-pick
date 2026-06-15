@@ -9,6 +9,8 @@ import '../data/student_model.dart';
 import '../../admin/data/school_service.dart';
 import '../../admin/data/school_model.dart';
 import '../../../core/utils/toast_utils.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'student_location_picker_screen.dart';
 
 class AddStudentScreen extends ConsumerStatefulWidget {
   final StudentModel? student;
@@ -98,6 +100,27 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
         setState(() {
           _fetchingLocation = false;
         });
+      }
+    }
+  }
+
+  Future<void> _openMapPicker() async {
+    final LatLng? initial = _capturedLocation != null 
+        ? LatLng(_capturedLocation!.latitude, _capturedLocation!.longitude)
+        : null;
+        
+    final result = await Navigator.of(context).push<LatLng>(
+      MaterialPageRoute(
+        builder: (_) => StudentLocationPickerScreen(initialLocation: initial),
+      ),
+    );
+
+    if (result != null) {
+      setState(() {
+        _capturedLocation = GeoPoint(result.latitude, result.longitude);
+      });
+      if (mounted) {
+        ToastUtils.showToast(context, 'Location selected from map!');
       }
     }
   }
@@ -416,35 +439,48 @@ class _AddStudentScreenState extends ConsumerState<AddStudentScreen> {
                             ),
                           ],
                           const SizedBox(height: 16),
-                          SizedBox(
-                            height: 48,
-                            child: OutlinedButton.icon(
-                              onPressed: _fetchingLocation ? null : _captureLocation,
-                              icon: _fetchingLocation
-                                  ? const SizedBox(
-                                      height: 18,
-                                      width: 18,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
-                                    )
-                                  : Icon(
-                                      hasLocation ? Icons.update_rounded : Icons.my_location_rounded, 
-                                      size: 18,
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _fetchingLocation ? null : _captureLocation,
+                                  icon: _fetchingLocation
+                                      ? const SizedBox(
+                                          height: 18,
+                                          width: 18,
+                                          child: CircularProgressIndicator(strokeWidth: 2),
+                                        )
+                                      : const Icon(Icons.my_location_rounded, size: 18),
+                                  label: Text(_fetchingLocation ? 'Fetching...' : 'Use GPS'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: hasLocation ? AppTheme.textPrimary : AppTheme.warningOrange,
+                                    side: BorderSide(
+                                      color: hasLocation 
+                                          ? AppTheme.border 
+                                          : AppTheme.warningOrange.withValues(alpha: 0.5),
                                     ),
-                              label: Text(_fetchingLocation 
-                                  ? 'Fetching Signal...' 
-                                  : hasLocation ? 'Update Coordinates' : 'Capture Current Location'),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: hasLocation ? AppTheme.textPrimary : AppTheme.warningOrange,
-                                side: BorderSide(
-                                  color: hasLocation 
-                                      ? AppTheme.border 
-                                      : AppTheme.warningOrange.withValues(alpha: 0.5),
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _openMapPicker,
+                                  icon: const Icon(Icons.map_rounded, size: 18),
+                                  label: const Text('Open Map'),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppTheme.textPrimary,
+                                    side: const BorderSide(color: AppTheme.border),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
