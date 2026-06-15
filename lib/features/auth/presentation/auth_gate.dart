@@ -76,7 +76,7 @@ class AuthGate extends ConsumerWidget {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                'Your account is deactivated or suspended. Please contact the administration.',
+                                'Your account has been suspended.\n\nPlease contact safepickhq@gmail.com or call on +91 8668959041 for support.',
                                 style: theme.textTheme.bodyMedium,
                                 textAlign: TextAlign.center,
                               ),

@@ -14,7 +14,7 @@ final parentChildrenProvider =
       final firestore = FirebaseFirestore.instance;
       final snap = await firestore
           .collection('students')
-          .where('parent_id', isEqualTo: parentId)
+          .where('parent_uid', isEqualTo: parentId)
           .get();
 
       return snap.docs
@@ -33,6 +33,50 @@ class AdminParentDetailScreen extends ConsumerStatefulWidget {
 
 class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScreen> {
   bool _isLoading = false;
+  late String _currentStatus;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentStatus = widget.parent.status;
+  }
+
+  Future<void> _toggleStatus() async {
+    final newStatus = (_currentStatus == 'suspended' || _currentStatus == 'inactive') 
+        ? 'active' 
+        : 'suspended';
+    
+    setState(() => _isLoading = true);
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(widget.parent.uid).update({
+        'status': newStatus,
+      });
+      if (mounted) {
+        setState(() {
+          _currentStatus = newStatus;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Account ${newStatus == 'active' ? 'activated' : 'suspended'} successfully'),
+            backgroundColor: newStatus == 'active' ? AppTheme.successGreen : AppTheme.warningOrange,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to update status: $e'),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _handleRemove() async {
     final TextEditingController controller = TextEditingController();
@@ -157,8 +201,7 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
     final childrenAsync = ref.watch(parentChildrenProvider(widget.parent.uid));
 
     final formatter = DateFormat('MMM d, yyyy');
-    final isInactive =
-        widget.parent.status == 'suspended' || widget.parent.status == 'inactive';
+    final isInactive = _currentStatus == 'suspended' || _currentStatus == 'inactive';
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -230,25 +273,33 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isInactive
-                          ? AppTheme.errorRed.withValues(alpha: 0.1)
-                          : AppTheme.successGreen.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      isInactive ? 'SUSPENDED' : 'ACTIVE',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: isInactive
-                            ? AppTheme.errorRed
-                            : AppTheme.successGreen,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
+                  InkWell(
+                    onTap: _isLoading ? null : _toggleStatus,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: isInactive ? AppTheme.errorRed.withValues(alpha: 0.1) : AppTheme.successGreen.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isInactive ? AppTheme.errorRed.withValues(alpha: 0.5) : AppTheme.successGreen.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(isInactive ? Icons.block_rounded : Icons.check_circle_outline_rounded, 
+                               size: 16, 
+                               color: isInactive ? AppTheme.errorRed : AppTheme.successGreen),
+                          const SizedBox(width: 8),
+                          Text(
+                            isInactive ? 'SUSPENDED (Tap to Activate)' : 'ACTIVE (Tap to Suspend)',
+                            style: theme.textTheme.labelMedium?.copyWith(
+                              color: isInactive ? AppTheme.errorRed : AppTheme.successGreen,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
