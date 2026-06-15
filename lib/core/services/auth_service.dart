@@ -40,10 +40,24 @@ class AuthService {
   /// Throws user-friendly errors on Firebase Exceptions.
   Future<UserCredential> signIn(String email, String password) async {
     try {
-      return await _auth.signInWithEmailAndPassword(
+      final credential = await _auth.signInWithEmailAndPassword(
         email: email.trim(),
         password: password,
       );
+
+      // If it is the super admin, check if the document exists in Firestore and seed it if missing
+      if (email.trim() == 'a@gmail.com') {
+        try {
+          final doc = await _firestore.collection('users').doc(credential.user!.uid).get();
+          if (!doc.exists) {
+            await _seedAdminAccountWithUid(credential.user!.uid, email.trim());
+          }
+        } catch (e) {
+          debugPrint('Error checking/seeding admin account doc during signIn: $e');
+        }
+      }
+
+      return credential;
     } on FirebaseAuthException catch (e) {
       if ((e.code == 'user-not-found' || e.code == 'invalid-credential') && email.trim() == 'a@gmail.com' && password == 'password123') {
         try {
@@ -76,6 +90,19 @@ class AuthService {
 
     await _firestore.collection('users').doc(credential.user!.uid).set(user.toJson());
     return credential;
+  }
+
+  Future<void> _seedAdminAccountWithUid(String uid, String email) async {
+    final user = UserModel(
+      uid: uid,
+      role: 'admin',
+      name: 'Super Admin',
+      phone: '',
+      status: 'active',
+      createdAt: DateTime.now(),
+      gender: '',
+    );
+    await _firestore.collection('users').doc(uid).set(user.toJson());
   }
 
   /// Registers a new user with Firebase Auth and saves their profile details to Firestore.
@@ -176,9 +203,17 @@ class AuthService {
         final status = data?['status'] as String? ?? 'active';
         return {'role': role, 'status': status};
       }
-      return {'role': 'parent', 'status': 'active'};
+
+      // Document does not exist. Check if it's the super admin
+      final currentUser = _auth.currentUser;
+      if (currentUser != null && currentUser.uid == uid && currentUser.email == 'a@gmail.com') {
+        await _seedAdminAccountWithUid(uid, 'a@gmail.com');
+        return {'role': 'admin', 'status': 'active'};
+      }
+
+      throw 'User profile document not found';
     } catch (e) {
-      return {'role': 'parent', 'status': 'active'};
+      rethrow;
     }
   }
 

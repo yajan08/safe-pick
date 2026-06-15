@@ -454,6 +454,11 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   }
 
   Future<void> _handleReopenTrip(String sessionId) async {
+    final selectedVehicle = await _selectVehicle();
+    if (selectedVehicle == null) return; // User cancelled
+
+    if (!mounted) return;
+
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -483,7 +488,7 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     setState(() => _isLoading = true);
     try {
       final tripService = ref.read(tripServiceProvider);
-      await tripService.reopenDailySession(sessionId, widget.tripId);
+      await tripService.reopenDailySession(sessionId, widget.tripId, selectedVehicle: selectedVehicle);
       ref.invalidate(tripDetailsProvider(widget.tripId));
 
       try {

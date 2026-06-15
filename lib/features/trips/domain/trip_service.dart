@@ -274,12 +274,16 @@ class TripService {
     }
   }
 
-  Future<void> reopenDailySession(String sessionId, String tripId) async {
+  Future<void> reopenDailySession(String sessionId, String tripId, {String? selectedVehicle}) async {
     final batch = _firestore.batch();
-    batch.update(_firestore.collection('daily_sessions').doc(sessionId), {
+    final Map<String, dynamic> updates = {
       'status': 'in_progress',
       'end_time': FieldValue.delete(),
-    });
+    };
+    if (selectedVehicle != null) {
+      updates['vehicle_number'] = selectedVehicle;
+    }
+    batch.update(_firestore.collection('daily_sessions').doc(sessionId), updates);
     batch.update(_firestore.collection('trips').doc(tripId), {
       'status': 'active',
       'last_completed_date': FieldValue.delete(),

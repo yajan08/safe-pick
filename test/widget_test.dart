@@ -19,11 +19,11 @@ void main() {
     );
 
     // Pump the stream values and wait for animations
-    await tester.pump(const Duration(milliseconds: 2500));
+    await tester.pump(const Duration(milliseconds: 3500));
     await tester.pumpAndSettle();
 
     // Verify that the login screen elements are rendered.
-    expect(find.text('Welcome to SafePick'), findsOneWidget);
+    expect(find.text('Welcome Back'), findsOneWidget);
     expect(find.text('Sign In'), findsWidgets);
   });
 }

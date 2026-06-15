@@ -8,6 +8,9 @@ import '../../students/data/student_model.dart';
 import '../../students/presentation/add_student_screen.dart';
 import '../../trips/domain/trip_service.dart';
 import '../../students/presentation/student_history_screen.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
 
 /// Screen showing full student details with QR code for the parent.
 class StudentDetailScreen extends ConsumerStatefulWidget {
@@ -151,6 +154,146 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
         if (mounted) setState(() => _isLoading = false);
       }
     }
+  }
+
+  Future<void> _printQrCode() async {
+    final pdf = pw.Document(
+      title: 'SafePick – ${widget.student.name} QR Badge',
+      author: 'SafePick',
+    );
+
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Center(
+            child: pw.Container(
+              width: 300,
+              height: 400,
+              padding: const pw.EdgeInsets.all(24),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: PdfColor.fromHex('#C1942B'), width: 2),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(16)),
+              ),
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  // Header / Brand
+                  pw.Column(
+                    children: [
+                      pw.Text(
+                        'SAFEPICK',
+                        style: pw.TextStyle(
+                          fontSize: 20,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('#C1942B'),
+                          letterSpacing: 2,
+                        ),
+                      ),
+                      pw.SizedBox(height: 4),
+                      pw.Text(
+                        'Student Transport Badge',
+                        style: const pw.TextStyle(
+                          fontSize: 10,
+                          color: PdfColors.grey700,
+                        ),
+                      ),
+                    ],
+                  ),
+                  
+                  // QR Code
+                  pw.Container(
+                    padding: const pw.EdgeInsets.all(12),
+                    decoration: pw.BoxDecoration(
+                      border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                      borderRadius: const pw.BorderRadius.all(pw.Radius.circular(12)),
+                    ),
+                    child: pw.BarcodeWidget(
+                      data: widget.student.studentId,
+                      barcode: pw.Barcode.qrCode(),
+                      color: PdfColor.fromHex('#111111'),
+                      width: 150,
+                      height: 150,
+                    ),
+                  ),
+
+                  // Student Details
+                  pw.Column(
+                    children: [
+                      pw.Text(
+                        widget.student.name.toUpperCase(),
+                        style: pw.TextStyle(
+                          fontSize: 18,
+                          fontWeight: pw.FontWeight.bold,
+                          color: PdfColor.fromHex('#111827'),
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                      pw.SizedBox(height: 6),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: pw.BoxDecoration(
+                          color: PdfColor.fromHex('#F3F4F6'),
+                          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
+                        ),
+                        child: pw.Text(
+                          widget.student.studentId,
+                          style: pw.TextStyle(
+                            fontSize: 12,
+                            fontWeight: pw.FontWeight.bold,
+                            color: PdfColor.fromHex('#C1942B'),
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ),
+                      pw.SizedBox(height: 12),
+                      pw.Row(
+                        mainAxisAlignment: pw.MainAxisAlignment.spaceEvenly,
+                        children: [
+                          pw.Column(
+                            children: [
+                              pw.Text(
+                                'GRADE',
+                                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+                              ),
+                              pw.SizedBox(height: 2),
+                              pw.Text(
+                                widget.student.grade,
+                                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          pw.Container(width: 1, height: 15, color: PdfColors.grey300),
+                          pw.Column(
+                            children: [
+                              pw.Text(
+                                'SCHOOL',
+                                style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey500),
+                              ),
+                              pw.SizedBox(height: 2),
+                              pw.Text(
+                                widget.student.schoolName.isNotEmpty ? widget.student.schoolName : 'N/A',
+                                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+
+    await Printing.layoutPdf(
+      onLayout: (PdfPageFormat format) => pdf.save(),
+      name: 'SafePick_QR_${widget.student.name.replaceAll(' ', '_')}',
+    );
   }
 
   @override
@@ -332,6 +475,28 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
               height: 1.4,
             ),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          Divider(color: AppTheme.border.withValues(alpha: 0.5), height: 1),
+          const SizedBox(height: 16),
+          TextButton.icon(
+            onPressed: _printQrCode,
+            icon: const Icon(Icons.print_rounded, color: AppTheme.primaryGold),
+            label: const Text(
+              'Print QR Code',
+              style: TextStyle(
+                color: AppTheme.primaryGold,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: AppTheme.primaryGold.withValues(alpha: 0.3)),
+              ),
+            ),
           ),
         ],
       ),
