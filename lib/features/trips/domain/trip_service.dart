@@ -5,6 +5,7 @@ import '../../../core/services/auth_service.dart';
 import '../data/trip_manifest_model.dart';
 import '../../students/data/student_ride_log_model.dart';
 import '../data/daily_session_model.dart';
+import '../data/trip_model.dart';
 
 /// Riverpod provider for the [TripService] instance.
 final tripServiceProvider = Provider<TripService>((ref) {
@@ -17,6 +18,18 @@ final tripServiceProvider = Provider<TripService>((ref) {
 final tripManifestProvider = StreamProvider.family<List<TripManifestModel>, String>((ref, tripId) {
   final tripService = ref.watch(tripServiceProvider);
   return tripService.streamTripManifest(tripId);
+});
+
+/// Riverpod StreamProvider family that streams all trips a student is assigned to.
+final studentTripsProvider = StreamProvider.family<List<TripModel>, String>((ref, studentId) {
+  final firestore = ref.watch(firestoreProvider);
+  return firestore
+      .collection('trips')
+      .where('student_ids', arrayContains: studentId)
+      .snapshots()
+      .map((snapshot) => snapshot.docs
+          .map((doc) => TripModel.fromJson(doc.data(), doc.id))
+          .toList());
 });
 
 /// Riverpod StreamProvider family that streams a daily session by trip ID.
@@ -684,6 +697,35 @@ class TripService {
         'student_ids': FieldValue.arrayRemove([studentId])
       });
     }
+
+    await batch.commit();
+  }
+
+  /// Removes a single student from a specific trip, ensuring the trip is not currently active.
+  Future<void> removeStudentFromTrip(String tripId, String studentId) async {
+    // 1. Check if there's any active session for this trip
+    final activeSessionsSnap = await _firestore
+        .collection('daily_sessions')
+        .where('trip_id', isEqualTo: tripId)
+        .where('status', isEqualTo: 'in_progress')
+        .limit(1)
+        .get();
+
+    if (activeSessionsSnap.docs.isNotEmpty) {
+      throw 'Cannot remove student because the trip is currently in progress.';
+    }
+
+    final batch = _firestore.batch();
+
+    // 2. Remove from trip manifest subcollection
+    final manifestRef = _firestore.collection('trips').doc(tripId).collection('trip_manifest').doc(studentId);
+    batch.delete(manifestRef);
+
+    // 3. Remove from trip's student_ids array
+    final tripRef = _firestore.collection('trips').doc(tripId);
+    batch.update(tripRef, {
+      'student_ids': FieldValue.arrayRemove([studentId])
+    });
 
     await batch.commit();
   }

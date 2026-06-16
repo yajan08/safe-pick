@@ -8,6 +8,7 @@ import '../../students/data/student_model.dart';
 import '../../students/presentation/add_student_screen.dart';
 import '../../trips/domain/trip_service.dart';
 import '../../students/presentation/student_history_screen.dart';
+import 'student_assigned_trips_screen.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -359,25 +360,49 @@ class _StudentDetailScreenState extends ConsumerState<StudentDetailScreen> {
                         _buildDetailsCard(theme),
                         const SizedBox(height: 20),
                         
-                        OutlinedButton.icon(
-                          onPressed: _isLoading ? null : () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => StudentHistoryScreen(student: widget.student),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: _isLoading ? null : () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => StudentHistoryScreen(student: widget.student),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.history_rounded, size: 18),
+                                label: const FittedBox(child: Text('Trip History', style: TextStyle(fontWeight: FontWeight.w600))),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppTheme.primaryGold,
+                                  side: const BorderSide(color: AppTheme.primaryGold),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
                               ),
-                            );
-                          },
-                          icon: const Icon(Icons.history_rounded),
-                          label: const Text(
-                            'View Trip History',
-                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.primaryGold,
-                            side: const BorderSide(color: AppTheme.primaryGold),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _isLoading ? null : () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => StudentAssignedTripsScreen(student: widget.student),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.route_rounded, size: 18),
+                                label: const FittedBox(child: Text('Assigned Trips', style: TextStyle(fontWeight: FontWeight.w600))),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryGold,
+                                  foregroundColor: AppTheme.background,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
 

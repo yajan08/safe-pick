@@ -105,6 +105,7 @@ class ParentDashboard extends ConsumerWidget {
                               _buildSquareStatusAndEtaCards(theme, selectedStudent),
                               const SizedBox(height: 16),
                               _buildMapCard(context, theme, selectedStudent),
+                              const SizedBox(height: 16),
                             ],
                           ),
                         ),
@@ -753,6 +754,7 @@ class ParentDashboard extends ConsumerWidget {
       ),
     );
   }
+
 
   BoxDecoration _cardDecoration() {
     return BoxDecoration(
