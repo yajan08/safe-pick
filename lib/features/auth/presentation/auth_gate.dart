@@ -7,6 +7,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../students/presentation/parent_dashboard.dart';
 import '../../trips/presentation/driver_dashboard.dart';
 import '../../admin/presentation/admin_dashboard_screen.dart';
+import '../../../core/services/push_notification_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Future provider that fetches the user's profile data from Firestore using their UID.
 /// Caches the profile data for the user session.
@@ -23,6 +25,12 @@ class AuthGate extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<AsyncValue<User?>>(authStateChangesProvider, (previous, next) {
+      if (next.value != null) {
+        ref.read(pushNotificationServiceProvider).initialize();
+      }
+    });
+
     final authState = ref.watch(authStateChangesProvider);
     final theme = Theme.of(context);
 

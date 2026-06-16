@@ -72,3 +72,6 @@
 
 # Build artifacts
 **/build/
+
+# Firebase Functions dependencies
+functions/node_modules/
