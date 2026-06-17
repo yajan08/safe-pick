@@ -59,6 +59,7 @@ dependencies:
   pdf: ^3.12.0
   printing: ^5.14.3
   firebase_messaging: ^16.3.0
+  flutter_dotenv: ^6.0.1
 
 dev_dependencies:
   flutter_test:
@@ -84,6 +85,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - .env
     - assets/images/
     - assets/certs/
     - assets/certs/emqxsl-ca.crt

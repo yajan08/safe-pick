@@ -5,6 +5,7 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:mqtt_client/mqtt_client.dart';
 import 'package:mqtt_client/mqtt_server_client.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class MqttService {
   MqttServerClient? client;
@@ -41,7 +42,10 @@ class MqttService {
 
     final connMessage = MqttConnectMessage()
         .withClientIdentifier(clientId)
-        .authenticateAs('safepick_app_client', 'Emqxpassword@1')
+        .authenticateAs(
+          dotenv.env['MQTT_USERNAME'] ?? 'safepick_app_client', 
+          dotenv.env['MQTT_PASSWORD'] ?? 'Emqxpassword@1'
+        )
         .startClean();
 
     client!.connectionMessage = connMessage;

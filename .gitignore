@@ -75,3 +75,6 @@
 
 # Firebase Functions dependencies
 functions/node_modules/
+
+# Env
+.env
