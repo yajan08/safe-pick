@@ -1,48 +1,115 @@
-# Developer Onboarding Guide
+# SafePick Developer Onboarding & Workflow Guide
 
-Welcome to the SafePick project! This guide covers everything you need to set up the app on a fresh computer and start contributing securely.
+Welcome to the SafePick project! This document is the ultimate source of truth for any new developer joining the team. It covers setting up your local environment from scratch, configuring the backend, running the app, and safely interacting with GitHub.
 
-## 1. Prerequisites
-Ensure you have the following installed on your new machine:
-- [Flutter SDK](https://docs.flutter.dev/get-started/install)
-- [Git](https://git-scm.com/)
-- Android Studio / VS Code (with Flutter extensions)
+---
 
-## 2. Cloning the Repository
-Clone the project to your local machine:
+## 1. Prerequisites (What you need installed)
+Before touching the code, ensure your new laptop has the following installed:
+- **Flutter SDK**: [Install Flutter](https://docs.flutter.dev/get-started/install) (Ensure `flutter doctor` passes).
+- **Node.js**: [Install Node.js](https://nodejs.org/) (Required for Firebase Cloud Functions).
+- **Git**: [Install Git](https://git-scm.com/).
+- **Android Studio / VS Code**: Ensure you have the Dart and Flutter extensions installed.
+
+---
+
+## 2. Initial Setup (First Day)
+
+### Step 1: Clone the Repository
 ```bash
 git clone https://github.com/your-username/safe-pick.git
 cd safe-pick
 ```
 
-## 3. Install Packages
-The repository does not store downloaded packages (to save space). You must download them locally:
+### Step 2: Install App Dependencies
+Because packages are ignored by Git to save space, download them locally:
 ```bash
 flutter pub get
 ```
 
-## 4. Setup Environment Secrets (.env)
-> [!IMPORTANT]
-> For security reasons, the `.env` file is intentionally ignored by Git and will NOT be downloaded when you clone the app. 
+### Step 3: Install Backend Dependencies (Firebase Functions)
+Our backend logic (like ETA calculations) runs on Firebase Cloud Functions. You must install the Node packages for them:
+```bash
+cd functions
+npm install
+cd ..
+```
 
-You must manually recreate the `.env` file to connect to the backend services.
+### Step 4: Setup Environment Secrets (.env)
+> [!IMPORTANT]  
+> For security reasons, the `.env` file is intentionally ignored by Git and will NEVER be downloaded when you clone the app. 
 
-1. In the root of the `safe-pick` folder, duplicate the `.env.example` file and rename the copy to `.env`.
-   - On Windows: `copy .env.example .env`
-   - On Mac/Linux: `cp .env.example .env`
-2. Open the new `.env` file and replace the placeholder text with the actual production credentials (request these from the lead developer/admin).
+To connect to our MQTT broker and APIs, you must manually recreate the `.env` file:
+1. Duplicate the `.env.example` file and rename the copy to `.env`.
+   - Windows: `copy .env.example .env`
+   - Mac/Linux: `cp .env.example .env`
+2. Open the new `.env` file and replace the placeholder text with the actual production credentials (ask the lead developer/admin for these).
 
-## 5. Firebase Configuration
-The `firebase.json` and `firebase_options.dart` files are already included in the repository. As long as you have the `.env` file set up, the app will automatically connect to the correct Firebase project on boot. No manual Firebase CLI setup is needed just to run the app.
+### Step 5: Setup Firebase CLI (Required for Backend Deployment)
+To deploy Cloud Functions or update Firestore Rules, install the Firebase CLI and log in:
+```bash
+npm install -g firebase-tools
+firebase login
+```
+*(You will need the lead developer to grant your Google account access to the Firebase Project).*
 
-## 6. Run the App
-Connect an emulator or a physical device, and run:
+---
+
+## 3. Running & Testing the App
+
+### Running Locally
+Connect a physical device via USB or start an Android/iOS Emulator, then run:
 ```bash
 flutter run
 ```
 
+### Running Tests
+Before opening a Pull Request, always ensure you haven't broken existing logic:
+```bash
+flutter analyze   # Checks for syntax and linting errors
+flutter test      # Runs all unit and widget tests
+```
+
 ---
 
-## Git Security Rules
-- **NEVER** commit the `.env` file or any file containing hardcoded passwords. Our `.gitignore` is set up to block `.env`, but always double-check before committing.
-- If you add new packages, remember to run `flutter pub get` and commit the updated `pubspec.yaml` and `pubspec.lock`.
+## 4. GitHub Workflow (How to contribute safely)
+
+To keep the `main` branch stable, follow this standard Git workflow:
+
+### A. Start New Work
+Always pull the latest code and create a new branch for your feature or bugfix:
+```bash
+git checkout main
+git pull origin main
+git checkout -b feature/your-new-feature-name
+```
+
+### B. Save Your Work (Commit)
+As you write code, stage and commit your changes:
+```bash
+git status                  # Review which files you've changed
+git add .                   # Stage all changes
+git commit -m "feat: added new UI card for parent dashboard"
+```
+
+### C. Push to GitHub
+```bash
+git push origin feature/your-new-feature-name
+```
+*After pushing, go to GitHub.com and open a Pull Request (PR) to merge your code into `main`.*
+
+### D. What if someone else updated main while I was working?
+If another developer pushed code to `main` while you were building your feature, you need to pull their changes into your branch to prevent conflicts:
+```bash
+git checkout main
+git pull origin main
+git checkout feature/your-new-feature-name
+git merge main
+```
+
+---
+
+## Critical Rules to Remember
+1. **NEVER commit the `.env` file.** Our `.gitignore` blocks it, but if you ever override it, you compromise the entire system.
+2. If you add a new package (e.g., `flutter pub add http`), you MUST commit the updated `pubspec.yaml` and `pubspec.lock` files so other developers get the new package when they pull.
+3. If you write a new Firebase Function in `functions/index.js`, deploy it using: `firebase deploy --only functions`.
