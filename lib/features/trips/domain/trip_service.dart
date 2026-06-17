@@ -198,7 +198,11 @@ class TripService {
         });
       }
 
-      await batch.commit();
+      try {
+      await batch.commit().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Offline writes are queued locally; we ignore timeouts so UI doesn't block.
+    }
       return sessionId;
     } catch (e) {
       throw 'Failed to start trip: $e';
@@ -280,7 +284,11 @@ class TripService {
         });
       }
 
-      await batch.commit();
+      try {
+      await batch.commit().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Offline writes are queued locally; we ignore timeouts so UI doesn't block.
+    }
       return sessionId;
     } catch (e) {
       throw 'Failed to start redo trip: $e';
@@ -301,7 +309,11 @@ class TripService {
       'status': 'active',
       'last_completed_date': FieldValue.delete(),
     });
-    await batch.commit();
+    try {
+      await batch.commit().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Offline writes are queued locally; we ignore timeouts so UI doesn't block.
+    }
   }
 
   Future<void> endDailySession(String sessionId, String tripId) async {
@@ -347,7 +359,11 @@ class TripService {
       'last_completed_date': Timestamp.fromDate(DateTime.now()),
     });
 
-    await batch.commit();
+    try {
+      await batch.commit().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Offline writes are queued locally; we ignore timeouts so UI doesn't block.
+    }
   }
 
   /// Process a QR Scan event using Firestore Batch Writes (Fan-out)
@@ -360,6 +376,8 @@ class TripService {
     final sessionSnap = await sessionRef.get();
     if (!sessionSnap.exists) throw 'Active trip session not found.';
     final tripId = sessionSnap.data()?['trip_id'] as String? ?? '';
+    await sessionRef.get();
+    if (!sessionSnap.exists) throw 'Active trip session not found.';
     final dateString = sessionSnap.data()?['date'] as String? ?? '';
     final driverUid = sessionSnap.data()?['driver_uid'] as String? ?? '';
 
@@ -437,13 +455,16 @@ class TripService {
     final globalUpdate = <String, dynamic>{
       'current_status': nextStatus,
     };
-    if (nextStatus == 'At School' || nextStatus == 'At Home') {
-      globalUpdate['stats.total_trips'] = FieldValue.increment(1);
-    }
+    
+    await _applyEtaCalculations(globalUpdate, studentId, nextStatus, now, isMorning);
     
     batch.update(_firestore.collection('students').doc(studentId), globalUpdate);
 
-    await batch.commit();
+    try {
+      await batch.commit().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Offline writes are queued locally; we ignore timeouts so UI doesn't block.
+    }
   }
 
   /// Manually override attendance status (At Home, In Van, At School)
@@ -504,13 +525,16 @@ class TripService {
     final globalUpdate = <String, dynamic>{
       'current_status': status,
     };
-    if (status == 'At Home' || status == 'At School') {
-      globalUpdate['stats.total_trips'] = FieldValue.increment(1);
-    }
+    
+    await _applyEtaCalculations(globalUpdate, studentId, status, now, tripType.toLowerCase() == 'morning');
     
     batch.update(_firestore.collection('students').doc(studentId), globalUpdate);
 
-    await batch.commit();
+    try {
+      await batch.commit().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Offline writes are queued locally; we ignore timeouts so UI doesn't block.
+    }
   }
 
   /// Bulk action to drop off all students currently "In Van" at the school.
@@ -574,8 +598,9 @@ class TripService {
         // Sync to global student record and increment stats
         final globalUpdate = <String, dynamic>{
           'current_status': status,
-          'stats.total_trips': FieldValue.increment(1),
         };
+        
+        await _applyEtaCalculations(globalUpdate, studentId, status, now, tripType.toLowerCase() == 'morning');
         
         batch.update(_firestore.collection('students').doc(studentId), globalUpdate);
         count++;
@@ -583,7 +608,11 @@ class TripService {
     }
 
     if (count > 0) {
-      await batch.commit();
+      try {
+      await batch.commit().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Offline writes are queued locally; we ignore timeouts so UI doesn't block.
+    }
     }
   }
 
@@ -676,7 +705,11 @@ class TripService {
       });
     }
 
-    await batch.commit();
+    try {
+      await batch.commit().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Offline writes are queued locally; we ignore timeouts so UI doesn't block.
+    }
   }
 
   /// Permanently removes a student and clears their references from active trip manifests,
@@ -698,7 +731,11 @@ class TripService {
       });
     }
 
-    await batch.commit();
+    try {
+      await batch.commit().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Offline writes are queued locally; we ignore timeouts so UI doesn't block.
+    }
   }
 
   /// Removes a single student from a specific trip, ensuring the trip is not currently active.
@@ -727,6 +764,54 @@ class TripService {
       'student_ids': FieldValue.arrayRemove([studentId])
     });
 
-    await batch.commit();
+    try {
+      await batch.commit().timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // Offline writes are queued locally; we ignore timeouts so UI doesn't block.
+    }
+  }
+
+  /// Calculates ETA metrics when an attendance event occurs
+  Future<void> _applyEtaCalculations(
+      Map<String, dynamic> globalUpdate,
+      String studentId,
+      String nextStatus,
+      Timestamp now,
+      bool isMorning) async {
+    if (nextStatus == 'In Van') {
+      globalUpdate['in_van_since'] = now;
+      globalUpdate['eta_notified'] = false;
+    } else if (nextStatus == 'At School' || nextStatus == 'At Home') {
+      globalUpdate['stats.total_trips'] = FieldValue.increment(1);
+
+      final studentSnap = await _firestore.collection('students').doc(studentId).get();
+      if (!studentSnap.exists) return;
+      
+      final studentData = studentSnap.data() as Map<String, dynamic>;
+      final stats = studentData['stats'] as Map<String, dynamic>? ?? {};
+      
+      final inVanSinceRaw = studentData['in_van_since'];
+      if (inVanSinceRaw != null) {
+        final inVanSinceDt = (inVanSinceRaw as Timestamp).toDate();
+        final durationMs = now.toDate().difference(inVanSinceDt).inMilliseconds;
+        
+        if (durationMs > 0 && durationMs < 10800000) {
+          if (isMorning) {
+            final int count = (stats['morning_trip_count'] as num?)?.toInt() ?? 0;
+            final num currentAvg = (stats['morning_avg_duration_ms'] as num?) ?? 0;
+            final newAvg = ((currentAvg * count) + durationMs) / (count + 1);
+            globalUpdate['stats.morning_trip_count'] = count + 1;
+            globalUpdate['stats.morning_avg_duration_ms'] = newAvg.round();
+          } else {
+            final int count = (stats['afternoon_trip_count'] as num?)?.toInt() ?? 0;
+            final num currentAvg = (stats['afternoon_avg_duration_ms'] as num?) ?? 0;
+            final newAvg = ((currentAvg * count) + durationMs) / (count + 1);
+            globalUpdate['stats.afternoon_trip_count'] = count + 1;
+            globalUpdate['stats.afternoon_avg_duration_ms'] = newAvg.round();
+          }
+        }
+      }
+    }
   }
 }
+

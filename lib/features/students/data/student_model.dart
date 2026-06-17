@@ -15,6 +15,8 @@ class StudentModel {
   final String currentStatus; // 'At Home' | 'In Van' | 'At School' | 'Absent'
   final Map<String, dynamic> stats; // e.g. {'total_trips': 0, 'attendance_rate': 1.0}
   final String? estimatedArrival;
+  final DateTime? inVanSince;
+  final bool etaNotified;
 
   const StudentModel({
     required this.studentId,
@@ -29,6 +31,8 @@ class StudentModel {
     this.currentStatus = 'At Home',
     required this.stats,
     this.estimatedArrival,
+    this.inVanSince,
+    this.etaNotified = false,
   });
 
   /// Factory constructor to create a StudentModel from a Map
@@ -46,7 +50,20 @@ class StudentModel {
       currentStatus: json['current_status'] as String? ?? json['last_attendance_status'] as String? ?? 'At Home',
       stats: json['stats'] as Map<String, dynamic>? ?? const {},
       estimatedArrival: json['estimated_arrival'] as String?,
+      inVanSince: _parseOptionalDateStatic(json['in_van_since']),
+      etaNotified: json['eta_notified'] as bool? ?? false,
     );
+  }
+
+  static DateTime? _parseOptionalDateStatic(dynamic raw) {
+    if (raw == null) return null;
+    if (raw is DateTime) return raw;
+    if (raw is String) return DateTime.tryParse(raw);
+    try {
+      return (raw as dynamic).toDate() as DateTime;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Converts the StudentModel instance into a Map for Firestore
@@ -63,6 +80,8 @@ class StudentModel {
       'current_status': currentStatus,
       'stats': stats,
       'estimated_arrival': estimatedArrival,
+      if (inVanSince != null) 'in_van_since': Timestamp.fromDate(inVanSince!),
+      'eta_notified': etaNotified,
     };
   }
 
@@ -80,6 +99,8 @@ class StudentModel {
     String? currentStatus,
     Map<String, dynamic>? stats,
     String? estimatedArrival,
+    DateTime? inVanSince,
+    bool? etaNotified,
   }) {
     return StudentModel(
       studentId: studentId ?? this.studentId,
@@ -94,6 +115,8 @@ class StudentModel {
       currentStatus: currentStatus ?? this.currentStatus,
       stats: stats ?? this.stats,
       estimatedArrival: estimatedArrival ?? this.estimatedArrival,
+      inVanSince: inVanSince ?? this.inVanSince,
+      etaNotified: etaNotified ?? this.etaNotified,
     );
   }
 

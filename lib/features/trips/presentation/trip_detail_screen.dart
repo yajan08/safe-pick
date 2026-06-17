@@ -1,5 +1,6 @@
 import 'dart:async';
-
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -65,11 +66,44 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   final Map<String, BitmapDescriptor> _schoolMarkerCache = {};
   List<SchoolModel> _currentSchools = [];
 
+  // ─── NETWORK & GPS STATE ────────────────────────────
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
+  StreamSubscription<ServiceStatus>? _serviceStatusSub;
+  bool _isOffline = false;
+  bool _isLocationDisabled = false;
+
   @override
   void initState() {
     super.initState();
     _initDriverMarker();
     _fetchInitialLocation();
+    
+    _connectivitySub = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+      if (mounted) {
+        setState(() {
+          _isOffline = results.contains(ConnectivityResult.none);
+        });
+      }
+    });
+
+    _serviceStatusSub = Geolocator.getServiceStatusStream().listen((ServiceStatus status) {
+      if (mounted) {
+        setState(() {
+          _isLocationDisabled = status == ServiceStatus.disabled;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _publishTimer?.cancel();
+    _positionStream?.cancel();
+    _connectivitySub?.cancel();
+    _serviceStatusSub?.cancel();
+    _mqttService.disconnect();
+    _stopLiveTracking(); 
+    super.dispose();
   }
 
   Future<void> _fetchInitialLocation() async {
@@ -263,11 +297,36 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
     setState(() => _isLiveTracking = true);
 
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
+    LocationSettings locationSettings;
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      locationSettings = AndroidSettings(
         accuracy: LocationAccuracy.high,
-        distanceFilter: 0, 
-      ),
+        distanceFilter: 0,
+        forceLocationManager: true,
+        intervalDuration: const Duration(seconds: 3),
+        foregroundNotificationConfig: const ForegroundNotificationConfig(
+          notificationText: "SafePick Live Tracking Active",
+          notificationTitle: "Running in background",
+          enableWakeLock: true,
+        ),
+      );
+    } else if (defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS) {
+      locationSettings = AppleSettings(
+        accuracy: LocationAccuracy.high,
+        activityType: ActivityType.automotiveNavigation,
+        distanceFilter: 0,
+        pauseLocationUpdatesAutomatically: false,
+        showBackgroundLocationIndicator: true,
+      );
+    } else {
+      locationSettings = const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 0,
+      );
+    }
+
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: locationSettings,
     ).listen((Position position) {
       _currentPosition = position; 
       if (_isLiveTracking && _mapController != null) {
@@ -307,12 +366,6 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
     _mqttService.disconnect();
     _isLiveTracking = false;
-  }
-
-  @override
-  void dispose() {
-    _stopLiveTracking(); 
-    super.dispose();
   }
 
   Future<void> _handleStartTrip() async {
@@ -720,6 +773,35 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         appBar: AppBar(
           title: Text(isTripActive ? 'ACTIVE ROUTE' : 'Route Details', style: const TextStyle(fontWeight: FontWeight.w900)),
           backgroundColor: isTripActive ? AppTheme.surfaceCard : AppTheme.background,
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight((_isOffline || _isLocationDisabled) ? 40.0 : 0.0),
+            child: Column(
+              children: [
+                if (_isOffline)
+                  Container(
+                    width: double.infinity,
+                    color: AppTheme.errorRed,
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                    child: const Text(
+                      'You are offline. Syncing paused.',
+                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                if (_isLocationDisabled)
+                  Container(
+                    width: double.infinity,
+                    color: AppTheme.warningOrange,
+                    padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                    child: const Text(
+                      'Location disabled. Parents cannot track you.',
+                      style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+              ],
+            ),
+          ),
           leading: isTripActive
               ? null
               : IconButton(
@@ -1255,6 +1337,8 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       }
       return;
     }
+
+    if (!mounted) return;
 
     final confirm = await showDialog<bool>(
       context: context,

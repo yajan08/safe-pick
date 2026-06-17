@@ -240,6 +240,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
                 'Delete Account',
                 style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w900, fontSize: 24),
               ),
+              scrollable: true,
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -313,7 +314,7 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
         Navigator.of(context).popUntil((route) => route.isFirst);
       }
     } catch (e) {
-      _showErrorDialog('Error deleting account: $e');
+      _showErrorDialog('We encountered an issue deleting your account. Please check your connection and try again.');
     }
   }
 

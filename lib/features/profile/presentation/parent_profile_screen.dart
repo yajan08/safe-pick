@@ -96,7 +96,7 @@ class ParentProfileScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: const Text('An error occurred. Please check your connection and try again.'),
             backgroundColor: AppTheme.errorRed,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -131,6 +131,7 @@ class ParentProfileScreen extends ConsumerWidget {
                   letterSpacing: -0.5,
                 ),
               ),
+              scrollable: true,
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -223,7 +224,7 @@ class ParentProfileScreen extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(e.toString()),
+            content: const Text('We encountered an issue deleting your account. Please try again.'),
             backgroundColor: AppTheme.errorRed,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),

@@ -94,7 +94,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
       );
       _routeToAuthGate();
     } catch (e) {
-      if (mounted) setState(() => _loginError = e.toString());
+      if (mounted) setState(() => _loginError = 'Login failed. Please verify your credentials and try again.');
     } finally {
       if (mounted) setState(() => _isLoginLoading = false);
     }
@@ -116,7 +116,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
       );
       _routeToAuthGate();
     } catch (e) {
-      if (mounted) setState(() => _signupError = e.toString());
+      if (mounted) setState(() => _signupError = 'Signup failed. Please try again or check your connection.');
     } finally {
       if (mounted) setState(() => _isSignupLoading = false);
     }

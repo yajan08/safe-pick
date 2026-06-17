@@ -1,4 +1,5 @@
 const { onDocumentUpdated, onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -124,5 +125,82 @@ exports.onTripStarted = onDocumentCreated("daily_sessions/{sessionId}", async (e
         console.log(`Trip started notification sent. Successes: ${response.successCount}, Failures: ${response.failureCount}`);
     } catch (error) {
         console.error("Error sending multicast FCM notification:", error);
+    }
+});
+
+/**
+ * Scheduled function to check for students who are "In Van" and send a notification
+ * when they are approximately 10 minutes away.
+ */
+exports.checkApproachingStudents = onSchedule("every 2 minutes", async (event) => {
+    // We get all students currently "In Van"
+    const studentsSnapshot = await admin.firestore().collection("students")
+        .where("current_status", "==", "In Van")
+        .where("eta_notified", "==", false)
+        .get();
+
+    if (studentsSnapshot.empty) return;
+
+    const now = Date.now();
+    const isMorning = new Date().getHours() < 12; // Approximation, fast calculation
+
+    for (const doc of studentsSnapshot.docs) {
+        const studentData = doc.data();
+        if (!studentData.in_van_since || !studentData.stats) continue;
+
+        const inVanSince = studentData.in_van_since.toDate().getTime();
+        
+        let avgDurationMs = 0;
+        let count = 0;
+
+        if (isMorning) {
+            count = studentData.stats.morning_trip_count || 0;
+            avgDurationMs = studentData.stats.morning_avg_duration_ms || 0;
+        } else {
+            count = studentData.stats.afternoon_trip_count || 0;
+            avgDurationMs = studentData.stats.afternoon_avg_duration_ms || 0;
+        }
+
+        // Only send if we have enough historical data
+        if (count >= 10 && avgDurationMs > 0) {
+            const timeInVanMs = now - inVanSince;
+            const remainingMs = avgDurationMs - timeInVanMs;
+
+            // If remaining time is less than or equal to 12 minutes (720000ms), send the warning.
+            // We use 12 mins to safely catch the "around 10 mins" window since this runs every 2 mins.
+            if (remainingMs <= 720000 && remainingMs > 0) {
+                // Fetch parent to get FCM token
+                const parentUid = studentData.parent_uid;
+                if (!parentUid) continue;
+
+                const parentDoc = await admin.firestore().collection("users").doc(parentUid).get();
+                if (!parentDoc.exists) continue;
+
+                const fcmToken = parentDoc.data().fcmToken;
+                if (!fcmToken) continue;
+
+                const studentName = studentData.name || "Your child";
+                const message = {
+                    token: fcmToken,
+                    notification: {
+                        title: `SafePick: Arriving Soon`,
+                        body: `${studentName} is approximately 10 minutes away!`,
+                    },
+                    data: {
+                        studentId: doc.id,
+                        type: "ETA_WARNING",
+                    },
+                };
+
+                try {
+                    await admin.messaging().send(message);
+                    // Mark as notified
+                    await doc.ref.update({ eta_notified: true });
+                    console.log(`Sent 10-min warning for ${studentName} to ${parentUid}`);
+                } catch (error) {
+                    console.error("Error sending ETA warning:", error);
+                }
+            }
+        }
     }
 });

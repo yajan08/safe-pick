@@ -439,23 +439,77 @@ class ParentDashboard extends ConsumerWidget {
         break;
     }
 
-    String etaText = student.estimatedArrival ?? '';
-    if (etaText.isEmpty) {
-      switch (student.currentStatus) {
-        case 'In Van':
-          etaText = '15 mins';
-          break;
-        case 'At Home':
-          etaText = 'Arrived';
-          break;
-        case 'Absent':
-          etaText = 'N/A';
-          break;
-        case 'At School':
-        default:
-          etaText = 'Standby';
-          break;
+    Widget etaWidget;
+    String fallbackEta = student.estimatedArrival ?? '';
+    
+    if (student.currentStatus == 'In Van') {
+      final inVanSinceRaw = student.inVanSince;
+      if (inVanSinceRaw != null) {
+        etaWidget = StreamBuilder(
+          stream: Stream.periodic(const Duration(seconds: 30)), // Tick every 30s to be safe
+          builder: (context, _) {
+            final now = DateTime.now();
+            final isMorning = now.hour < 12; 
+            final int count = (student.stats[isMorning ? 'morning_trip_count' : 'afternoon_trip_count'] as num?)?.toInt() ?? 0;
+            final num avgDurationMs = (student.stats[isMorning ? 'morning_avg_duration_ms' : 'afternoon_avg_duration_ms'] as num?) ?? 0;
+
+            String dynamicEta;
+            if (count >= 10 && avgDurationMs > 0) {
+              final timeInVanMs = now.difference(inVanSinceRaw).inMilliseconds;
+              final remainingMs = avgDurationMs - timeInVanMs;
+              if (remainingMs <= 0) {
+                dynamicEta = 'Almost here';
+              } else {
+                final remainingMins = (remainingMs / 60000).ceil();
+                dynamicEta = '~$remainingMins mins';
+              }
+            } else {
+              dynamicEta = 'Available after 10 trips';
+            }
+            return Text(
+              dynamicEta,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textPrimary,
+                letterSpacing: -0.5,
+              ),
+            );
+          },
+        );
+      } else {
+        fallbackEta = 'Calculating...';
+        etaWidget = Text(
+          fallbackEta,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w700,
+            color: AppTheme.textPrimary,
+            letterSpacing: -0.5,
+          ),
+        );
       }
+    } else {
+      if (fallbackEta.isEmpty) {
+        switch (student.currentStatus) {
+          case 'At Home':
+            fallbackEta = 'Arrived';
+            break;
+          case 'Absent':
+            fallbackEta = 'N/A';
+            break;
+          case 'At School':
+          default:
+            fallbackEta = 'Standby';
+            break;
+        }
+      }
+      etaWidget = Text(
+        fallbackEta,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w700,
+          color: AppTheme.textPrimary,
+          letterSpacing: -0.5,
+        ),
+      );
     }
 
     return Row(
@@ -471,11 +525,11 @@ class ParentDashboard extends ConsumerWidget {
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: _InfoTile(
+          child: _InfoTileDynamic(
             icon: Icons.schedule_rounded,
             iconColor: AppTheme.textSecondary,
             label: 'Est. Arrival',
-            value: etaText,
+            valueWidget: etaWidget,
           ),
         ),
       ],
@@ -844,6 +898,40 @@ class _InfoTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _InfoTileDynamic(
+      icon: icon,
+      iconColor: iconColor,
+      label: label,
+      dotColor: dotColor,
+      valueWidget: Text(
+        value,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          color: AppTheme.textPrimary,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.2,
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoTileDynamic extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final String label;
+  final Widget valueWidget;
+  final Color? dotColor;
+
+  const _InfoTileDynamic({
+    required this.icon,
+    required this.iconColor,
+    required this.label,
+    required this.valueWidget,
+    this.dotColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
@@ -897,14 +985,7 @@ class _InfoTile extends StatelessWidget {
                   ),
                   const SizedBox(width: 8),
                 ],
-                Text(
-                  value,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    color: AppTheme.textPrimary,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.2,
-                  ),
-                ),
+                valueWidget,
               ],
             ),
           ),

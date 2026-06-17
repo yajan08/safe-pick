@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -38,11 +39,23 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
   bool _autoCenter = true;
   bool _isAnimating = false;
 
+  DateTime? _lastTelemetryTime;
+  Timer? _staleTimer;
+  bool _isDataStale = false;
+
   @override
   void initState() {
     super.initState();
     _initMarkers();
     _connectAndListen();
+    _staleTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (_lastTelemetryTime != null && mounted) {
+        final secondsSinceLast = DateTime.now().difference(_lastTelemetryTime!).inSeconds;
+        if (secondsSinceLast > 15 && !_isDataStale) {
+          setState(() => _isDataStale = true);
+        }
+      }
+    });
   }
   
   Future<void> _initMarkers() async {
@@ -83,6 +96,7 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
 
   @override
   void dispose() {
+    _staleTimer?.cancel();
     _mqttService.disconnect();
     _mapController?.dispose();
     super.dispose();
@@ -138,6 +152,12 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
 
                 _currentVanPosition = LatLng(lat, lng);
                 _currentSpeedKmh = speed * 3.6;
+                _lastTelemetryTime = DateTime.now();
+                if (_isDataStale) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) setState(() => _isDataStale = false);
+                  });
+                }
 
                 // Native Distance Calculation
                 if (widget.student.homeLocation != null) {
@@ -238,15 +258,21 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
                   Row(
                     children: [
                       Icon(
-                        _isConnected ? Icons.wifi_tethering_rounded : Icons.wifi_off_rounded,
-                        color: _isConnected ? AppTheme.successGreen : AppTheme.warningOrange,
+                        !_isConnected 
+                          ? Icons.wifi_off_rounded 
+                          : (_isDataStale ? Icons.warning_rounded : Icons.wifi_tethering_rounded),
+                        color: !_isConnected || _isDataStale ? AppTheme.warningOrange : AppTheme.successGreen,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        _isConnected ? 'Live Telemetry Active' : 'Connecting...',
-                        style: TextStyle(
-                          color: _isConnected ? AppTheme.successGreen : AppTheme.warningOrange,
-                          fontWeight: FontWeight.bold,
+                      Expanded(
+                        child: Text(
+                          !_isConnected 
+                            ? 'Connecting...' 
+                            : (_isDataStale ? 'Driver location unavailable. They may be offline.' : 'Live Telemetry Active'),
+                          style: TextStyle(
+                            color: !_isConnected || _isDataStale ? AppTheme.warningOrange : AppTheme.successGreen,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ],
