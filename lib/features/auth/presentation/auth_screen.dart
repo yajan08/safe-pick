@@ -41,7 +41,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
   final _signupConfirmPassCtrl = TextEditingController();
   final _vehicleNumberCtrl = TextEditingController();
 
-  String _selectedRole = 'Parent';
+  final String _selectedRole = 'Parent';
   String _selectedGender = 'Male';
   bool _signupObscurePass = true;
   bool _signupObscureConfirmPass = true;
@@ -365,26 +365,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> with SingleTickerProvid
             key: const ValueKey('step0'),
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedRole,
-                      decoration: const InputDecoration(labelText: 'Role', prefixIcon: Icon(Icons.badge_outlined, size: 20)),
-                      items: const [DropdownMenuItem(value: 'Parent', child: Text('Parent')), DropdownMenuItem(value: 'Driver', child: Text('Driver'))],
-                      onChanged: (v) => setState(() => _selectedRole = v!),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selectedGender,
-                      decoration: const InputDecoration(labelText: 'Gender', prefixIcon: Icon(Icons.wc_rounded, size: 20)),
-                      items: const [DropdownMenuItem(value: 'Male', child: Text('Male')), DropdownMenuItem(value: 'Female', child: Text('Female'))],
-                      onChanged: (v) => setState(() => _selectedGender = v!),
-                    ),
-                  ),
-                ],
+              DropdownButtonFormField<String>(
+                initialValue: _selectedGender,
+                decoration: const InputDecoration(labelText: 'Gender', prefixIcon: Icon(Icons.wc_rounded, size: 20)),
+                items: const [DropdownMenuItem(value: 'Male', child: Text('Male')), DropdownMenuItem(value: 'Female', child: Text('Female'))],
+                onChanged: (v) => setState(() => _selectedGender = v!),
               ),
               const SizedBox(height: 16),
               TextFormField(

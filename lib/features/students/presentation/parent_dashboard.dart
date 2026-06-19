@@ -63,7 +63,7 @@ class ParentDashboard extends ConsumerWidget {
             child: studentsAsync.when(
               data: (students) {
                 if (students.isEmpty) {
-                  return _buildEmptyState(context, theme);
+                  return _buildEmptyState(context, ref, theme);
                 }
 
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -121,6 +121,82 @@ class ParentDashboard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _handleSignOut(BuildContext context, WidgetRef ref) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.background,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+          side: BorderSide(color: AppTheme.border.withValues(alpha: 0.5), width: 1),
+        ),
+        title: const Text(
+          'Sign Out',
+          style: TextStyle(
+            color: AppTheme.textPrimary,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to sign out?',
+          style: TextStyle(
+            color: AppTheme.textSecondary,
+            height: 1.4,
+          ),
+        ),
+        actionsPadding: const EdgeInsets.only(right: 20, bottom: 20, left: 20),
+        actionsAlignment: MainAxisAlignment.end,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.textSecondary,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            child: const Text('Cancel'),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryGold,
+              foregroundColor: AppTheme.background,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await ref.read(authServiceProvider).signOut();
+      if (context.mounted) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('An error occurred. Please check your connection and try again.'),
+            backgroundColor: AppTheme.errorRed,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -190,24 +266,43 @@ class ParentDashboard extends ConsumerWidget {
                 'assets/images/logo.svg',
                 height: 38,
               ).animate().fade().scale(delay: 80.ms, curve: Curves.easeOutBack),
-              GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ParentProfileScreen()),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                        color: AppTheme.border.withValues(alpha: 0.6), width: 1.5),
+              Row(
+                children: [
+                  GestureDetector(
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => const ParentProfileScreen()),
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                            color: AppTheme.border.withValues(alpha: 0.6), width: 1.5),
+                      ),
+                      child: CircleAvatar(
+                        radius: 20,
+                        backgroundColor: AppTheme.surfaceCard,
+                        child: const Icon(Icons.person_outline_rounded,
+                            color: AppTheme.textPrimary, size: 22),
+                      ),
+                    ),
                   ),
-                  child: CircleAvatar(
-                    radius: 20,
-                    backgroundColor: AppTheme.surfaceCard,
-                    child: const Icon(Icons.person_outline_rounded,
-                        color: AppTheme.textPrimary, size: 22),
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onTap: () => _handleSignOut(context, ref),
+                    child: Container(
+                      padding: const EdgeInsets.all(11),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.surfaceCard,
+                        border: Border.all(
+                            color: AppTheme.border.withValues(alpha: 0.6), width: 1.5),
+                      ),
+                      child: const Icon(Icons.logout_rounded,
+                          color: AppTheme.textPrimary, size: 20),
+                    ),
                   ),
-                ),
+                ],
               ).animate().fade(delay: 160.ms),
             ],
           ),
@@ -688,7 +783,7 @@ class ParentDashboard extends ConsumerWidget {
   // ─────────────────────────────────────────────────────────────────────────
   // Empty state
   // ─────────────────────────────────────────────────────────────────────────
-  Widget _buildEmptyState(BuildContext context, ThemeData theme) {
+  Widget _buildEmptyState(BuildContext context, WidgetRef ref, ThemeData theme) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -724,15 +819,37 @@ class ParentDashboard extends ConsumerWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 40),
-            ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const ParentProfileScreen()),
-              ),
-              icon: const Icon(Icons.person_add_alt_1_rounded, size: 22),
-              label: const Text('Go to Profile'),
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const ParentProfileScreen()),
+                  ),
+                  icon: const Icon(Icons.person_rounded, size: 20),
+                  label: const Text('Go to Profile'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                OutlinedButton.icon(
+                  onPressed: () => _handleSignOut(context, ref),
+                  icon: const Icon(Icons.logout_rounded, size: 20),
+                  label: const Text('Sign Out'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.textPrimary,
+                    side: BorderSide(color: AppTheme.border.withValues(alpha: 0.5)),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ).animate().fade(duration: 600.ms).scale(

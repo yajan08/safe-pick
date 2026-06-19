@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/presentation/auth_gate.dart';
 
 class DriverProfileScreen extends ConsumerStatefulWidget {
   const DriverProfileScreen({super.key});
@@ -311,7 +312,10 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     try {
       await ref.read(authServiceProvider).deleteDriverAccount(result);
       if (mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AuthGate()),
+          (route) => false,
+        );
       }
     } catch (e) {
       _showErrorDialog('We encountered an issue deleting your account. Please check your connection and try again.');

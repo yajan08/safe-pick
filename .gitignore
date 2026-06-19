@@ -78,3 +78,6 @@ functions/node_modules/
 
 # Env
 .env
+
+# platform-tools
+platform-tools/

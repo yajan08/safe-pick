@@ -15,7 +15,14 @@ class AdminSchoolsScreen extends ConsumerStatefulWidget {
 }
 
 class _AdminSchoolsScreenState extends ConsumerState<AdminSchoolsScreen> {
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +66,7 @@ class _AdminSchoolsScreenState extends ConsumerState<AdminSchoolsScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
             child: TextField(
+              controller: _searchController,
               onChanged: (v) => setState(() => _searchQuery = v.toLowerCase()),
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
               decoration: InputDecoration(
@@ -90,18 +98,14 @@ class _AdminSchoolsScreenState extends ConsumerState<AdminSchoolsScreen> {
                 final schools = allSchools.where((s) => s.name.toLowerCase().contains(_searchQuery)).toList();
                 
                 if (schools.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.school_outlined, size: 48, color: AppTheme.textMuted.withValues(alpha: 0.3)),
-                        const SizedBox(height: 16),
-                        Text(
-                          _searchQuery.isNotEmpty ? 'No schools match your search.' : 'No schools added yet.',
-                          style: TextStyle(color: AppTheme.textMuted, fontSize: 14, fontWeight: FontWeight.w500),
-                        ),
-                      ],
-                    ),
+                  return _EmptySchoolsView(
+                    searchQuery: _searchQuery,
+                    onClearSearch: () {
+                      _searchController.clear();
+                      setState(() {
+                        _searchQuery = '';
+                      });
+                    },
                   );
                 }
 
@@ -221,6 +225,80 @@ class _SchoolCard extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptySchoolsView extends StatelessWidget {
+  final String searchQuery;
+  final VoidCallback? onClearSearch;
+
+  const _EmptySchoolsView({
+    required this.searchQuery,
+    this.onClearSearch,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isSearching = searchQuery.isNotEmpty;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: kAdminNavy.withValues(alpha: 0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                isSearching ? Icons.search_off_rounded : Icons.school_outlined,
+                size: 64,
+                color: kAdminNavy.withValues(alpha: 0.7),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              isSearching ? 'No match found' : 'No schools registered',
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+                color: kAdminNavy,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isSearching
+                  ? 'We couldn\'t find any schools matching "$searchQuery". Try checking your spelling or search for another name.'
+                  : 'There are currently no active schools in the system. Use the "Add School" button to create one.',
+              style: const TextStyle(
+                color: AppTheme.textSecondary,
+                fontSize: 14,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            if (isSearching && onClearSearch != null) ...[
+              const SizedBox(height: 24),
+              TextButton.icon(
+                onPressed: onClearSearch,
+                icon: const Icon(Icons.clear_rounded, size: 18),
+                label: const Text('Clear Search'),
+                style: TextButton.styleFrom(
+                  foregroundColor: kAdminNavy,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(color: kAdminNavy),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

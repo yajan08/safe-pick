@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../auth/presentation/auth_gate.dart';
 import '../../students/data/student_model.dart';
 import '../../students/presentation/add_student_screen.dart';
 import 'student_detail_screen.dart';
@@ -218,7 +219,10 @@ class ParentProfileScreen extends ConsumerWidget {
     try {
       await ref.read(authServiceProvider).deleteParentAccount(result);
       if (context.mounted) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const AuthGate()),
+          (route) => false,
+        );
       }
     } catch (e) {
       if (context.mounted) {
@@ -459,7 +463,7 @@ class ParentProfileScreen extends ConsumerWidget {
                 child: TextButton.icon(
                   onPressed: () => _handleDeleteAccount(context, ref),
                   icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                  label: const Text('Delete'),
+                  label: const Text('Delete Account'),
                   style: TextButton.styleFrom(
                     foregroundColor: AppTheme.errorRed,
                     padding: const EdgeInsets.symmetric(vertical: 12),

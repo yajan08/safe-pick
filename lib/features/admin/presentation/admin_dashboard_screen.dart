@@ -90,6 +90,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
                       onPressed: () => Navigator.pop(context, false),
                       style: TextButton.styleFrom(
                         foregroundColor: AppTheme.textSecondary,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -224,6 +228,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
           ],
         ),
       ),
+      floatingActionButton: _currentIndex == 1
+          ? FloatingActionButton(
+              backgroundColor: kAdminNavy,
+              foregroundColor: Colors.white,
+              elevation: 4,
+              onPressed: () => AdminUsersTab.showRegisterDriverSheet(context),
+              child: const Icon(Icons.person_add_rounded),
+            )
+          : null,
     );
   }
 }

@@ -171,7 +171,7 @@ class TripService {
         'start_time': Timestamp.fromDate(now),
         'initial_statuses': initialStatuses,
         'is_redo': false,
-        'vehicle_number': ?selectedVehicle,
+        'vehicle_number': selectedVehicle,
       };
 
       final batch = _firestore.batch();
@@ -260,7 +260,7 @@ class TripService {
         'initial_statuses': initialStatuses,
         'is_redo': true,
         'previous_session_id': previousSessionId,
-        'vehicle_number': ?selectedVehicle,
+        'vehicle_number': selectedVehicle,
       };
 
       final batch = _firestore.batch();

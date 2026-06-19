@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/services/auth_service.dart';
+import '../../../firebase_options.dart';
 import '../../trips/data/daily_session_model.dart';
 
 // ---------------------------------------------------------------------------
@@ -211,6 +213,99 @@ class AuditService {
     return snapshot.docs
         .map((doc) => DailySessionModel.fromJson(doc.data(), doc.id))
         .toList();
+  }
+
+  /// Registers a new driver from an Admin session using a secondary Firebase app instance
+  /// to avoid signing out the current Admin.
+  Future<void> registerDriver({
+    required String email,
+    required String password,
+    required String name,
+    required String phone,
+    required String gender,
+    required String vehicleNumber,
+  }) async {
+    FirebaseApp? secondaryApp;
+    try {
+      final appName = 'DriverCreationApp_${DateTime.now().millisecondsSinceEpoch}';
+      secondaryApp = await Firebase.initializeApp(
+        name: appName,
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+
+      final secondaryAuth = FirebaseAuth.instanceFor(app: secondaryApp);
+      final secondaryFirestore = FirebaseFirestore.instanceFor(app: secondaryApp);
+
+      // 1. Create user in Firebase Auth
+      final credential = await secondaryAuth.createUserWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+
+      final uid = credential.user!.uid;
+
+      // 2. Create the user document in Firestore users collection
+      final userRef = secondaryFirestore.collection('users').doc(uid);
+      
+      final normalizedVehicleNumber = vehicleNumber.trim().toUpperCase();
+      final vehicleNumbers = normalizedVehicleNumber.isEmpty
+          ? const <String>[]
+          : [normalizedVehicleNumber];
+
+      final userDoc = {
+        'uid': uid,
+        'role': 'driver',
+        'name': name.trim(),
+        'phone': phone.trim(),
+        'status': 'active',
+        'created_at': FieldValue.serverTimestamp(),
+        'gender': gender,
+        'vehicle_number': normalizedVehicleNumber,
+        'vehicle_numbers': vehicleNumbers,
+      };
+      await userRef.set(userDoc);
+
+      // 3. Write the audit log using the primary Firestore instance (authenticated as the Admin)
+      final logRef = _firestore.collection('audit_logs').doc();
+      final entry = AuditLogModel(
+        logId: logRef.id,
+        action: 'DRIVER_CREATED',
+        targetId: uid,
+        targetType: 'driver',
+        performedBy: _currentUid,
+        timestamp: DateTime.now(),
+        details: {
+          'email': email.trim(),
+          'name': name.trim(),
+          'phone': phone.trim(),
+          'vehicle_number': normalizedVehicleNumber,
+        },
+      );
+      await _firestore.collection('audit_logs').doc(logRef.id).set(entry.toJson());
+
+    } on FirebaseAuthException catch (e) {
+      String message = 'Failed to register driver.';
+      if (e.code == 'email-already-in-use') {
+        message = 'This email address is already registered.';
+      } else if (e.code == 'weak-password') {
+        message = 'The password is too weak. Must be at least 6 characters.';
+      } else if (e.code == 'invalid-email') {
+        message = 'The email address is badly formatted.';
+      } else if (e.code == 'operation-not-allowed') {
+        message = 'Email/password sign-in is not enabled for this project.';
+      } else if (e.message != null) {
+        message = e.message!;
+      }
+      throw message;
+    } catch (e) {
+      throw 'An error occurred during driver creation: $e';
+    } finally {
+      if (secondaryApp != null) {
+        try {
+          await secondaryApp.delete();
+        } catch (_) {}
+      }
+    }
   }
 }
 
