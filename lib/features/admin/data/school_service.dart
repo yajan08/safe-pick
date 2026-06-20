@@ -23,11 +23,14 @@ class SchoolService {
   Stream<List<SchoolModel>> streamAllSchools() {
     return _firestore
         .collection('schools')
-        .orderBy('name')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => SchoolModel.fromJson(doc.data(), doc.id))
-            .toList());
+        .map((snapshot) {
+          final schools = snapshot.docs
+              .map((doc) => SchoolModel.fromJson(doc.data(), doc.id))
+              .toList();
+          schools.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+          return schools;
+        });
   }
 
   /// Stream only active schools (for Parents selecting a school)
@@ -35,11 +38,14 @@ class SchoolService {
     return _firestore
         .collection('schools')
         .where('is_active', isEqualTo: true)
-        .orderBy('name')
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => SchoolModel.fromJson(doc.data(), doc.id))
-            .toList());
+        .map((snapshot) {
+          final schools = snapshot.docs
+              .map((doc) => SchoolModel.fromJson(doc.data(), doc.id))
+              .toList();
+          schools.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+          return schools;
+        });
   }
 
   /// Create a new school

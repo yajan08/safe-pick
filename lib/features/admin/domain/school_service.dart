@@ -7,9 +7,12 @@ final schoolServiceProvider = Provider((ref) => SchoolService());
 final schoolsStreamProvider = StreamProvider<List<SchoolModel>>((ref) {
   return FirebaseFirestore.instance
       .collection('schools')
-      .orderBy('name')
       .snapshots()
-      .map((snap) => snap.docs.map((doc) => SchoolModel.fromJson(doc.data(), doc.id)).toList());
+      .map((snap) {
+        final schools = snap.docs.map((doc) => SchoolModel.fromJson(doc.data(), doc.id)).toList();
+        schools.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+        return schools;
+      });
 });
 
 final activeSchoolsProvider = Provider<AsyncValue<List<SchoolModel>>>((ref) {

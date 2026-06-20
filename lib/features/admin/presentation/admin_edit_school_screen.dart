@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -22,6 +23,7 @@ class _AdminEditSchoolScreenState extends ConsumerState<AdminEditSchoolScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
   
   bool _isActive = true;
   bool _isLoading = false;
@@ -52,6 +54,7 @@ class _AdminEditSchoolScreenState extends ConsumerState<AdminEditSchoolScreen> {
     _nameController.dispose();
     _mapController?.dispose();
     _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -225,7 +228,10 @@ class _AdminEditSchoolScreenState extends ConsumerState<AdminEditSchoolScreen> {
                                 child: TextField(
                                   controller: _searchController,
                                   onChanged: (val) {
-                                    _searchLocation(val);
+                                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                                    _debounce = Timer(const Duration(milliseconds: 500), () {
+                                      _searchLocation(val);
+                                    });
                                   },
                                   decoration: InputDecoration(
                                     hintText: 'Search school address or city...',

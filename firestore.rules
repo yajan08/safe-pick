@@ -23,11 +23,27 @@ service cloud.firestore {
       allow write: if isAuthenticated() && request.auth.uid == userId;
     }
 
+    match /schools/{schoolId} {
+      allow read, write: if isAuthenticated();
+    }
+
     match /students/{studentId} {
       // Any authenticated user (driver, parent, admin) can read student data for manifest/tracking
       allow read: if isAuthenticated();
       // Only authenticated users can update (Drivers marking attendance, Parents marking absent)
       allow write: if isAuthenticated(); 
+
+      match /ride_history/{historyId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    match /audit_logs/{logId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /metadata/{docId} {
+      allow read, write: if isAuthenticated();
     }
 
     match /trips/{tripId} {
