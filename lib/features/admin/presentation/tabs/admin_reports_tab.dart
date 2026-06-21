@@ -8,6 +8,7 @@ import '../../../students/data/student_model.dart';
 import '../../../students/data/student_ride_log_model.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../admin_dashboard_screen.dart';
+import '../../../../core/widgets/safe_pick_dialog.dart';
 
 class AdminReportsTab extends ConsumerStatefulWidget {
   const AdminReportsTab({super.key});
@@ -97,29 +98,15 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
 
     showDialog(
       context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: AppTheme.surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Row(
-          children: [
-            Icon(Icons.analytics_rounded, color: kAdminNavy, size: 20),
-            SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                'Student Report',
-                style: TextStyle(
-                  fontSize: 16.5,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.2,
-                ),
-              ),
-            ),
-          ],
-        ),
+      builder: (_) => SafePickDialog(
+        title: 'Student Report',
+        titleIcon: const Icon(Icons.analytics_rounded, color: kAdminNavy, size: 20),
+        primaryActionLabel: 'Close',
+        primaryActionColor: kAdminNavy,
+        onPrimaryAction: () => Navigator.pop(context),
         content: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _ReportLine(label: 'Student', value: _selectedStudent!.name),
             _ReportLine(label: 'ID', value: _selectedStudent!.studentId),
@@ -145,19 +132,6 @@ class _AdminReportsTabState extends ConsumerState<AdminReportsTab> {
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Close',
-              style: TextStyle(
-                color: kAdminNavy,
-                fontWeight: FontWeight.w600,
-                fontSize: 13.5,
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

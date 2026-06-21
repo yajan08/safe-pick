@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/safe_pick_dialog.dart';
 import 'tabs/admin_overview_tab.dart';
 import 'tabs/admin_users_tab.dart';
 import 'tabs/admin_trips_tab.dart';
@@ -58,68 +59,15 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen> {
             onPressed: () async {
               final confirm = await showDialog<bool>(
                 context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: AppTheme.background,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    side: BorderSide(
-                      color: kAdminNavy.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
-                  ),
-                  title: const Text(
-                    'Sign Out',
-                    style: TextStyle(
-                      color: kAdminNavy,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  content: const Text(
-                    'Are you sure you want to sign out of the Admin Console?',
-                    style: TextStyle(
-                      color: AppTheme.textSecondary,
-                      height: 1.4,
-                    ),
-                  ),
-                  actionsPadding: const EdgeInsets.all(16),
-                  actionsAlignment: MainAxisAlignment.end,
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.textSecondary,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Cancel'),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.errorRed,
-                        foregroundColor: AppTheme.background,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text(
-                        'Sign Out',
-                        style: TextStyle(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ],
+                builder: (context) => SafePickDialog(
+                  title: 'Sign Out',
+                  description:
+                      'Are you sure you want to sign out of the Admin Console?',
+                  primaryActionLabel: 'Sign Out',
+                  primaryActionColor: AppTheme.errorRed,
+                  onPrimaryAction: () => Navigator.pop(context, true),
+                  secondaryActionLabel: 'Cancel',
+                  onSecondaryAction: () => Navigator.pop(context, false),
                 ),
               );
 

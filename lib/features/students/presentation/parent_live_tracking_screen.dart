@@ -221,8 +221,8 @@ class _ParentLiveTrackingScreenState extends ConsumerState<ParentLiveTrackingScr
               backgroundColor: _autoCenter ? AppTheme.primaryGold : AppTheme.surface,
               foregroundColor: _autoCenter ? Colors.white : AppTheme.textSecondary,
               onPressed: () {
-                setState(() => _autoCenter = !_autoCenter);
-                if (_autoCenter && _currentVanPosition != null && _mapController != null) {
+                setState(() => _autoCenter = true);
+                if (_currentVanPosition != null && _mapController != null) {
                   _isAnimating = true;
                   _mapController!.animateCamera(CameraUpdate.newLatLng(_currentVanPosition!)).then((_) {
                     if (mounted) _isAnimating = false;

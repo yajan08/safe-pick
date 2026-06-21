@@ -45,12 +45,17 @@ class AuthService {
         password: password,
       );
 
-      // If it is the super admin, check if the document exists in Firestore and seed it if missing
-      if (email.trim() == 'a@gmail.com') {
+      // If it is the super admin, check if the document exists in Firestore and seed/update it
+      if (email.trim().toLowerCase() == 'a@gmail.com') {
         try {
           final doc = await _firestore.collection('users').doc(credential.user!.uid).get();
           if (!doc.exists) {
-            await _seedAdminAccountWithUid(credential.user!.uid, email.trim());
+            await _seedAdminAccountWithUid(credential.user!.uid, email.trim().toLowerCase());
+          } else {
+            final data = doc.data();
+            if (data?['role'] != 'admin') {
+              await _firestore.collection('users').doc(credential.user!.uid).update({'role': 'admin'});
+            }
           }
         } catch (e) {
           debugPrint('Error checking/seeding admin account doc during signIn: $e');
@@ -59,7 +64,7 @@ class AuthService {
 
       return credential;
     } on FirebaseAuthException catch (e) {
-      if ((e.code == 'user-not-found' || e.code == 'invalid-credential') && email.trim() == 'a@gmail.com' && password == 'password123') {
+      if ((e.code == 'user-not-found' || e.code == 'invalid-credential') && email.trim().toLowerCase() == 'a@gmail.com' && password == 'password123') {
         try {
           return await _seedAdminAccount(email.trim(), password);
         } catch (_) {
@@ -199,14 +204,23 @@ class AuthService {
       final doc = await _firestore.collection('users').doc(uid).get(const GetOptions(source: Source.serverAndCache));
       if (doc.exists) {
         final data = doc.data();
-        final role = data?['role'] as String? ?? 'parent';
+        var role = data?['role'] as String? ?? 'parent';
         final status = data?['status'] as String? ?? 'active';
+        
+        // If it is the super admin email, force the role to 'admin' to prevent incorrect role/redirect bugs
+        final currentUser = _auth.currentUser;
+        if (currentUser != null && currentUser.uid == uid && currentUser.email?.toLowerCase() == 'a@gmail.com' && role != 'admin') {
+          role = 'admin';
+          // Fix the Firestore document in the background
+          _firestore.collection('users').doc(uid).update({'role': 'admin'}).catchError((_) {});
+        }
+        
         return {'role': role, 'status': status};
       }
 
       // Document does not exist. Check if it's the super admin
       final currentUser = _auth.currentUser;
-      if (currentUser != null && currentUser.uid == uid && currentUser.email == 'a@gmail.com') {
+      if (currentUser != null && currentUser.uid == uid && currentUser.email?.toLowerCase() == 'a@gmail.com') {
         await _seedAdminAccountWithUid(uid, 'a@gmail.com');
         return {'role': 'admin', 'status': 'active'};
       }

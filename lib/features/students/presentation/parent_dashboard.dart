@@ -10,6 +10,7 @@ import '../data/student_model.dart';
 import '../../profile/presentation/parent_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 import '../../trips/domain/trip_service.dart';
+import '../../../core/widgets/safe_pick_dialog.dart';
 
 /// Real-time stream provider that fetches all students linked to the logged-in parent.
 final parentStudentsProvider = StreamProvider<List<StudentModel>>((ref) {
@@ -126,55 +127,13 @@ class ParentDashboard extends ConsumerWidget {
   Future<void> _handleSignOut(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: BorderSide(color: AppTheme.border.withValues(alpha: 0.5), width: 1),
-        ),
-        title: const Text(
-          'Sign Out',
-          style: TextStyle(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-        ),
-        content: const Text(
-          'Are you sure you want to sign out?',
-          style: TextStyle(
-            color: AppTheme.textSecondary,
-            height: 1.4,
-          ),
-        ),
-        actionsPadding: const EdgeInsets.only(right: 20, bottom: 20, left: 20),
-        actionsAlignment: MainAxisAlignment.end,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.textSecondary,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            ),
-            child: const Text('Cancel'),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGold,
-              foregroundColor: AppTheme.background,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: const Text('Sign Out', style: TextStyle(fontWeight: FontWeight.w600)),
-          ),
-        ],
+      builder: (context) => SafePickDialog(
+        title: 'Sign Out',
+        description: 'Are you sure you want to sign out?',
+        primaryActionLabel: 'Sign Out',
+        onPrimaryAction: () => Navigator.of(context).pop(true),
+        secondaryActionLabel: 'Cancel',
+        onSecondaryAction: () => Navigator.of(context).pop(false),
       ),
     );
 
@@ -785,7 +744,8 @@ class ParentDashboard extends ConsumerWidget {
   // ─────────────────────────────────────────────────────────────────────────
   Widget _buildEmptyState(BuildContext context, WidgetRef ref, ThemeData theme) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.all(32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -818,38 +778,42 @@ class ParentDashboard extends ConsumerWidget {
                   ?.copyWith(color: AppTheme.textSecondary, height: 1.5),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 40),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const ParentProfileScreen()),
-                  ),
-                  icon: const Icon(Icons.person_rounded, size: 20),
-                  label: const Text('Go to Profile'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ParentProfileScreen()),
+                ),
+                icon: const Icon(Icons.person_rounded, size: 20),
+                label: const Text('Go to Profile to Add Child'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryGold,
+                  foregroundColor: AppTheme.background,
+                  elevation: 0,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                const SizedBox(width: 16),
-                OutlinedButton.icon(
-                  onPressed: () => _handleSignOut(context, ref),
-                  icon: const Icon(Icons.logout_rounded, size: 20),
-                  label: const Text('Sign Out'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.textPrimary,
-                    side: BorderSide(color: AppTheme.border.withValues(alpha: 0.5)),
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => _handleSignOut(context, ref),
+                icon: const Icon(Icons.logout_rounded, size: 20),
+                label: const Text('Sign Out'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.textPrimary,
+                  side: BorderSide(color: AppTheme.border.withValues(alpha: 0.5)),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-              ],
+              ),
             ),
           ],
         ).animate().fade(duration: 600.ms).scale(

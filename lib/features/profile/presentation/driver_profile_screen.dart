@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../auth/presentation/auth_gate.dart';
+import '../../../core/widgets/safe_pick_dialog.dart';
 
 class DriverProfileScreen extends ConsumerStatefulWidget {
   const DriverProfileScreen({super.key});
@@ -35,22 +36,12 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
     if (!mounted) return;
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Action Failed', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 22)),
-        content: Text(message, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16)),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.textPrimary, 
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
-            ),
-            child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+      builder: (context) => SafePickDialog(
+        title: 'Action Failed',
+        description: message,
+        isDestructive: true,
+        primaryActionLabel: 'OK',
+        onPrimaryAction: () => Navigator.of(context).pop(),
       ),
     );
   }
@@ -179,33 +170,13 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
   Future<void> _handleSignOut() async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceCard,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          'Sign Out',
-          style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.w900, fontSize: 24),
-        ),
-        content: const Text(
-          'Are you sure you want to sign out of your account?',
-          style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('CANCEL', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontSize: 16)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.textPrimary,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              minimumSize: const Size(0, 48),
-            ),
-            child: const Text('SIGN OUT', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+      builder: (context) => SafePickDialog(
+        title: 'Sign Out',
+        description: 'Are you sure you want to sign out of your account?',
+        primaryActionLabel: 'Sign Out',
+        onPrimaryAction: () => Navigator.of(context).pop(true),
+        secondaryActionLabel: 'Cancel',
+        onSecondaryAction: () => Navigator.of(context).pop(false),
       ),
     );
 
@@ -231,78 +202,57 @@ class _DriverProfileScreenState extends ConsumerState<DriverProfileScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: AppTheme.surfaceCard,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-                side: const BorderSide(color: AppTheme.errorRed, width: 2),
-              ),
-              title: const Text(
-                'Delete Account',
-                style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.w900, fontSize: 24),
-              ),
-              scrollable: true,
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Are you absolutely sure you want to permanently delete your account and all associated active vehicle profiles? This action cannot be undone.',
-                      style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
-                    ),
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: passwordController,
-                      obscureText: true,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      decoration: const InputDecoration(
-                        labelText: 'Current Password',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (_) {
-                        setState(() {
-                          canDelete = confirmController.text == 'Delete' && passwordController.text.isNotEmpty;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('Type "Delete" to confirm:', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: confirmController,
-                      style: const TextStyle(color: AppTheme.textPrimary),
-                      decoration: const InputDecoration(
-                        hintText: 'Delete',
-                        border: OutlineInputBorder(),
-                      ),
-                      onChanged: (val) {
-                        setState(() {
-                          canDelete = val == 'Delete' && passwordController.text.isNotEmpty;
-                        });
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(null),
-                  child: const Text('CANCEL', style: TextStyle(color: AppTheme.textSecondary, fontWeight: FontWeight.bold, fontSize: 16)),
-                ),
-                ElevatedButton(
-                  onPressed: canDelete ? () => Navigator.of(context).pop(passwordController.text) : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: canDelete ? AppTheme.errorRed : AppTheme.errorRed.withValues(alpha: 0.3),
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    minimumSize: const Size(0, 48),
+            return SafePickDialog(
+              title: 'Delete Account',
+              isDestructive: true,
+              isPrimaryActionEnabled: canDelete,
+              primaryActionLabel: 'Delete',
+              onPrimaryAction: () => Navigator.of(context).pop(passwordController.text),
+              secondaryActionLabel: 'Cancel',
+              onSecondaryAction: () => Navigator.of(context).pop(null),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Text(
+                    'Are you absolutely sure you want to permanently delete your account and all associated active vehicle profiles? This action cannot be undone.',
+                    style: TextStyle(color: AppTheme.textPrimary, fontSize: 16),
                   ),
-                  child: const Text('DELETE PERMANENTLY', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                      labelText: 'Current Password',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (_) {
+                      setState(() {
+                        canDelete = confirmController.text == 'Delete' && passwordController.text.isNotEmpty;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Text('Type "Delete" to confirm:', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: confirmController,
+                    style: const TextStyle(color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                      hintText: 'Delete',
+                      border: OutlineInputBorder(),
+                    ),
+                    onChanged: (val) {
+                      setState(() {
+                        canDelete = val == 'Delete' && passwordController.text.isNotEmpty;
+                      });
+                    },
+                  ),
+                ],
+              ),
             );
-          }
+          },
         );
       },
     );

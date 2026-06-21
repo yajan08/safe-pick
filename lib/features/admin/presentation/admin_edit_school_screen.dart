@@ -1,5 +1,3 @@
-import 'dart:io';
-import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -22,15 +20,11 @@ class AdminEditSchoolScreen extends ConsumerStatefulWidget {
 class _AdminEditSchoolScreenState extends ConsumerState<AdminEditSchoolScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
-  final TextEditingController _searchController = TextEditingController();
-  Timer? _debounce;
   
   bool _isActive = true;
   bool _isLoading = false;
   LatLng? _selectedLocation;
   GoogleMapController? _mapController;
-  List<dynamic> _searchResults = [];
-  bool _isSearching = false;
 
   // Default to Pune, Maharashtra, India
   static const LatLng _defaultLocation = LatLng(18.5204, 73.8567);
@@ -53,59 +47,10 @@ class _AdminEditSchoolScreenState extends ConsumerState<AdminEditSchoolScreen> {
   void dispose() {
     _nameController.dispose();
     _mapController?.dispose();
-    _searchController.dispose();
-    _debounce?.cancel();
     super.dispose();
   }
 
-  Future<void> _searchLocation(String query) async {
-    if (query.trim().isEmpty) {
-      setState(() {
-        _searchResults = [];
-      });
-      return;
-    }
 
-    setState(() {
-      _isSearching = true;
-    });
-
-    try {
-      final client = HttpClient();
-      final uri = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&limit=5');
-      final request = await client.getUrl(uri);
-      request.headers.add(HttpHeaders.userAgentHeader, 'SafePick/1.0 (contact@safepick.com)');
-      
-      final response = await request.close();
-      if (response.statusCode == 200) {
-        final responseBody = await response.transform(utf8.decoder).join();
-        final List<dynamic> data = jsonDecode(responseBody);
-        setState(() {
-          _searchResults = data;
-        });
-      }
-    } catch (e) {
-      debugPrint('Search error: $e');
-    } finally {
-      setState(() {
-        _isSearching = false;
-      });
-    }
-  }
-
-  void _selectSearchResult(dynamic result) {
-    final double? lat = double.tryParse(result['lat'].toString());
-    final double? lon = double.tryParse(result['lon'].toString());
-    if (lat != null && lon != null) {
-      final latLng = LatLng(lat, lon);
-      setState(() {
-        _selectedLocation = latLng;
-        _searchResults = [];
-      });
-      _searchController.text = result['display_name'] ?? '';
-      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(latLng, 16.0));
-    }
-  }
 
   Future<void> _saveSchool() async {
     if (!_formKey.currentState!.validate()) return;
@@ -209,91 +154,6 @@ class _AdminEditSchoolScreenState extends ConsumerState<AdminEditSchoolScreen> {
                                   ),
                                 }
                               : {},
-                        ),
-                        
-                        // Search bar at the top
-                        Positioned(
-                          top: 16, left: 16, right: 16,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: AppTheme.surface,
-                                  borderRadius: BorderRadius.circular(12),
-                                  boxShadow: [
-                                    BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 8, offset: const Offset(0, 2)),
-                                  ],
-                                ),
-                                child: TextField(
-                                  controller: _searchController,
-                                  onChanged: (val) {
-                                    if (_debounce?.isActive ?? false) _debounce!.cancel();
-                                    _debounce = Timer(const Duration(milliseconds: 500), () {
-                                      _searchLocation(val);
-                                    });
-                                  },
-                                  decoration: InputDecoration(
-                                    hintText: 'Search school address or city...',
-                                    hintStyle: TextStyle(color: AppTheme.textMuted.withValues(alpha: 0.6), fontSize: 13),
-                                    prefixIcon: const Icon(Icons.search_rounded, color: kAdminNavy, size: 20),
-                                    suffixIcon: _isSearching
-                                        ? const SizedBox(
-                                            width: 20, height: 20,
-                                            child: Padding(
-                                              padding: EdgeInsets.all(12.0),
-                                              child: CircularProgressIndicator(strokeWidth: 2, color: kAdminNavy),
-                                            ),
-                                          )
-                                        : _searchController.text.isNotEmpty
-                                            ? IconButton(
-                                                icon: const Icon(Icons.clear_rounded, size: 18),
-                                                onPressed: () {
-                                                  _searchController.clear();
-                                                  setState(() {
-                                                    _searchResults = [];
-                                                  });
-                                                },
-                                              )
-                                            : null,
-                                    border: InputBorder.none,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                                  ),
-                                ),
-                              ),
-                              if (_searchResults.isNotEmpty)
-                                Container(
-                                  margin: const EdgeInsets.only(top: 4),
-                                  constraints: const BoxConstraints(maxHeight: 200),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.surface,
-                                    borderRadius: BorderRadius.circular(12),
-                                    boxShadow: [
-                                      BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 10, offset: const Offset(0, 4)),
-                                    ],
-                                  ),
-                                  child: ListView.separated(
-                                    shrinkWrap: true,
-                                    padding: EdgeInsets.zero,
-                                    itemCount: _searchResults.length,
-                                    separatorBuilder: (context, index) => Divider(color: AppTheme.border.withValues(alpha: 0.3), height: 1),
-                                    itemBuilder: (context, index) {
-                                      final result = _searchResults[index];
-                                      return ListTile(
-                                        title: Text(
-                                          result['display_name'] ?? '',
-                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        leading: const Icon(Icons.location_on_rounded, color: AppTheme.warningOrange, size: 18),
-                                        onTap: () => _selectSearchResult(result),
-                                      );
-                                    },
-                                  ),
-                                ),
-                            ],
-                          ),
                         ),
 
                         // Map overlay hint moved to bottom

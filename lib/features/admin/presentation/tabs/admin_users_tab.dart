@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import '../../domain/admin_service.dart';
@@ -616,6 +617,10 @@ class _UserDetailSheetState extends ConsumerState<_UserDetailSheet> {
                 label: 'Phone',
                 controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
               ),
               if (widget.user.role == 'driver') ...[
                 const SizedBox(height: 12),
@@ -796,10 +801,12 @@ class _EditField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final TextInputType keyboardType;
+  final List<TextInputFormatter>? inputFormatters;
   const _EditField({
     required this.label,
     required this.controller,
     this.keyboardType = TextInputType.text,
+    this.inputFormatters,
   });
 
   @override
@@ -807,6 +814,7 @@ class _EditField extends StatelessWidget {
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
       decoration: InputDecoration(
         labelText: label,
@@ -1082,11 +1090,19 @@ class _RegisterDriverSheetState extends ConsumerState<_RegisterDriverSheet> {
               TextFormField(
                 controller: _phoneCtrl,
                 keyboardType: TextInputType.phone,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(10),
+                ],
                 decoration: const InputDecoration(
                   labelText: 'Phone Number',
                   prefixIcon: Icon(Icons.phone_outlined, size: 20),
                 ),
-                validator: (v) => v == null || v.trim().length < 10 ? 'Enter a valid phone number' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Enter phone number';
+                  if (v.trim().length != 10) return 'Phone number must be exactly 10 digits';
+                  return null;
+                },
               ),
               const SizedBox(height: 16),
 

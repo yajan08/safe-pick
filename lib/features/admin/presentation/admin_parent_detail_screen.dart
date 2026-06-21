@@ -8,6 +8,7 @@ import '../../auth/data/user_model.dart';
 import '../../profile/presentation/student_detail_screen.dart';
 import '../../students/data/student_model.dart';
 import 'admin_dashboard_screen.dart' show kAdminNavy;
+import '../../../core/widgets/safe_pick_dialog.dart';
 
 final parentChildrenProvider =
     FutureProvider.family<List<StudentModel>, String>((ref, parentId) async {
@@ -87,24 +88,17 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: AppTheme.background,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-                side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1),
-              ),
-              title: const Text(
-                'Remove Parent',
-                style: TextStyle(
-                  color: AppTheme.errorRed,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                ),
-              ),
+            return SafePickDialog(
+              title: 'Remove Parent',
+              isDestructive: true,
+              isPrimaryActionEnabled: canDelete,
+              primaryActionLabel: 'Remove',
+              onPrimaryAction: () => Navigator.pop(context, true),
+              secondaryActionLabel: 'Cancel',
+              onSecondaryAction: () => Navigator.pop(context, false),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     'Are you sure you want to remove ${widget.parent.name}? This will permanently delete their active profile. Their children will remain in the database unless removed separately.',
@@ -114,7 +108,7 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: controller,
@@ -131,33 +125,8 @@ class _AdminParentDetailScreenState extends ConsumerState<AdminParentDetailScree
                   ),
                 ],
               ),
-              actionsPadding: const EdgeInsets.all(16),
-              actionsAlignment: MainAxisAlignment.end,
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.textSecondary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: canDelete ? AppTheme.errorRed : AppTheme.errorRed.withValues(alpha: 0.3),
-                    foregroundColor: AppTheme.background,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: canDelete ? () => Navigator.pop(context, true) : null,
-                  child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ],
             );
-          }
+          },
         );
       },
     );

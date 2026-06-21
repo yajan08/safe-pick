@@ -12,7 +12,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 /// Future provider that fetches the user's profile data from Firestore using their UID.
 /// Caches the profile data for the user session.
-final userProfileProvider = FutureProvider.family<Map<String, String>, String>((ref, uid) async {
+final userProfileProvider = FutureProvider.autoDispose.family<Map<String, String>, String>((ref, uid) async {
   final authService = ref.watch(authServiceProvider);
   return authService.getUserProfileData(uid);
 });

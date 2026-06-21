@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../students/data/student_model.dart';
+import '../../../core/widgets/safe_pick_dialog.dart';
 import '../../trips/data/trip_model.dart';
 import '../../trips/domain/trip_service.dart';
 
@@ -165,54 +166,52 @@ class StudentAssignedTripsScreen extends ConsumerWidget {
   void _confirmRemoveTrip(BuildContext context, WidgetRef ref, TripModel trip) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.background,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Remove from Trip?'),
-        content: Text(
-          'Are you sure you want to remove ${student.name} from "${trip.tripName}"? This action cannot be undone.',
-          style: const TextStyle(color: AppTheme.textPrimary),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary)),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorRed,
-              foregroundColor: Colors.white,
-            ),
-            onPressed: () async {
-              Navigator.pop(ctx);
-              try {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (_) => const Center(child: CircularProgressIndicator(color: AppTheme.primaryGold)),
-                );
-                
-                await ref.read(tripServiceProvider).removeStudentFromTrip(trip.tripId, student.studentId);
-                
-                if (context.mounted) {
-                  Navigator.pop(context); // Close loading dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Student removed from trip successfully.')),
-                  );
+      builder: (dialogCtx) {
+        bool isLoading = false;
+        return StatefulBuilder(
+          builder: (builderCtx, setState) {
+            return SafePickDialog(
+              title: 'Remove from Trip?',
+              description: isLoading 
+                  ? 'Removing student...' 
+                  : 'Are you sure you want to remove ${student.name} from "${trip.tripName}"? This action cannot be undone.',
+              isDestructive: true,
+              primaryActionLabel: isLoading ? 'Removing...' : 'Remove',
+              isPrimaryActionEnabled: !isLoading,
+              onPrimaryAction: isLoading ? null : () async {
+                setState(() => isLoading = true);
+                try {
+                  await ref.read(tripServiceProvider).removeStudentFromTrip(trip.tripId, student.studentId);
+                  
+                  // Pop the dialog route using the dialog's context.
+                  if (dialogCtx.mounted) {
+                    Navigator.pop(dialogCtx);
+                  }
+                  
+                  // Display success message using screen's context.
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Student removed from trip successfully.')),
+                    );
+                  }
+                } catch (e) {
+                  if (builderCtx.mounted) {
+                    setState(() => isLoading = false);
+                  }
+                  // Display error message using screen's context.
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.errorRed),
+                    );
+                  }
                 }
-              } catch (e) {
-                if (context.mounted) {
-                  Navigator.pop(context); // Close loading dialog
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(e.toString()), backgroundColor: AppTheme.errorRed),
-                  );
-                }
-              }
-            },
-            child: const Text('Remove'),
-          ),
-        ],
-      ),
+              },
+              secondaryActionLabel: isLoading ? null : 'Cancel',
+              onSecondaryAction: isLoading ? null : () => Navigator.pop(dialogCtx),
+            );
+          },
+        );
+      },
     );
   }
 }

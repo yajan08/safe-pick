@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:safe_pick/core/services/mqtt_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/safe_pick_dialog.dart';
+
 import '../data/trip_model.dart';
 import '../domain/trip_service.dart';
 import '../data/trip_manifest_model.dart';
@@ -428,9 +430,10 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       context: context,
       barrierDismissible: false,
       builder: (context) {
-        return AlertDialog(
-          backgroundColor: AppTheme.surfaceCard,
-          title: const Text('Select Vehicle', style: TextStyle(fontWeight: FontWeight.w900, color: AppTheme.textPrimary, fontSize: 22)),
+        return SafePickDialog(
+          title: 'Select Vehicle',
+          secondaryActionLabel: 'Cancel',
+          onSecondaryAction: () => Navigator.of(context).pop(),
           content: SizedBox(
             width: double.maxFinite,
             child: ListView.separated(
@@ -454,12 +457,6 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
               },
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('CANCEL', style: TextStyle(color: AppTheme.textMuted, fontWeight: FontWeight.bold)),
-            )
-          ],
         );
       }
     );
@@ -468,25 +465,14 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   Future<void> _handleEndTrip(String sessionId) async {
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceCard,
-        title: const Text('End Trip', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to end this trip? You will stop tracking.', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false), 
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16))
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorRed, 
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
-            ),
-            child: const Text('END TRIP', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+      builder: (context) => SafePickDialog(
+        title: 'End Trip',
+        description: 'Are you sure you want to end this trip? You will stop tracking.',
+        isDestructive: true,
+        primaryActionLabel: 'End Trip',
+        onPrimaryAction: () => Navigator.of(context).pop(true),
+        secondaryActionLabel: 'Cancel',
+        onSecondaryAction: () => Navigator.of(context).pop(false),
       ),
     );
 
@@ -514,25 +500,13 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceCard,
-        title: const Text('Reopen Trip', style: TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to reopen this trip? This will set it back to In Progress and resume tracking.', style: TextStyle(color: AppTheme.textPrimary, fontSize: 16)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false), 
-            child: const Text('Cancel', style: TextStyle(color: AppTheme.textSecondary, fontSize: 16))
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryGold, 
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
-            ),
-            child: const Text('REOPEN', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+      builder: (context) => SafePickDialog(
+        title: 'Reopen Trip',
+        description: 'Are you sure you want to reopen this trip? This will set it back to In Progress and resume tracking.',
+        primaryActionLabel: 'Reopen',
+        onPrimaryAction: () => Navigator.of(context).pop(true),
+        secondaryActionLabel: 'Cancel',
+        onSecondaryAction: () => Navigator.of(context).pop(false),
       ),
     );
 
@@ -622,17 +596,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       if (mounted) {
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.surfaceCard,
-            title: const Text('Access Revoked', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 24)),
-            content: const Text('Payment not done. Student access is revoked.', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed, foregroundColor: Colors.white),
-                child: const Text('DISMISS', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
+          builder: (context) => SafePickDialog(
+            title: 'Access Revoked',
+            description: 'Payment not done. Student access is revoked.',
+            isDestructive: true,
+            primaryActionLabel: 'DISMISS',
+            onPrimaryAction: () => Navigator.of(context).pop(),
           ),
         );
       }
@@ -649,17 +618,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       if (mounted) {
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.surfaceCard,
-            title: const Text('Invalid Student', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 24)),
-            content: Text('Student ID $studentId is NOT assigned to this route.', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed, foregroundColor: Colors.white),
-                child: const Text('DISMISS', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
+          builder: (context) => SafePickDialog(
+            title: 'Invalid Student',
+            description: 'Student ID $studentId is NOT assigned to this route.',
+            isDestructive: true,
+            primaryActionLabel: 'DISMISS',
+            onPrimaryAction: () => Navigator.of(context).pop(),
           ),
         );
       }
@@ -685,17 +649,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         if (mounted) {
           showDialog(
             context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: AppTheme.surfaceCard,
-              title: const Text('Scan Error', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 24)),
-              content: Text('${manifestStudent.name} is already marked as At School.', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
-              actions: [
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.textPrimary, foregroundColor: Colors.white),
-                  child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ],
+            builder: (context) => SafePickDialog(
+              title: 'Scan Error',
+              description: '${manifestStudent.name} is already marked as At School.',
+              isDestructive: true,
+              primaryActionLabel: 'OK',
+              onPrimaryAction: () => Navigator.of(context).pop(),
             ),
           );
         }
@@ -710,17 +669,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
         if (mounted) {
           showDialog(
             context: context,
-            builder: (context) => AlertDialog(
-              backgroundColor: AppTheme.surfaceCard,
-              title: const Text('Scan Error', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 24)),
-              content: Text('${manifestStudent.name} is already marked as At Home.', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
-              actions: [
-                ElevatedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.textPrimary, foregroundColor: Colors.white),
-                  child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ],
+            builder: (context) => SafePickDialog(
+              title: 'Scan Error',
+              description: '${manifestStudent.name} is already marked as At Home.',
+              isDestructive: true,
+              primaryActionLabel: 'OK',
+              onPrimaryAction: () => Navigator.of(context).pop(),
             ),
           );
         }
@@ -731,17 +685,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
     if (mounted) {
       showDialog(
         context: context,
-        builder: (context) => AlertDialog(
-          backgroundColor: AppTheme.surfaceCard,
-          title: const Text('Status Updated', style: TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.bold, fontSize: 24)),
-          content: Text('${manifestStudent.name} is now $nextStatus.', style: const TextStyle(color: AppTheme.textPrimary, fontSize: 18, fontWeight: FontWeight.bold)),
-          actions: [
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.successGreen, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)),
-              child: const Text('CONTINUE', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
+        builder: (context) => SafePickDialog(
+          title: 'Status Updated',
+          description: '${manifestStudent.name} is now $nextStatus.',
+          primaryActionLabel: 'CONTINUE',
+          primaryActionColor: AppTheme.successGreen,
+          onPrimaryAction: () => Navigator.of(context).pop(),
         ),
       );
     }
@@ -1321,17 +1270,12 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       if (mounted) {
         showDialog(
           context: context,
-          builder: (context) => AlertDialog(
-            backgroundColor: AppTheme.surfaceCard,
-            title: const Text('Access Revoked', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 24)),
-            content: const Text('Payment not done. Student cannot be managed.', style: TextStyle(color: AppTheme.textPrimary, fontSize: 18)),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.errorRed, foregroundColor: Colors.white),
-                child: const Text('DISMISS', style: TextStyle(fontWeight: FontWeight.bold)),
-              ),
-            ],
+          builder: (context) => SafePickDialog(
+            title: 'Access Revoked',
+            description: 'Payment not done. Student cannot be managed.',
+            isDestructive: true,
+            primaryActionLabel: 'DISMISS',
+            onPrimaryAction: () => Navigator.of(context).pop(),
           ),
         );
       }
@@ -1342,42 +1286,25 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
 
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: AppTheme.surfaceCard,
-        title: Text(
-          status == 'In Van'
-              ? 'Board Student'
-              : status == 'At School'
-                  ? 'Offboard Student (At School)'
-                  : status == 'At Home'
-                      ? 'Offboard Student (At Home)'
-                      : 'Mark Student Absent',
-          style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 22),
-        ),
-        content: Text(
-          'Are you sure you want to mark this student as '
-          '${status == 'In Van' ? 'boarded (in the van)' : status == 'At School' ? 'offboarded (at school)' : status == 'At Home' ? 'offboarded (at home)' : 'absent'}?',
-          style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false), 
-            child: const Text('CANCEL', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16))
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: status == 'In Van'
-                  ? AppTheme.primaryGoldDark
-                  : (status == 'At School' || status == 'At Home')
-                      ? AppTheme.successGreen
-                      : AppTheme.errorRed,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
-            ),
-            child: const Text('CONFIRM', style: TextStyle(fontWeight: FontWeight.bold)),
-          ),
-        ],
+      builder: (context) => SafePickDialog(
+        title: status == 'In Van'
+            ? 'Board Student'
+            : status == 'At School'
+                ? 'Offboard Student (At School)'
+                : status == 'At Home'
+                    ? 'Offboard Student (At Home)'
+                    : 'Mark Student Absent',
+        description: 'Are you sure you want to mark this student as '
+            '${status == 'In Van' ? 'boarded (in the van)' : status == 'At School' ? 'offboarded (at school)' : status == 'At Home' ? 'offboarded (at home)' : 'absent'}?',
+        primaryActionLabel: 'Confirm',
+        primaryActionColor: status == 'In Van'
+            ? AppTheme.primaryGoldDark
+            : (status == 'At School' || status == 'At Home')
+                ? AppTheme.successGreen
+                : AppTheme.errorRed,
+        onPrimaryAction: () => Navigator.of(context).pop(true),
+        secondaryActionLabel: 'Cancel',
+        onSecondaryAction: () => Navigator.of(context).pop(false),
       ),
     );
 

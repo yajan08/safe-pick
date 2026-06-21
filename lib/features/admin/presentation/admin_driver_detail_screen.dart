@@ -8,6 +8,7 @@ import '../../auth/data/user_model.dart';
 import '../../trips/data/trip_model.dart';
 import 'admin_dashboard_screen.dart' show kAdminNavy;
 import 'admin_trip_history_screen.dart';
+import '../../../core/widgets/safe_pick_dialog.dart';
 
 final driverTripsProvider = FutureProvider.family<List<TripModel>, String>((ref, driverUid) async {
   final firestore = FirebaseFirestore.instance;
@@ -84,24 +85,17 @@ class _AdminDriverDetailScreenState extends ConsumerState<AdminDriverDetailScree
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: AppTheme.background,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-                side: BorderSide(color: AppTheme.errorRed.withValues(alpha: 0.3), width: 1),
-              ),
-              title: const Text(
-                'Remove Driver',
-                style: TextStyle(
-                  color: AppTheme.errorRed,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.5,
-                ),
-              ),
+            return SafePickDialog(
+              title: 'Remove Driver',
+              isDestructive: true,
+              isPrimaryActionEnabled: canDelete,
+              primaryActionLabel: 'Remove',
+              onPrimaryAction: () => Navigator.pop(context, true),
+              secondaryActionLabel: 'Cancel',
+              onSecondaryAction: () => Navigator.pop(context, false),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     'Are you sure you want to remove ${widget.driver.name}? This will permanently delete their active profile, but their trip history will remain intact.',
@@ -111,7 +105,7 @@ class _AdminDriverDetailScreenState extends ConsumerState<AdminDriverDetailScree
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600)),
+                  const Text('Type "Delete" to confirm:', style: TextStyle(fontWeight: FontWeight.w600, color: AppTheme.textPrimary)),
                   const SizedBox(height: 8),
                   TextField(
                     controller: controller,
@@ -128,33 +122,8 @@ class _AdminDriverDetailScreenState extends ConsumerState<AdminDriverDetailScree
                   ),
                 ],
               ),
-              actionsPadding: const EdgeInsets.all(16),
-              actionsAlignment: MainAxisAlignment.end,
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.textSecondary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: canDelete ? AppTheme.errorRed : AppTheme.errorRed.withValues(alpha: 0.3),
-                    foregroundColor: AppTheme.background,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: canDelete ? () => Navigator.pop(context, true) : null,
-                  child: const Text('Remove', style: TextStyle(fontWeight: FontWeight.w600)),
-                ),
-              ],
             );
-          }
+          },
         );
       },
     );
