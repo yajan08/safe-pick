@@ -1377,22 +1377,19 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
                   _handleManualOverride(session.sessionId, student.studentId, newStatus);
                 },
                 itemBuilder: (context) {
-                  final isMorning = tripType.toLowerCase() == 'morning';
                   return [
                     const PopupMenuItem(
                       value: 'In Van',
                       child: Text('Board (In Van)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
-                    if (isMorning)
-                      const PopupMenuItem(
-                        value: 'At School',
-                        child: Text('Drop (At School)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      )
-                    else
-                      const PopupMenuItem(
-                        value: 'At Home',
-                        child: Text('Drop (At Home)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      ),
+                    const PopupMenuItem(
+                      value: 'At School',
+                      child: Text('Drop (At School)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
+                    const PopupMenuItem(
+                      value: 'At Home',
+                      child: Text('Drop (At Home)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ),
                     const PopupMenuItem(
                       value: 'Absent',
                       child: Text('Mark Absent', style: TextStyle(color: AppTheme.errorRed, fontWeight: FontWeight.bold, fontSize: 16)),

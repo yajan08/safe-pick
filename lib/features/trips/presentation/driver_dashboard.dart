@@ -48,13 +48,16 @@ class DriverDashboard extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
-        backgroundColor: AppTheme.background,
+        backgroundColor: AppTheme.surface,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
+        shape: const Border(
+          bottom: BorderSide(color: AppTheme.border, width: 1.0),
+        ),
         title: SvgPicture.asset(
           'assets/images/logo.svg',
-          height: 36, // Scaled correctly for brand recognition
+          height: 46, // Scaled correctly for brand recognition
         ).animate().fade().scale(delay: 100.ms, curve: Curves.easeOutBack),
         actions: [
           GestureDetector(
@@ -304,6 +307,69 @@ class DriverDashboard extends ConsumerWidget {
       statusColor = AppTheme.textMuted;
     }
 
+    final Color cardBg;
+    final Border cardBorder;
+    final List<BoxShadow> cardShadow;
+    final TextStyle? titleStyle;
+    final Widget actionIcon;
+
+    if (isActive) {
+      cardBg = const Color(0xFFFFFBEB);
+      cardBorder = Border.all(color: AppTheme.primaryGold.withValues(alpha: 0.4), width: 1.5);
+      cardShadow = [
+        BoxShadow(
+          color: AppTheme.primaryGold.withValues(alpha: 0.08),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ];
+      titleStyle = theme.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w900,
+        color: AppTheme.textPrimary,
+        letterSpacing: -0.2,
+      );
+      actionIcon = const Icon(
+        Icons.chevron_right_rounded,
+        color: AppTheme.primaryGoldDark,
+        size: 24,
+      );
+    } else if (isCompletedToday) {
+      cardBg = AppTheme.surfaceCard.withValues(alpha: 0.6);
+      cardBorder = Border.all(color: AppTheme.border.withValues(alpha: 0.5), width: 1.0);
+      cardShadow = [];
+      titleStyle = theme.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w800,
+        color: AppTheme.textMuted,
+        decoration: TextDecoration.lineThrough,
+        letterSpacing: -0.2,
+      );
+      actionIcon = const Icon(
+        Icons.check_circle_rounded,
+        color: AppTheme.successGreen,
+        size: 24,
+      );
+    } else {
+      cardBg = AppTheme.surfaceCard;
+      cardBorder = Border.all(color: AppTheme.border, width: 1.2);
+      cardShadow = [
+        BoxShadow(
+          color: Colors.black.withValues(alpha: 0.02),
+          blurRadius: 10,
+          offset: const Offset(0, 4),
+        ),
+      ];
+      titleStyle = theme.textTheme.titleMedium?.copyWith(
+        fontWeight: FontWeight.w800,
+        color: AppTheme.textPrimary,
+        letterSpacing: -0.2,
+      );
+      actionIcon = const Icon(
+        Icons.chevron_right_rounded,
+        color: AppTheme.textMuted,
+        size: 24,
+      );
+    }
+
     return _TappableCard(
       onTap: () {
         Navigator.of(context).push(
@@ -315,16 +381,10 @@ class DriverDashboard extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: AppTheme.surfaceCard,
+          color: cardBg,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppTheme.border.withValues(alpha: 0.5)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.02),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          border: cardBorder,
+          boxShadow: cardShadow,
         ),
         child: Row(
           children: [
@@ -332,14 +392,20 @@ class DriverDashboard extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isMorning 
-                    ? AppTheme.primaryGold.withValues(alpha: 0.1) 
-                    : AppTheme.textSecondary.withValues(alpha: 0.1),
+                color: isCompletedToday
+                    ? AppTheme.border.withValues(alpha: 0.4)
+                    : (isMorning
+                        ? AppTheme.primaryGold.withValues(alpha: 0.1)
+                        : AppTheme.textSecondary.withValues(alpha: 0.1)),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
-                isMorning ? Icons.wb_sunny_rounded : Icons.nights_stay_rounded,
-                color: isMorning ? AppTheme.primaryGoldDark : AppTheme.textSecondary,
+                isCompletedToday
+                    ? Icons.check_rounded
+                    : (isMorning ? Icons.wb_sunny_rounded : Icons.nights_stay_rounded),
+                color: isCompletedToday
+                    ? AppTheme.textMuted
+                    : (isMorning ? AppTheme.primaryGoldDark : AppTheme.textSecondary),
                 size: 24,
               ),
             ),
@@ -352,11 +418,7 @@ class DriverDashboard extends ConsumerWidget {
                 children: [
                   Text(
                     trip.tripName,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      color: AppTheme.textPrimary,
-                      letterSpacing: -0.2,
-                    ),
+                    style: titleStyle,
                   ),
                   const SizedBox(height: 6),
                   Row(
@@ -374,7 +436,7 @@ class DriverDashboard extends ConsumerWidget {
                         statusLabel,
                         style: theme.textTheme.labelMedium?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: AppTheme.textSecondary,
+                          color: isCompletedToday ? AppTheme.textMuted : AppTheme.textSecondary,
                         ),
                       ),
                     ],
@@ -384,11 +446,7 @@ class DriverDashboard extends ConsumerWidget {
             ),
             
             // Action indicator
-            const Icon(
-              Icons.chevron_right_rounded,
-              color: AppTheme.textMuted,
-              size: 24,
-            ),
+            actionIcon,
           ],
         ),
       ),

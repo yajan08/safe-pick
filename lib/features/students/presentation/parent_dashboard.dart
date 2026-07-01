@@ -107,6 +107,7 @@ class ParentDashboard extends ConsumerWidget {
                               const SizedBox(height: 16),
                               _buildMapCard(context, theme, selectedStudent),
                               const SizedBox(height: 16),
+                              _buildFooter(theme),
                             ],
                           ),
                         ),
@@ -208,10 +209,19 @@ class ParentDashboard extends ConsumerWidget {
     StudentModel selected,
   ) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
       decoration: BoxDecoration(
-        color: AppTheme.background.withValues(alpha: 0.6),
-        border: Border(bottom: BorderSide(color: AppTheme.border.withValues(alpha: 0.3))),
+        color: AppTheme.surface,
+        border: const Border(
+          bottom: BorderSide(color: AppTheme.border, width: 1.0),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,7 +233,7 @@ class ParentDashboard extends ConsumerWidget {
             children: [
               SvgPicture.asset(
                 'assets/images/logo.svg',
-                height: 38,
+                height: 48,
               ).animate().fade().scale(delay: 80.ms, curve: Curves.easeOutBack),
               Row(
                 children: [
@@ -299,7 +309,7 @@ class ParentDashboard extends ConsumerWidget {
           const SizedBox(height: 4),
           Text(
             selected.name,
-            style: theme.textTheme.headlineMedium?.copyWith(
+            style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w800,
               letterSpacing: -0.5,
               color: AppTheme.textPrimary,
@@ -341,7 +351,7 @@ class ParentDashboard extends ConsumerWidget {
                     style: Theme.of(
                             WidgetsBinding.instance.rootElement! as BuildContext)
                         .textTheme
-                        .headlineMedium
+                        .titleLarge
                         ?.copyWith(
                           fontWeight: FontWeight.w800,
                           letterSpacing: -0.5,
@@ -902,8 +912,94 @@ class ParentDashboard extends ConsumerWidget {
           offset: const Offset(0, 8),
         ),
       ],
-      border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.2), 
+      border: Border.all(color: AppTheme.border, width: 1.2), 
     );
+  }
+
+  Widget _buildFooter(ThemeData theme) {
+    return Container(
+      margin: const EdgeInsets.only(top: 24, bottom: 8),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceCard,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: AppTheme.border, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/applogo.png',
+                height: 38,
+              ).animate(delay: 500.ms).shake(hz: 2, duration: 1500.ms),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'SafePick HQ',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w900,
+                      color: AppTheme.textPrimary,
+                      letterSpacing: -0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Every ride tracked, every child safe 🚌✨',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: AppTheme.textSecondary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: AppTheme.border, height: 1, thickness: 1),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '© 2026 SafePick Inc.',
+                style: theme.textTheme.labelMedium?.copyWith(
+                  color: AppTheme.textMuted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Row(
+                children: [
+                  Text(
+                    'Parent Portal',
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: AppTheme.primaryGoldDark,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.verified_user_rounded,
+                    size: 14,
+                    color: AppTheme.primaryGold,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fade(delay: 300.ms).slideY(begin: 0.05, curve: Curves.easeOut);
   }
 }
 
@@ -1026,7 +1122,7 @@ class _InfoTileDynamic extends StatelessWidget {
             offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.2),
+        border: Border.all(color: AppTheme.border, width: 1.2),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
