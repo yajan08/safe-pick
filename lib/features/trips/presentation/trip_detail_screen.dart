@@ -13,7 +13,7 @@ import '../domain/trip_service.dart';
 import '../data/trip_manifest_model.dart';
 import '../data/daily_session_model.dart';
 import 'qr_scanner_screen.dart';
-import '../../../core/services/auth_service.dart';
+import '../../auth/domain/auth_service.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'utils/marker_generator.dart';
@@ -57,6 +57,8 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   String? _approachingStudentName;
   String? _approachingStatusAction;
   String? _approachingNextStatus;
+  final Set<String> _approachingNotifiedStudents = {};
+  final Set<String> _arrivedNotifiedStudents = {};
 
   // ─── MAP STATE & MARKER CACHE ────────────────────────
   GoogleMapController? _mapController;
@@ -215,6 +217,53 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   // ─── LIVE TRACKING ENGINE ────────────────────────────
   
   void _checkGeofences(Position currentPos, List<TripManifestModel> manifest, String sessionId, String tripType, List<SchoolModel> schools) {
+    // 1. Process Geofence Push Notifications (Independent of driver's active screen banner)
+    for (var student in manifest) {
+      if (student.homeLocation == null) continue;
+
+      final attendanceMap = ref.read(sessionAttendanceProvider(sessionId)).value ?? {};
+      final currentStatus = attendanceMap[student.studentId] ?? student.status;
+
+      bool isActiveTarget = false;
+      if (tripType.toLowerCase() == 'morning') {
+        if (currentStatus.toLowerCase() == 'at home') {
+          isActiveTarget = true;
+        }
+      } else {
+        if (currentStatus.toLowerCase() == 'in van') {
+          isActiveTarget = true;
+        }
+      }
+
+      if (!isActiveTarget) continue;
+
+      final distance = Geolocator.distanceBetween(
+        currentPos.latitude, currentPos.longitude,
+        student.homeLocation!.latitude, student.homeLocation!.longitude,
+      );
+
+      // Check 500m geofence for "approaching" notification
+      if (distance <= 500.0 && !_approachingNotifiedStudents.contains(student.studentId)) {
+        _approachingNotifiedStudents.add(student.studentId);
+        ref.read(tripServiceProvider).updateGeofenceNotificationStatus(
+          sessionId,
+          student.studentId,
+          approachingNotified: true,
+        );
+      }
+
+      // Check 50m geofence for "arrived" notification
+      if (distance <= 50.0 && !_arrivedNotifiedStudents.contains(student.studentId)) {
+        _arrivedNotifiedStudents.add(student.studentId);
+        ref.read(tripServiceProvider).updateGeofenceNotificationStatus(
+          sessionId,
+          student.studentId,
+          arrivedNotified: true,
+        );
+      }
+    }
+
+    // 2. Process Driver UI Banner (Only one active at a time)
     if (_approachingStudentId != null) return; 
 
     final isMorning = tripType.toLowerCase() == 'morning';
@@ -287,6 +336,9 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
   
   Future<void> _startLiveTracking(String sessionId) async {
     if (_isLiveTracking) return;
+
+    _approachingNotifiedStudents.clear();
+    _arrivedNotifiedStudents.clear();
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
@@ -682,21 +734,43 @@ class _TripDetailScreenState extends ConsumerState<TripDetailScreen> {
       }
     }
 
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (context) => SafePickDialog(
-          title: 'Status Updated',
-          description: '${manifestStudent.name} is now $nextStatus.',
-          primaryActionLabel: 'CONTINUE',
-          primaryActionColor: AppTheme.successGreen,
-          onPrimaryAction: () => Navigator.of(context).pop(),
-        ),
-      );
-    }
+    if (!mounted) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => SafePickDialog(
+        title: nextStatus == 'In Van'
+            ? 'Board Student'
+            : nextStatus == 'At School'
+                ? 'Offboard Student (At School)'
+                : 'Offboard Student (At Home)',
+        description: 'Are you sure you want to mark ${manifestStudent.name} as $nextStatus?',
+        primaryActionLabel: 'Confirm',
+        primaryActionColor: nextStatus == 'In Van'
+            ? AppTheme.primaryGoldDark
+            : AppTheme.successGreen,
+        onPrimaryAction: () => Navigator.of(context).pop(true),
+        secondaryActionLabel: 'Cancel',
+        onSecondaryAction: () => Navigator.of(context).pop(false),
+      ),
+    );
+
+    if (confirm != true) return;
 
     try {
       await ref.read(tripServiceProvider).processQrScan(studentId, sessionId);
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => SafePickDialog(
+            title: 'Status Updated',
+            description: '${manifestStudent.name} is now $nextStatus.',
+            primaryActionLabel: 'CONTINUE',
+            primaryActionColor: AppTheme.successGreen,
+            onPrimaryAction: () => Navigator.of(context).pop(),
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('Error processing scan: $e');
     }

@@ -4,10 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:safe_pick/features/students/presentation/parent_live_tracking_screen.dart';
-import '../../../core/services/auth_service.dart';
+import '../../auth/domain/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/student_model.dart';
-import '../../profile/presentation/parent_profile_screen.dart';
+import 'parent_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 import '../../trips/domain/trip_service.dart';
 import '../../../core/widgets/safe_pick_dialog.dart';
@@ -60,7 +60,7 @@ class ParentDashboard extends ConsumerWidget {
           _buildAmbientBackground(),
 
           SafeArea(
-            bottom: false,
+            bottom: true,
             child: studentsAsync.when(
               data: (students) {
                 if (students.isEmpty) {
@@ -91,7 +91,6 @@ class ParentDashboard extends ConsumerWidget {
                     Expanded(
                       child: SingleChildScrollView(
                         physics: const BouncingScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 40),
                         child: AnimatedSwitcher(
                           duration: const Duration(milliseconds: 400),
                           switchInCurve: Curves.easeOutCubic,
@@ -101,12 +100,20 @@ class ParentDashboard extends ConsumerWidget {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _buildProfileCard(context, theme, selectedStudent),
-                              const SizedBox(height: 16),
-                              _buildSquareStatusAndEtaCards(theme, selectedStudent),
-                              const SizedBox(height: 16),
-                              _buildMapCard(context, theme, selectedStudent),
-                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    _buildProfileCard(context, theme, selectedStudent),
+                                    const SizedBox(height: 16),
+                                    _buildSquareStatusAndEtaCards(theme, selectedStudent),
+                                    const SizedBox(height: 16),
+                                    _buildMapCard(context, theme, selectedStudent),
+                                  ],
+                                ),
+                              ),
                               _buildFooter(theme),
                             ],
                           ),
@@ -917,90 +924,176 @@ class ParentDashboard extends ConsumerWidget {
   }
 
   Widget _buildFooter(ThemeData theme) {
-    return Container(
-      margin: const EdgeInsets.only(top: 24, bottom: 8),
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceCard,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppTheme.border, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 16,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Image.asset(
-                'assets/images/applogo.png',
-                height: 38,
-              ).animate(delay: 500.ms).shake(hz: 2, duration: 1500.ms),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'SafePick HQ',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                      color: AppTheme.textPrimary,
-                      letterSpacing: -0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Every ride tracked, every child safe 🚌✨',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textSecondary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+    return Column(
+      children: [
+        const SizedBox(height: 32),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              '© 2026 SafePick Inc. • Parent Portal',
+              style: theme.textTheme.labelMedium?.copyWith(
+                color: AppTheme.textMuted,
+                fontWeight: FontWeight.w600,
               ),
-            ],
+            ),
+            const SizedBox(width: 4),
+            const Icon(
+              Icons.verified_user_rounded,
+              size: 14,
+              color: AppTheme.primaryGold,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 120,
+          width: double.infinity,
+          child: CustomPaint(
+            painter: _DashboardCartoonPainter(),
           ),
-          const SizedBox(height: 16),
-          const Divider(color: AppTheme.border, height: 1, thickness: 1),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                '© 2026 SafePick Inc.',
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppTheme.textMuted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    'Parent Portal',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      color: AppTheme.primaryGoldDark,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(
-                    Icons.verified_user_rounded,
-                    size: 14,
-                    color: AppTheme.primaryGold,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ],
-      ),
-    ).animate().fade(delay: 300.ms).slideY(begin: 0.05, curve: Curves.easeOut);
+        ),
+      ],
+    );
   }
+}
+
+class _DashboardCartoonPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final double w = size.width;
+    final double h = size.height;
+    final double groundY = h - 35; 
+    final double scale = w / 400.0;
+
+    // 1. Sky Gradient
+    final Paint skyPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Color(0xFFF0F9FF), Color(0x99BAE6FD)],
+      ).createShader(Rect.fromLTWH(0, 0, w, groundY));
+    canvas.drawRect(Rect.fromLTWH(0, 0, w, groundY), skyPaint);
+
+    // 2. Cloud and Sun
+    canvas.drawCircle(Offset(w * 0.85, 30), 10 * scale, Paint()..color = const Color(0xE6FDE047));
+    canvas.drawCircle(Offset(w * 0.85, 30), 6 * scale, Paint()..color = const Color(0xFFFACC15));
+    _drawCloud(canvas, w * 0.25, 25, scale, Paint()..color = const Color(0x99E0F2FE));
+    _drawCloud(canvas, w * 0.65, 35, scale, Paint()..color = const Color(0x99E0F2FE));
+
+    // 3. Road
+    final Paint roadPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter, end: Alignment.bottomCenter,
+        colors: [Color(0xFF475569), Color(0xFF334155)],
+      ).createShader(Rect.fromLTWH(0, groundY, w, h - groundY));
+    canvas.drawRect(Rect.fromLTWH(0, groundY, w, h - groundY), roadPaint);
+    canvas.drawRect(Rect.fromLTWH(0, groundY - 2, w, 2), Paint()..color = const Color(0xFF1E293B).withValues(alpha: 0.4));
+
+    final Paint dashPaint = Paint()..color = const Color(0xCCFACC15)..strokeWidth = 2 * scale..strokeCap = StrokeCap.round;
+    for (double i = 10; i < w; i += (45 * scale)) {
+      canvas.drawLine(Offset(i, groundY + (h - groundY) * 0.35), Offset(i + (20 * scale), groundY + (h - groundY) * 0.35), dashPaint);
+    }
+
+    // 4. Draw Entities
+    _drawEntity(canvas, w * 0.05, groundY, scale, _drawSchool);
+    _drawEntity(canvas, w * 0.28, groundY, scale, (c) => _drawTree(c, 1.0));
+    _drawEntity(canvas, w * 0.38, groundY, scale, _drawKid);
+    _drawEntity(canvas, w * 0.48, groundY, scale, _drawBus);
+    _drawEntity(canvas, w * 0.82, groundY, scale, _drawHouse);
+    _drawEntity(canvas, w * 0.94, groundY, scale, _drawParent);
+  }
+
+  void _drawEntity(Canvas canvas, double x, double y, double scale, Function(Canvas) drawFn) {
+    canvas.save();
+    canvas.translate(x, y);
+    canvas.scale(scale, scale);
+    drawFn(canvas);
+    canvas.restore();
+  }
+
+  void _drawCloud(Canvas canvas, double cx, double cy, double scale, Paint paint) {
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx, cy), width: 34 * scale, height: 14 * scale), paint);
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx + 12 * scale, cy - 3 * scale), width: 26 * scale, height: 14 * scale), paint);
+    canvas.drawOval(Rect.fromCenter(center: Offset(cx - 12 * scale, cy - 2 * scale), width: 22 * scale, height: 12 * scale), paint);
+  }
+
+  void _drawSchool(Canvas canvas) {
+    final bld = Paint()..color = const Color(0xFFE0F2FE);
+    final roof = Paint()..color = const Color(0xFF7DD3FC);
+    final winDark = Paint()..color = const Color(0xFFBAE6FD);
+    final winLight = Paint()..color = const Color(0xCCFDE047);
+
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(5, -40, 62, 40), const Radius.circular(2)), bld);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(0, -45, 72, 8), const Radius.circular(2)), roof);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(23, -20, 12, 20), const Radius.circular(2)), roof);
+    canvas.drawCircle(const Offset(33, -10), 1.5, Paint()..color = const Color(0xFF0EA5E9));
+    
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(11, -33, 9, 9), const Radius.circular(1)), winDark);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(24, -33, 9, 9), const Radius.circular(1)), winDark);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(37, -33, 9, 9), const Radius.circular(1)), winLight);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(50, -33, 9, 9), const Radius.circular(1)), winDark);
+  }
+
+  void _drawTree(Canvas canvas, double sizeMult) {
+    final trunk = Paint()..color = const Color(0xFF92400E);
+    final leavesMain = Paint()..color = const Color(0xFF4ADE80);
+    final leavesAccent = Paint()..color = const Color(0xFF22C55E);
+
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(0, -16 * sizeMult, 4, 16 * sizeMult), const Radius.circular(1)), trunk);
+    canvas.drawOval(Rect.fromLTWH(-7, -40 * sizeMult, 18, 26 * sizeMult), leavesMain);
+    canvas.drawOval(Rect.fromLTWH(-4.5, -45 * sizeMult, 13, 18 * sizeMult), leavesAccent);
+  }
+
+  void _drawKid(Canvas canvas) {
+    final skin = Paint()..color = const Color(0xFFFEF08A);
+    final shirt = Paint()..color = const Color(0xFF6366F1);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(4, -10, 4, 10), const Radius.circular(2)), skin);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(9, -10, 4, 10), const Radius.circular(2)), skin);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(3, -22, 10, 12), const Radius.circular(2.5)), shirt);
+    canvas.drawCircle(const Offset(8, -28), 6, skin);
+  }
+
+  void _drawHouse(Canvas canvas) {
+    final bld = Paint()..color = const Color(0xFFE0F2FE);
+    final roof = Paint()..color = const Color(0xFF7DD3FC);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(0, -32, 42, 32), const Radius.circular(2)), bld);
+    canvas.drawPath(Path()..moveTo(-2, -32)..lineTo(44, -32)..lineTo(21, -52)..close(), roof);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(12, -22, 10, 22), const Radius.circular(2)), roof);
+  }
+
+  void _drawParent(Canvas canvas) {
+    final skin = Paint()..color = const Color(0xFFFEF08A);
+    final shirt = Paint()..color = const Color(0xFFF472B6);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(4, -10, 4, 10), const Radius.circular(2)), skin);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(9, -10, 4, 10), const Radius.circular(2)), skin);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(3, -22, 10, 12), const Radius.circular(2.5)), shirt);
+    canvas.drawCircle(const Offset(8, -28), 6, skin);
+  }
+
+  void _drawBus(Canvas canvas) {
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(0, -35, 82, 30), const Radius.circular(4)), Paint()..color = const Color(0xFFFACC15));
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(64, -32, 18, 22), const Radius.circular(3)), Paint()..color = const Color(0xFFEAB308));
+
+    final winPaint = Paint()..color = const Color(0xFFBAE6FD);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(66, -30, 13, 14), const Radius.circular(2)), winPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(5, -32, 10, 8), const Radius.circular(1.5)), winPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(19, -32, 10, 8), const Radius.circular(1.5)), winPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(33, -32, 10, 8), const Radius.circular(1.5)), winPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(const Rect.fromLTWH(47, -32, 10, 8), const Radius.circular(1.5)), winPaint);
+
+    canvas.drawRect(const Rect.fromLTWH(0, -25, 82, 3), Paint()..color = const Color(0x331E293B));
+    canvas.drawRect(const Rect.fromLTWH(0, -17, 82, 3), Paint()..color = const Color(0x331E293B));
+
+    final tire = Paint()..color = const Color(0xFF1E293B);
+    final rim = Paint()..color = const Color(0xFF64748B);
+    canvas.drawCircle(const Offset(18, -3), 8, tire);
+    canvas.drawCircle(const Offset(18, -3), 4, rim);
+    canvas.drawCircle(const Offset(66, -3), 8, tire);
+    canvas.drawCircle(const Offset(66, -3), 4, rim);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

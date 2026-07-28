@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:safe_pick/features/auth/presentation/auth_screen.dart';
-import '../../../core/services/auth_service.dart';
+import '../domain/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../../students/presentation/parent_dashboard.dart';

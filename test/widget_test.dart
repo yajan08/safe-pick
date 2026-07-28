@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:safe_pick/main.dart';
-import 'package:safe_pick/core/services/auth_service.dart';
+import 'package:safe_pick/features/auth/domain/auth_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {

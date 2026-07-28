@@ -204,3 +204,86 @@ exports.checkApproachingStudents = onSchedule("every 2 minutes", async (event) =
         }
     }
 });
+
+/**
+ * Triggers when a student's attendance document is updated in a daily session.
+ * Sends FCM notifications when the van enters approaching (500m) or arrived (50m) geofences.
+ */
+exports.onGeofenceNotificationTriggered = onDocumentUpdated("daily_sessions/{sessionId}/attendance/{studentId}", async (event) => {
+    const beforeData = event.data.before.data();
+    const afterData = event.data.after.data();
+
+    if (!beforeData || !afterData) return;
+
+    const studentId = event.params.studentId;
+
+    // Check approaching_notified transition
+    const wasApproaching = beforeData.approaching_notified === true;
+    const isApproaching = afterData.approaching_notified === true;
+
+    // Check arrived_notified transition
+    const wasArrived = beforeData.arrived_notified === true;
+    const isArrived = afterData.arrived_notified === true;
+
+    if (!wasApproaching && isApproaching) {
+        await sendGeofenceNotification(studentId, "Approaching", "is approaching your location (within 500 meters).");
+    }
+
+    if (!wasArrived && isArrived) {
+        await sendGeofenceNotification(studentId, "Arrived", "has arrived at your location. Please proceed to the van.");
+    }
+});
+
+/**
+ * Helper to retrieve parent's FCM token and dispatch notification
+ */
+async function sendGeofenceNotification(studentId, type, messageBody) {
+    try {
+        const studentDoc = await admin.firestore().collection("students").doc(studentId).get();
+        if (!studentDoc.exists) {
+            console.log("Student document not found for id:", studentId);
+            return;
+        }
+
+        const studentData = studentDoc.data();
+        const parentUid = studentData.parent_uid;
+        if (!parentUid) {
+            console.log("No parent_uid found for student:", studentId);
+            return;
+        }
+
+        const parentDoc = await admin.firestore().collection("users").doc(parentUid).get();
+        if (!parentDoc.exists) {
+            console.log("Parent user document not found for uid:", parentUid);
+            return;
+        }
+
+        const fcmToken = parentDoc.data().fcmToken;
+        if (!fcmToken) {
+            console.log("No FCM token found for parent user:", parentUid);
+            return;
+        }
+
+        const studentName = studentData.name || "Your child";
+        const title = type === "Approaching" ? `SafePick: Van Approaching` : `SafePick: Van Arrived`;
+        const body = `${studentName} ${messageBody}`;
+
+        const payload = {
+            token: fcmToken,
+            notification: {
+                title: title,
+                body: body,
+            },
+            data: {
+                studentId: studentId,
+                type: `GEOFENCE_${type.toUpperCase()}`,
+            },
+        };
+
+        await admin.messaging().send(payload);
+        console.log(`Successfully sent ${type} notification to parent ${parentUid} for student ${studentId}`);
+    } catch (error) {
+        console.error(`Error sending ${type} geofence notification:`, error);
+    }
+}
+

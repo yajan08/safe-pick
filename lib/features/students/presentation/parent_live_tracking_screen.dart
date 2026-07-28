@@ -7,7 +7,7 @@ import 'package:safe_pick/features/students/data/student_model.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/services/mqtt_service.dart';
 import '../../trips/presentation/utils/marker_generator.dart';
-import '../../../core/services/auth_service.dart';
+import '../../auth/domain/auth_service.dart';
 
 class ParentLiveTrackingScreen extends ConsumerStatefulWidget {
   final StudentModel student;

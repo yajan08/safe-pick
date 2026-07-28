@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../trips/data/daily_session_model.dart';
 import '../data/student_ride_log_model.dart';
-import '../../../core/services/auth_service.dart';
+import '../../auth/domain/auth_service.dart';
 
 final historyServiceProvider = Provider<HistoryService>((ref) {
   final firestore = ref.watch(firestoreProvider);

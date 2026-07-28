@@ -1,6 +1,6 @@
 // ignore_for_file: deprecated_member_use
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/services/auth_service.dart';
+import '../../auth/domain/auth_service.dart';
 import '../../auth/data/user_model.dart';
 import '../../trips/data/daily_session_model.dart';
 import '../../students/data/student_model.dart';

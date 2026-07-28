@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../features/auth/data/user_model.dart';
+import '../data/user_model.dart';
 
 /// Riverpod provider for the raw [FirebaseAuth] instance.
 final firebaseAuthProvider = Provider<FirebaseAuth>((ref) {

@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
-import '../../../core/services/auth_service.dart';
+import '../domain/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import 'auth_gate.dart'; 
 

@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/services/auth_service.dart';
+import '../../auth/domain/auth_service.dart';
 import '../data/trip_manifest_model.dart';
 import '../../students/data/student_ride_log_model.dart';
 import '../data/daily_session_model.dart';
@@ -190,6 +191,8 @@ class TripService {
         final attendanceRef = docRef.collection('attendance').doc(studentId);
         batch.set(attendanceRef, {
           'status': studentInitialStatus,
+          'approaching_notified': false,
+          'arrived_notified': false,
         });
 
         // Set global student status as well
@@ -277,6 +280,8 @@ class TripService {
         final attendanceRef = docRef.collection('attendance').doc(studentId);
         batch.set(attendanceRef, {
           'status': studentInitialStatus,
+          'approaching_notified': false,
+          'arrived_notified': false,
         });
 
         batch.update(_firestore.collection('students').doc(studentId), {
@@ -811,6 +816,36 @@ class TripService {
           }
         }
       }
+    }
+  }
+
+  /// Updates the geofence notifications flags in the student's attendance document.
+  Future<void> updateGeofenceNotificationStatus(
+    String sessionId,
+    String studentId, {
+    bool? approachingNotified,
+    bool? arrivedNotified,
+  }) async {
+    try {
+      final docRef = _firestore
+          .collection('daily_sessions')
+          .doc(sessionId)
+          .collection('attendance')
+          .doc(studentId);
+      
+      final updates = <String, dynamic>{};
+      if (approachingNotified != null) {
+        updates['approaching_notified'] = approachingNotified;
+      }
+      if (arrivedNotified != null) {
+        updates['arrived_notified'] = arrivedNotified;
+      }
+      
+      if (updates.isNotEmpty) {
+        await docRef.update(updates);
+      }
+    } catch (e) {
+      debugPrint('Failed to update geofence notification status: $e');
     }
   }
 }

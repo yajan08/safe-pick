@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../auth/data/user_model.dart';
-import '../../profile/presentation/student_detail_screen.dart';
+import '../../students/presentation/student_detail_screen.dart';
 import '../../students/data/student_model.dart';
 import 'admin_dashboard_screen.dart' show kAdminNavy;
 import '../../../core/widgets/safe_pick_dialog.dart';

@@ -2,12 +2,12 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../../../core/services/auth_service.dart';
+import '../../auth/domain/auth_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../data/trip_model.dart';
 import 'trip_detail_screen.dart';
 import 'create_trip_screen.dart';
-import '../../profile/presentation/driver_profile_screen.dart';
+import 'driver_profile_screen.dart';
 import '../../../core/widgets/shimmer_loading.dart';
 
 /// Real-time stream provider that fetches all trips assigned to the logged-in driver.
