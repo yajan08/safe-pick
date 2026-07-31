@@ -52,12 +52,13 @@ class DriverDashboard extends ConsumerWidget {
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: true,
+        toolbarHeight: 68,
         shape: const Border(
           bottom: BorderSide(color: AppTheme.border, width: 1.0),
         ),
         title: SvgPicture.asset(
           'assets/images/logo.svg',
-          height: 46, // Scaled correctly for brand recognition
+          height: 56, // Scaled up for better visibility
         ).animate().fade().scale(delay: 100.ms, curve: Curves.easeOutBack),
         actions: [
           GestureDetector(

@@ -240,7 +240,7 @@ class ParentDashboard extends ConsumerWidget {
             children: [
               SvgPicture.asset(
                 'assets/images/logo.svg',
-                height: 48,
+                height: 58, // Scaled up for better visibility
               ).animate().fade().scale(delay: 80.ms, curve: Curves.easeOutBack),
               Row(
                 children: [
